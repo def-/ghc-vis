@@ -138,3 +138,19 @@ Node {rootLabel = PAPClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = P
               Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 1}, ptrArgs = [], dataArgs = []}, subForest = []}]},
             Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []}]}]}]},
         Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []}]}]}]}
+=======
+            Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []}]}]}]}]}]}]}
+
+let x = id (:) () x
+Node {rootLabel = APClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = AP, srtlen = 0}, arity = 2677173072, n_args = 0, fun = 0x00007ff59df4baf0, payload = []}, subForest = [
+  Node {rootLabel = BCOClosure {info = StgInfoTable {ptrs = 4, nptrs = 0, tipe = BCO, srtlen = 0}, instrs = 0x00007ff59df4bb70, literals = 0x00007ff59df4bba8, bcoptrs = 0x00007ff59df4bbb8, arity = 0, size = 6, bitmap = 0}, subForest = [
+    Node {rootLabel = ArrWordsClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = ARR_WORDS, srtlen = 0}, bytes = 38, words = [5348024557502464,8590000155,563078802440197,7318349394608129,197568561153]}, subForest = []},
+    Node {rootLabel = ArrWordsClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = ARR_WORDS, srtlen = 0}, bytes = 0, words = []}, subForest = []},
+    Node {rootLabel = MutArrClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = MUT_ARR_PTRS_FROZEN, srtlen = 0}, mccPtrs = 2, mccSize = 140692893776952, mccPayload = [0x00007ff59df4bc38]}, subForest = [
+      Node {rootLabel = BCOClosure {info = StgInfoTable {ptrs = 4, nptrs = 0, tipe = BCO, srtlen = 0}, instrs = 0x00007ff59df4bcc8, literals = 0x00007ff59df4bd00, bcoptrs = 0x00007ff59df4bd10, arity = 1, size = 7, bitmap = 1}, subForest = [
+        Node {rootLabel = ArrWordsClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = ARR_WORDS, srtlen = 0}, bytes = 34, words = [4785074604081152,21474836482,1407465077932037,281496453251074,35848238]}, subForest = []},
+        Node {rootLabel = ArrWordsClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = ARR_WORDS, srtlen = 0}, bytes = 0, words = []}, subForest = []},
+        Node {rootLabel = MutArrClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = MUT_ARR_PTRS_FROZEN, srtlen = 0}, mccPtrs = 4, mccSize = 1074850888, mccPayload = [0x000000004010ec48,0x000000004010ee78,0x000000004136d550]}, subForest = [
+          Node {rootLabel = ConsClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = CONSTR_NOCAF_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = [], descr = "ghc-prim:GHC.Tuple.()"}, subForest = []},
+          Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []},
+          Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []}]}]}]}]}]}

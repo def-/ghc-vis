@@ -14,6 +14,12 @@ buildTree x = do
 
 t x = unfoldTreeM buildTree x
 
+u = t . asBox
+
+-- infinite tree duh
+f = let y = id (:) () y
+    in getClosureData y
+
 boxAddr :: Box -> Int
 boxAddr (Box any) = fromIntegral $ W# (aToWord# any)
 
