@@ -162,3 +162,14 @@ fromList [
   (2,HNode {nodePtrs = [0], nodeLits = [], nodeInfo = OtherInfo {itabPtrs = 1, itabLits = 0, itabType = CAF_BLACKHOLE, itabSrtLen = 0, itabCode = [72,139,67,8,72,169,7,0,0,0,117,65,72,139,8,72]}})]
 
 
+fromList [
+  (1093909248,FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}),
+  (140492237406984,ArrWordsClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = ARR_WORDS, srtlen = 0}, bytes = 58, words = [8162774324609024,9288678526418957,281599530827777,1407379178651649,281483568676864,1407456487931906,562962840027137,140492235997230]}),
+  (140492250853096,ArrWordsClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = ARR_WORDS, srtlen = 0}, bytes = 28, words = [3940649673949184,9288674231517187,281586645991424,140488383266818]}),
+  (140492261120352,BCOClosure {info = StgInfoTable {ptrs = 4, nptrs = 0, tipe = BCO, srtlen = 0}, instrs = 0x00007fc6e5e78308, literals = 0x00007fc6e695d2e0, bcoptrs = 0x00007fc6e695d300, arity = 0, size = 6, bitmap = 0}),
+  (140492261261672,MutArrClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = MUT_ARR_PTRS_FROZEN0, srtlen = 0}, mccPtrs = 0, mccSize = 0, mccPayload = []}),
+  (140492261261696,ArrWordsClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = ARR_WORDS, srtlen = 0}, bytes = 8, words = [1087997544]}),
+  (140492261261720,MutArrClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = MUT_ARR_PTRS_FROZEN0, srtlen = 0}, mccPtrs = 2, mccSize = 3, mccPayload = [0x00007fc6e6b41618,0x000000004133bb00]}),
+  (140492261261768,ArrWordsClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = ARR_WORDS, srtlen = 0}, bytes = 16, words = [0,1102018888]}),
+  (140492261263064,APClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = AP, srtlen = 0}, arity = 43220737, n_args = 0, fun = 0x00007fc6e6b41730, payload = []}),
+  (140492261402848,BCOClosure {info = StgInfoTable {ptrs = 4, nptrs = 0, tipe = BCO, srtlen = 0}, instrs = 0x00007fc6e6b4aee8, literals = 0x00007fc6e6b413b0, bcoptrs = 0x00007fc6e6b413c8, arity = 2, size = 7, bitmap = 2})]
