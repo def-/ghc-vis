@@ -1,5 +1,7 @@
 {-# LANGUAGE MagicHash, BangPatterns #-}
 
+-- BCOClosure says 4 ptrs, has only 3
+
 import GHC.HeapView
 import Control.Monad
 import Data.Tree
@@ -18,9 +20,18 @@ t x = unfoldTreeM buildTree x
 
 u = t . asBox
 
--- infinite tree duh
+-- infinite tree duh -- needs MVAR_CLEAN at some weird depth (depends on run)
 f = let y = id (:) () y
     in getClosureData y
+
+g = let y = id (:) () y
+    in y
+
+isM (MVarClosure _ _ _ _) = True
+isM _ = False
+
+isF (FunClosure _ _ _) = True
+isF _ = False
 
 boxAddr :: Box -> Int
 boxAddr (Box any) = fromIntegral $ W# (aToWord# any)

@@ -154,3 +154,11 @@ Node {rootLabel = APClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = AP
           Node {rootLabel = ConsClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = CONSTR_NOCAF_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = [], descr = "ghc-prim:GHC.Tuple.()"}, subForest = []},
           Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []},
           Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []}]}]}]}]}]}
+
+> vacuum (fix (0:))
+fromList [
+  (0,HNode {nodePtrs = [1,2], nodeLits = [], nodeInfo = ConInfo {itabPkg = "ghc-prim", itabMod = "GHC.Types", itabCon = ":", itabPtrs = 2, itabLits = 0, itabType = CONSTR_2_0, itabSrtLen = 1, itabCode = [72,131,195,2,255,101,0,144,176,35,0,0,0,0,0,0]}}),
+  (1,HNode {nodePtrs = [], nodeLits = [0], nodeInfo = ConInfo {itabPkg = "integer-gmp", itabMod = "GHC.Integer.Type", itabCon = "S#", itabPtrs = 0, itabLits = 1, itabType = CONSTR_0_1, itabSrtLen = 0, itabCode = [72,255,195,255,101,0,102,144,0,29,0,0,0,0,0,0]}}),
+  (2,HNode {nodePtrs = [0], nodeLits = [], nodeInfo = OtherInfo {itabPtrs = 1, itabLits = 0, itabType = CAF_BLACKHOLE, itabSrtLen = 0, itabCode = [72,139,67,8,72,169,7,0,0,0,117,65,72,139,8,72]}})]
+
+
