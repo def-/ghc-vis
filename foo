@@ -45,6 +45,25 @@ Node {rootLabel = IndClosure {info = StgInfoTable {ptrs = 1, nptrs = 0, tipe = B
         Node {rootLabel = ConsClosure {info = StgInfoTable {ptrs = 0, nptrs = 1, tipe = CONSTR_0_1, srtlen = 0}, ptrArgs = [], dataArgs = [3], descr = "integer-gmp:GHC.Integer.Type.S#"}, subForest = []},
         Node {rootLabel = ConsClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = CONSTR_NOCAF_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = [], descr = "ghc-prim:GHC.Types.[]"}, subForest = []}]}]}]}]}
 
+fromList [
+  (1080856176,ConsClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = CONSTR_NOCAF_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = [], descr = "ghc-prim:GHC.Types.[]"}),
+  (140157770836720,ConsClosure {info = StgInfoTable {ptrs = 0, nptrs = 1, tipe = CONSTR_0_1, srtlen = 0}, ptrArgs = [], dataArgs = [3], descr = "integer-gmp:GHC.Integer.Type.S#"}),
+  (140157770836736,ConsClosure {info = StgInfoTable {ptrs = 2, nptrs = 0, tipe = CONSTR_2_0, srtlen = 1}, ptrArgs = [0x00007f79047b4b30,0x00000000406c8e70], dataArgs = [], descr = "ghc-prim:GHC.Types.:"}),
+  (140157770836760,ConsClosure {info = StgInfoTable {ptrs = 0, nptrs = 1, tipe = CONSTR_0_1, srtlen = 0}, ptrArgs = [], dataArgs = [2], descr = "integer-gmp:GHC.Integer.Type.S#"}),
+  (140157770836776,ConsClosure {info = StgInfoTable {ptrs = 2, nptrs = 0, tipe = CONSTR_2_0, srtlen = 1}, ptrArgs = [0x00007f78ff485de8,0x00007f78ff4840a8], dataArgs = [], descr = "ghc-prim:GHC.Types.:"}),
+  (140157770836800,ConsClosure {info = StgInfoTable {ptrs = 0, nptrs = 1, tipe = CONSTR_0_1, srtlen = 0}, ptrArgs = [], dataArgs = [1], descr = "integer-gmp:GHC.Integer.Type.S#"}),
+  (140157770836816,ConsClosure {info = StgInfoTable {ptrs = 2, nptrs = 0, tipe = CONSTR_2_0, srtlen = 1}, ptrArgs = [0x00007f78ff485ee8,0x00007f78ff484188], dataArgs = [], descr = "ghc-prim:GHC.Types.:"})]
+
+fromList [
+  (0,HNode {nodePtrs = [1,2], nodeLits = [], nodeInfo = ConInfo {itabPkg = "ghc-prim", itabMod = "GHC.Types", itabCon = ":", itabPtrs = 2, itabLits = 0, itabType = CONSTR_2_0, itabSrtLen = 1, itabCode = [72,131,195,2,255,101,0,144,176,35,0,0,0,0,0,0]}}),
+  (1,HNode {nodePtrs = [], nodeLits = [1], nodeInfo = ConInfo {itabPkg = "integer-gmp", itabMod = "GHC.Integer.Type", itabCon = "S#", itabPtrs = 0, itabLits = 1, itabType = CONSTR_0_1, itabSrtLen = 0, itabCode = [72,255,195,255,101,0,102,144,16,29,0,0,0,0,0,0]}}),
+  (2,HNode {nodePtrs = [3,4], nodeLits = [], nodeInfo = ConInfo {itabPkg = "ghc-prim", itabMod = "GHC.Types", itabCon = ":", itabPtrs = 2, itabLits = 0, itabType = CONSTR_2_0, itabSrtLen = 1, itabCode = [72,131,195,2,255,101,0,144,176,35,0,0,0,0,0,0]}}),
+  (3,HNode {nodePtrs = [], nodeLits = [2], nodeInfo = ConInfo {itabPkg = "integer-gmp", itabMod = "GHC.Integer.Type", itabCon = "S#", itabPtrs = 0, itabLits = 1, itabType = CONSTR_0_1, itabSrtLen = 0, itabCode = [72,255,195,255,101,0,102,144,16,29,0,0,0,0,0,0]}}),
+  (4,HNode {nodePtrs = [5,6], nodeLits = [], nodeInfo = ConInfo {itabPkg = "ghc-prim", itabMod = "GHC.Types", itabCon = ":", itabPtrs = 2, itabLits = 0, itabType = CONSTR_2_0, itabSrtLen = 1, itabCode = [72,131,195,2,255,101,0,144,176,35,0,0,0,0,0,0]}}),
+  (5,HNode {nodePtrs = [], nodeLits = [3], nodeInfo = ConInfo {itabPkg = "integer-gmp", itabMod = "GHC.Integer.Type", itabCon = "S#", itabPtrs = 0, itabLits = 1, itabType = CONSTR_0_1, itabSrtLen = 0, itabCode = [72,255,195,255,101,0,102,144,16,29,0,0,0,0,0,0]}}),
+  (6,HNode {nodePtrs = [], nodeLits = [], nodeInfo = ConInfo {itabPkg = "ghc-prim", itabMod = "GHC.Types", itabCon = "[]", itabPtrs = 0, itabLits = 0, itabType = CONSTR_NOCAF_STATIC, itabSrtLen = 0, itabCode = [72,255,195,255,101,0,102,144,184,35,0,0,0,0,0,0]}})]
+
+
 > :print x
 x = 1 : 2 : (_t4::[Integer])
 > t $ asBox x
@@ -83,4 +102,39 @@ Node {rootLabel = APClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = AP
               Node {rootLabel = ArrWordsClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = ARR_WORDS, srtlen = 0}, bytes = 16, words = [3,1084533064]}, subForest = []},
               Node {rootLabel = MutArrClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = MUT_ARR_PTRS_FROZEN, srtlen = 0}, mccPtrs = 2, mccSize = 1109490808, mccPayload = [0x0000000042217c78]}, subForest = [
                 Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []}]}]},
-            Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []}]}]}]}]}]}]}
+            ode {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []}]}]}]}]}]}]}
+
+Node {rootLabel = PAPClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = PAP, srtlen = 0}, arity = 2249271680, n_args = 32555, fun = 0x00007f2b86112980, payload = []}, subForest = [
+  Node {rootLabel = BCOClosure {info = StgInfoTable {ptrs = 4, nptrs = 0, tipe = BCO, srtlen = 0}, instrs = 0x00007f2b86112a18, literals = 0x00007f2b86112a60, bcoptrs = 0x00007f2b86112a70, arity = 1, size = 7, bitmap = 1}, subForest = [
+    Node {rootLabel = ArrWordsClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = ARR_WORDS, srtlen = 0}, bytes = 50, words = [7036874417766400,562954248454173,8725724278358017,281496451612674,1407460782964738,562967134994434,35848238]}, subForest = []},
+    Node {rootLabel = ArrWordsClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = ARR_WORDS, srtlen = 0}, bytes = 0, words = []}, subForest = []},
+    Node {rootLabel = MutArrClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = MUT_ARR_PTRS_FROZEN, srtlen = 0}, mccPtrs = 4, mccSize = 139824909593472, mccPayload = [0x00007f2b86112b80,0x00007f2b86112948,0x0000000042243770]}, subForest = [
+      Node {rootLabel = BCOClosure {info = StgInfoTable {ptrs = 4, nptrs = 0, tipe = BCO, srtlen = 0}, instrs = 0x00007f2b86112be8, literals = 0x00007f2b86112c18, bcoptrs = 0x00007f2b86112c28, arity = 2, size = 7, bitmap = 2}, subForest = [
+        Node {rootLabel = ArrWordsClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = ARR_WORDS, srtlen = 0}, bytes = 32, words = [4503599627370496,1407379178520579,281496452923392,12947857518952474]}, subForest = []},
+        Node {rootLabel = ArrWordsClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = ARR_WORDS, srtlen = 0}, bytes = 0, words = []}, subForest = []},
+        Node {rootLabel = MutArrClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = MUT_ARR_PTRS_FROZEN, srtlen = 0}, mccPtrs = 3, mccSize = 1109757424, mccPayload = [0x0000000042258df0,0x0000000042258cd8]}, subForest = [
+          Node {rootLabel = ConsClosure {info = StgInfoTable {ptrs = 7, nptrs = 0, tipe = CONSTR_STATIC, srtlen = 0}, ptrArgs = [0x0000000040843b28/2,0x0000000040843b20/2,0x0000000040843b18/2,0x0000000040843b68/1,0x0000000040843ba0/1,0x0000000040843a80/1,0x0000000042258de8/1], dataArgs = [], descr = "base:GHC.Num.D:Num"}, subForest = [
+            Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []},
+            Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []},
+            Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []},
+            Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 1}, ptrArgs = [], dataArgs = []}, subForest = []},
+            Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 1}, ptrArgs = [], dataArgs = []}, subForest = []},
+            Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []},
+            Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []}]},
+          Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []}]}]},
+      Node {rootLabel = APClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = AP, srtlen = 0}, arity = 2276541912, n_args = 0, fun = 0x00007f2b861129e8, payload = []}, subForest = [
+        Node {rootLabel = BCOClosure {info = StgInfoTable {ptrs = 4, nptrs = 0, tipe = BCO, srtlen = 0}, instrs = 0x00007f2b86112ad8, literals = 0x00007f2b86112b20, bcoptrs = 0x00007f2b86112b50, arity = 0, size = 6, bitmap = 0}, subForest = [
+          Node {rootLabel = ArrWordsClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = ARR_WORDS, srtlen = 0}, bytes = 56, words = [7881299347898368,9288678526418957,563005788061697,281487863775233,1407374883618819,281496452923392,12947857518952474]}, subForest = []},
+          Node {rootLabel = ArrWordsClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = ARR_WORDS, srtlen = 0}, bytes = 32, words = [4,1082399048,1,1082399048]}, subForest = []},
+          Node {rootLabel = MutArrClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = MUT_ARR_PTRS_FROZEN, srtlen = 0}, mccPtrs = 3, mccSize = 1109686496, mccPayload = [0x00000000422478e0,0x0000000042246640]}, subForest = [
+            Node {rootLabel = ConsClosure {info = StgInfoTable {ptrs = 8, nptrs = 0, tipe = CONSTR_STATIC, srtlen = 0}, ptrArgs = [0x0000000042247810/1,0x0000000042247828/1,0x00000000422477f0/1,0x00000000422477e8/1,0x0000000042247850/1,0x0000000042247860/2,0x00000000422478b8/2,0x00000000422478d0/3], dataArgs = [], descr = "base:GHC.Enum.D:Enum"}, subForest = [
+              Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 1}, ptrArgs = [], dataArgs = []}, subForest = []},
+              Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 1}, ptrArgs = [], dataArgs = []}, subForest = []},
+              Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []},
+              Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []},
+              Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 1}, ptrArgs = [], dataArgs = []}, subForest = []},
+              Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []},
+              Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 3}, ptrArgs = [], dataArgs = []}, subForest = []},
+              Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 1}, ptrArgs = [], dataArgs = []}, subForest = []}]},
+            Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []}]}]}]},
+        Node {rootLabel = FunClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = FUN_STATIC, srtlen = 0}, ptrArgs = [], dataArgs = []}, subForest = []}]}]}]}
