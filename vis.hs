@@ -113,10 +113,10 @@ tprint h (ConsClosure (StgInfoTable 1 0 CONSTR_1_0 1) [bPtr] [] _ "Data.Maybe" "
   = "Just " ++ tprint h cPtr
   where cPtr = myLookup bPtr h
 
-tprint h (ConsClosure (StgInfoTable _ _ CONSTR_NOCAF_STATIC _) _ _ _ _ name)
+tprint h (ConsClosure (StgInfoTable 0 0 CONSTR_NOCAF_STATIC 0) [] [] _ _ name)
   = name
 
-tprint h (ConsClosure (StgInfoTable _ _ CONSTR_2_0 _) [bHead,bTail] _ _ "GHC.Types" ":")
+tprint h (ConsClosure (StgInfoTable 2 0 CONSTR_2_0 1) [bHead,bTail] [] _ "GHC.Types" ":")
   = tprint h cHead ++ ":" ++ tprint h cTail
   where cHead = myLookup bHead h
         cTail = myLookup bTail h
@@ -124,7 +124,7 @@ tprint h (ConsClosure (StgInfoTable _ _ CONSTR_2_0 _) [bHead,bTail] _ _ "GHC.Typ
 tprint h (ArrWordsClosure (StgInfoTable 0 0 ARR_WORDS 0) bytes arrWords)
   = intercalate "," (map (printf "0x%x") arrWords :: [String])
 
-tprint h (IndClosure (StgInfoTable _ _ BLACKHOLE _) b)
+tprint h (IndClosure (StgInfoTable 1 0 BLACKHOLE 0) b)
   = tprint h c
   where c = myLookup b h
 
@@ -135,8 +135,19 @@ tprint h (ThunkClosure (StgInfoTable 1 1 THUNK_1_1 0) [bPtr] [arg])
   = "Thunk(" ++ (tprint h cPtr) ++ ", " ++ show arg ++ ")"
   where cPtr = myLookup bPtr h
 
+tprint h (ThunkClosure (StgInfoTable 3 0 THUNK 0) [bPtr1, bPtr2, bPtr3] [])
+  = "Thunk(" ++ (tprint h cPtr1) ++ ", " ++ (tprint h cPtr2) ++ ", " ++ (tprint h cPtr3) ++ ", " ++ ")"
+  where cPtr1 = myLookup bPtr1 h
+        cPtr2 = myLookup bPtr2 h
+        cPtr3 = myLookup bPtr3 h
+
 tprint h (FunClosure (StgInfoTable 0 1 tipe 0) [] [arg])
   = "Fun(" ++ show arg ++ ")"
+
+tprint h (FunClosure (StgInfoTable 2 0 tipe 0) [bPtr1, bPtr2] [])
+  = "Fun(" ++ (tprint h cPtr1) ++ ", " ++ (tprint h cPtr2) ++ ")"
+  where cPtr1 = myLookup bPtr1 h
+        cPtr2 = myLookup bPtr2 h
 
 tprint _ c = "Missing pattern for " ++ show c
 
