@@ -17,6 +17,20 @@ import Unsafe.Coerce
 import Data.IntMap(IntMap)
 import qualified Data.IntMap as IntMap
 
+-- Temporarily, probably use System.Mem.StableName
+instance Ord Box
+  where compare x y = compare (show x) (show y)
+
+--instance Ord NBox
+--  where compare (NamedBox _ a) (NamedBox _ b) = compare a b
+--        compare (NamedBox _ a) (UnnamedBox b) = compare a b
+--        compare (UnnamedBox a) (UnnamedBox b) = compare a b
+--        compare (UnnamedBox a) (NamedBox _ b) = compare a b
+
+data NBox = NamedBox String Box
+          | UnnamedBox Box
+          deriving (Eq,Ord)
+
 buildTree x = do
   cd <- getBoxedClosureData x
   return (cd, allPtrs cd)
