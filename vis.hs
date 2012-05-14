@@ -4,6 +4,7 @@
 
 import GHC.HeapView
 import Control.Monad
+import Control.Monad.State
 import Data.Tree
 import Data.Word
 import Data.Char
@@ -20,6 +21,12 @@ import qualified Data.Map as Map
 --import Data.IntMap(IntMap)
 --import qualified Data.IntMap as IntMap
 
+type HeapEntry = (Maybe String, Closure)
+type HeapMap   = Map Box HeapEntry
+--type PrintState = State HeapMap
+type PrintState = State (Integer, HeapMap)
+
+-- TODO: Doesn't work!
 -- Temporarily, probably use System.Mem.StableName
 instance Ord Box
   where compare x y = compare (show x) (show y)
@@ -62,6 +69,7 @@ isF _ = False
 
 -- Run performGC from System.Mem first to get pointers not to change as much
 -- while executing
+walkHeap :: a -> IO HeapMap
 walkHeap a = go (asBox a) Map.empty
   where go b l = case Map.lookup b l of
                    Just _  -> return l
@@ -81,13 +89,17 @@ walkHeap a = go (asBox a) Map.empty
 --                      return $ (ins b c ims)
 
 dprint a = do h <- walkHeap a
-              return (tprint h (myLookup (asBox a) h))
+              return $ evalState (mprint (myLookup (asBox a) h)) (0,h)
 
 myLookup b h = fromJust $ Map.lookup b h
 
-tprint :: Map Box (Maybe String, Closure) -> (Maybe String, Closure) -> String
-tprint h (_,(ConsClosure (StgInfoTable _ _ CONSTR_0_1 _) _ [dataArg] _ modl name)) =
- case (modl, name) of
+mlp :: Box -> PrintState String
+mlp b = do (_,h) <- get
+           mprint $ fromJust $ Map.lookup b h
+
+mprint :: HeapEntry -> PrintState String
+mprint (_,ConsClosure (StgInfoTable _ _ CONSTR_0_1 _) _ [dataArg] _ modl name) =
+ return $ case (modl, name) of
     k | k `elem` [ ("GHC.Word", "W#")
                  , ("GHC.Word", "W8#")
                  , ("GHC.Word", "W16#")
@@ -110,67 +122,65 @@ tprint h (_,(ConsClosure (StgInfoTable _ _ CONSTR_0_1 _) _ [dataArg] _ modl name
 
     c -> "Missing ConsClosure pattern for " ++ show c
 
-tprint h (_,ConsClosure (StgInfoTable 1 3 CONSTR 0) [bPtr] [_,start,end] _ "Data.ByteString.Internal" "PS")
-  = (printf "ByteString[%d,%d]" start end) ++ "(" ++ (tprint h cPtr) ++ ")"
-  where cPtr = myLookup bPtr h
+mprint (_,ConsClosure (StgInfoTable 1 3 CONSTR 0) [bPtr] [_,start,end] _ "Data.ByteString.Internal" "PS")
+  = do cPtr  <- mlp bPtr
+       return $ printf "ByteString[%d,%d](%s)" start end cPtr
 
-tprint h (_,ConsClosure (StgInfoTable 2 3 CONSTR 1) [bPtr1,bPtr2] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
-  = (printf "Chunk[%d,%d]" start end) ++ "(" ++ (tprint h cPtr1) ++ " | " ++ (tprint h cPtr2) ++ ")"
-  where cPtr1 = myLookup bPtr1 h
-        cPtr2 = myLookup bPtr2 h
+mprint (_,ConsClosure (StgInfoTable 2 3 CONSTR 1) [bPtr1,bPtr2] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
+  = do cPtr1 <- mlp bPtr1
+       cPtr2 <- mlp bPtr2
+       return $ printf "Chunk[%d,%d](%s|%s)" start end cPtr1 cPtr2
 
-tprint h (_,ConsClosure (StgInfoTable 1 0 CONSTR_1_0 2) [bPtr] [] _ "GHC.ForeignPtr" "PlainPtr")
-  = tprint h cPtr
-  where cPtr = myLookup bPtr h
+mprint (_,ConsClosure (StgInfoTable 1 0 CONSTR_1_0 2) [bPtr] [] _ "GHC.ForeignPtr" "PlainPtr")
+  = mlp bPtr
 
-tprint h (_,ConsClosure (StgInfoTable 1 0 CONSTR_1_0 1) [bPtr] [] _ "Data.Maybe" "Just")
-  = "Just " ++ tprint h cPtr
-  where cPtr = myLookup bPtr h
+mprint (_,ConsClosure (StgInfoTable 1 0 CONSTR_1_0 1) [bPtr] [] _ _ name)
+  = do cPtr <- mlp bPtr
+       return $ name ++ cPtr
 
-tprint h (_,ConsClosure (StgInfoTable 0 0 CONSTR_NOCAF_STATIC 0) [] [] _ _ name)
-  = name
+mprint (_,ConsClosure (StgInfoTable 0 0 CONSTR_NOCAF_STATIC 0) [] [] _ _ name)
+  = return name
 
-tprint h (_,ConsClosure (StgInfoTable 0 _ CONSTR_NOCAF_STATIC 0) [] args _ _ name)
-  = name ++ show args
+mprint (_,ConsClosure (StgInfoTable 0 _ CONSTR_NOCAF_STATIC 0) [] args _ _ name)
+  = return $ name ++ show args
 
-tprint h (_,ConsClosure (StgInfoTable 2 0 CONSTR_2_0 1) [bHead,bTail] [] _ "GHC.Types" ":")
-  = tprint h cHead ++ ":" ++ tprint h cTail
-  where cHead = myLookup bHead h
-        cTail = myLookup bTail h
+mprint (_,ConsClosure (StgInfoTable 2 0 CONSTR_2_0 1) [bHead,bTail] [] _ "GHC.Types" ":")
+  = do cHead <- mlp bHead
+       cTail <- mlp bTail
+       return $ cHead ++ ":" ++ cTail
 
-tprint h (_,ArrWordsClosure (StgInfoTable 0 0 ARR_WORDS 0) bytes arrWords)
-  = intercalate "," (map (printf "0x%x") arrWords :: [String])
+mprint (_,ArrWordsClosure (StgInfoTable 0 0 ARR_WORDS 0) bytes arrWords)
+  = return $ intercalate "," (map (printf "0x%x") arrWords :: [String])
 
-tprint h (_,IndClosure (StgInfoTable 1 0 BLACKHOLE 0) b)
-  = tprint h c
-  where c = myLookup b h
+mprint (_,IndClosure (StgInfoTable 1 0 BLACKHOLE 0) b)
+  = mlp b
 
-tprint h (_,ThunkClosure (StgInfoTable 0 0 THUNK_STATIC 3) [] [])
-  = "Thunk"
+mprint (_,ThunkClosure (StgInfoTable 0 0 THUNK_STATIC 3) [] [])
+  = return "Thunk"
 
-tprint h (_,ThunkClosure (StgInfoTable 1 1 THUNK_1_1 0) [bPtr] [arg])
-  = "Thunk(" ++ (tprint h cPtr) ++ ", " ++ show arg ++ ")"
-  where cPtr = myLookup bPtr h
+mprint (_,ThunkClosure (StgInfoTable 1 1 THUNK_1_1 0) [bPtr] [arg])
+  = do cPtr <- mlp bPtr
+       return $ printf "Thunk(%s, %s)" cPtr (show arg)
 
-tprint h (_,ThunkClosure (StgInfoTable 2 0 THUNK_2_0 0) [bPtr1, bPtr2] [])
-  = "Thunk(" ++ (tprint h cPtr1) ++ ", " ++ (tprint h cPtr2) ++ ")"
-  where cPtr1 = myLookup bPtr1 h
-        cPtr2 = myLookup bPtr2 h
+mprint (_,ThunkClosure (StgInfoTable 2 0 THUNK_2_0 0) [bPtr1, bPtr2] [])
+  = do cPtr1 <- mlp bPtr1
+       cPtr2 <- mlp bPtr2
+       return $ printf "Thunk(%s, %s)" cPtr1 cPtr2
 
-tprint h (_,ThunkClosure (StgInfoTable 3 0 THUNK 0) [bPtr1, bPtr2, bPtr3] [])
-  = "Thunk(" ++ (tprint h cPtr1) ++ ", " ++ (tprint h cPtr2) ++ ", " ++ (tprint h cPtr3) ++ ")"
-  where cPtr1 = myLookup bPtr1 h
-        cPtr2 = myLookup bPtr2 h
-        cPtr3 = myLookup bPtr3 h
+mprint (_,ThunkClosure (StgInfoTable 3 0 THUNK 0) [bPtr1, bPtr2, bPtr3] [])
+  = do cPtr1 <- mlp bPtr1
+       cPtr2 <- mlp bPtr2
+       cPtr3 <- mlp bPtr3
+       return $ printf "Thunk(%s, %s, %s)" cPtr1 cPtr2 cPtr3
 
-tprint h (_,FunClosure (StgInfoTable 0 1 tipe 0) [] [arg])
-  = "Fun(" ++ show arg ++ ")"
+mprint (_,FunClosure (StgInfoTable 0 1 tipe 0) [] [arg])
+  = return $ "Fun(" ++ show arg ++ ")"
 
-tprint h (_,FunClosure (StgInfoTable 2 0 tipe 0) [bPtr1, bPtr2] [])
-  = "Fun(" ++ (tprint h cPtr1) ++ ", " ++ (tprint h cPtr2) ++ ")"
-  where cPtr1 = myLookup bPtr1 h
-        cPtr2 = myLookup bPtr2 h
+mprint (_,FunClosure (StgInfoTable 2 0 tipe 0) [bPtr1, bPtr2] [])
+  = do cPtr1 <- mlp bPtr1
+       cPtr2 <- mlp bPtr2
+       return $ printf "Fun(%s, %s)" cPtr1 cPtr2
 
-tprint _ c = "Missing pattern for " ++ show c
+mprint c = return $ "Missing pattern for " ++ show c
 
 tseq (Box a) = seq a ()
