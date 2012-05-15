@@ -14,9 +14,6 @@ import GHC.Prim
 import GHC.Exts
 import Text.Printf
 import Unsafe.Coerce
-import System.Mem.StableName
-import System.Mem
-import System.IO.Unsafe
 
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -34,11 +31,7 @@ type PrintState = State (Integer, HeapMap)
 -- TODO: Doesn't work!
 -- Temporarily, probably use System.Mem.StableName
 instance Ord Box
-  where compare (Box x) (Box y) = compare (snhash x) (snhash y)
-          where snhash x = unsafePerformIO (makeStableName x >>= \n -> return $ hashStableName n)
-
-instance Ord (StableName a)
-  where compare x y = compare (hashStableName x) (hashStableName y)
+  where compare x y = compare (show x) (show y)
 
 buildTree x = do
   cd <- getBoxedClosureData x
