@@ -173,3 +173,19 @@ fromList [
   (140505249405816,MutArrClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = MUT_ARR_PTRS_FROZEN, srtlen = 0}, mccPtrs = 0, mccSize = 0, mccPayload = []}),
   (140505249406400,BCOClosure {info = StgInfoTable {ptrs = 4, nptrs = 0, tipe = BCO, srtlen = 0}, instrs = 0x00007fc9ed7adb30, literals = 0x00007fc9ed7adb60, bcoptrs = 0x00007fc9ed7adb78, arity = 2, size = 7, bitmap = 2}),
   (140505249410600,APClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = AP, srtlen = 0}, arity = 4011107920, n_args = 0, fun = 0x00007fc9ed7ad5c0, payload = []})]
+
+> vacuum a -- from reify paper cycle [...]
+fromList [
+  (0,HNode {nodePtrs = [1,2], nodeLits = [], nodeInfo = ConInfo {itabPkg = "ghc-prim", itabMod = "GHC.Types", itabCon = ":", itabPtrs = 2, itabLits = 0, itabType = CONSTR_2_0, itabSrtLen = 1, itabCode = [72,131,195,2,255,101,0,144,176,35,0,0,0,0,0,0]}}),
+  (1,HNode {nodePtrs = [3,4], nodeLits = [], nodeInfo = ConInfo {itabPkg = "ghc-prim", itabMod = "GHC.Types", itabCon = ":", itabPtrs = 2, itabLits = 0, itabType = CONSTR_2_0, itabSrtLen = 1, itabCode = [72,131,195,2,255,101,0,144,176,35,0,0,0,0,0,0]}}),
+  (2,HNode {nodePtrs = [9,10], nodeLits = [], nodeInfo = ConInfo {itabPkg = "ghc-prim", itabMod = "GHC.Types", itabCon = ":", itabPtrs = 2, itabLits = 0, itabType = CONSTR_2_0, itabSrtLen = 1, itabCode = [72,131,195,2,255,101,0,144,176,35,0,0,0,0,0,0]}}),
+  (3,HNode {nodePtrs = [], nodeLits = [1], nodeInfo = ConInfo {itabPkg = "integer-gmp", itabMod = "GHC.Integer.Type", itabCon = "S#", itabPtrs = 0, itabLits = 1, itabType = CONSTR_0_1, itabSrtLen = 0, itabCode = [72,255,195,255,101,0,102,144,0,29,0,0,0,0,0,0]}}),
+  (4,HNode {nodePtrs = [5,6], nodeLits = [], nodeInfo = ConInfo {itabPkg = "ghc-prim", itabMod = "GHC.Types", itabCon = ":", itabPtrs = 2, itabLits = 0, itabType = CONSTR_2_0, itabSrtLen = 1, itabCode = [72,131,195,2,255,101,0,144,176,35,0,0,0,0,0,0]}}),
+  (5,HNode {nodePtrs = [], nodeLits = [2], nodeInfo = ConInfo {itabPkg = "integer-gmp", itabMod = "GHC.Integer.Type", itabCon = "S#", itabPtrs = 0, itabLits = 1, itabType = CONSTR_0_1, itabSrtLen = 0, itabCode = [72,255,195,255,101,0,102,144,0,29,0,0,0,0,0,0]}}),
+  (6,HNode {nodePtrs = [7,8], nodeLits = [], nodeInfo = ConInfo {itabPkg = "ghc-prim", itabMod = "GHC.Types", itabCon = ":", itabPtrs = 2, itabLits = 0, itabType = CONSTR_2_0, itabSrtLen = 1, itabCode = [72,131,195,2,255,101,0,144,176,35,0,0,0,0,0,0]}}),
+  (7,HNode {nodePtrs = [], nodeLits = [3], nodeInfo = ConInfo {itabPkg = "integer-gmp", itabMod = "GHC.Integer.Type", itabCon = "S#", itabPtrs = 0, itabLits = 1, itabType = CONSTR_0_1, itabSrtLen = 0, itabCode = [72,255,195,255,101,0,102,144,0,29,0,0,0,0,0,0]}}),
+  (8,HNode {nodePtrs = [], nodeLits = [], nodeInfo = ConInfo {itabPkg = "ghc-prim", itabMod = "GHC.Types", itabCon = "[]", itabPtrs = 0, itabLits = 0, itabType = CONSTR_NOCAF_STATIC, itabSrtLen = 0, itabCode = [72,255,195,255,101,0,102,144,184,35,0,0,0,0,0,0]}}),
+  
+  (9,HNode {nodePtrs = [11,1], nodeLits = [], nodeInfo = ConInfo {itabPkg = "ghc-prim", itabMod = "GHC.Types", itabCon = ":", itabPtrs = 2, itabLits = 0, itabType = CONSTR_2_0, itabSrtLen = 1, itabCode = [72,131,195,2,255,101,0,144,176,35,0,0,0,0,0,0]}}),
+  (10,HNode {nodePtrs = [1,0], nodeLits = [], nodeInfo = ConInfo {itabPkg = "ghc-prim", itabMod = "GHC.Types", itabCon = ":", itabPtrs = 2, itabLits = 0, itabType = CONSTR_2_0, itabSrtLen = 1, itabCode = [72,131,195,2,255,101,0,144,176,35,0,0,0,0,0,0]}}),
+  (11,HNode {nodePtrs = [], nodeLits = [0], nodeInfo = ConInfo {itabPkg = "integer-gmp", itabMod = "GHC.Integer.Type", itabCon = "S#", itabPtrs = 0, itabLits = 1, itabType = CONSTR_0_1, itabSrtLen = 0, itabCode = [72,255,195,255,101,0,102,144,0,29,0,0,0,0,0,0]}})]
