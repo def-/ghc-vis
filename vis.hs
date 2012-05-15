@@ -18,6 +18,8 @@ import Unsafe.Coerce
 import Data.Map (Map)
 import qualified Data.Map as Map
 
+data Foo a = Foo a
+
 --import Data.IntMap(IntMap)
 --import qualified Data.IntMap as IntMap
 
@@ -132,6 +134,11 @@ getSetName b = do mn <- getName b
                                     return $ fromJust n
                     Just name -> return name
 
+mbParens t@('"':_) = t
+mbParens t@('(':_) = t
+mbParens t | ' ' `elem` t = "(" ++ t ++ ")"
+           | otherwise    = t
+
 -- TODO: Make examples.hs
 -- TODO: Generalize mprint
 
@@ -160,11 +167,11 @@ mprint _ (ConsClosure (StgInfoTable _ _ _ _) _ [dataArg] _ modl name) =
 
     c -> "Missing ConsClosure pattern for " ++ show c
 
-mprint _ (ConsClosure (StgInfoTable 1 3 CONSTR 0) [bPtr] [_,start,end] _ "Data.ByteString.Internal" "PS")
+mprint _ (ConsClosure (StgInfoTable 1 3 _ 0) [bPtr] [_,start,end] _ "Data.ByteString.Internal" "PS")
   = do cPtr  <- mlp bPtr
        return $ printf "ByteString[%d,%d](%s)" start end cPtr
 
-mprint _ (ConsClosure (StgInfoTable 2 3 CONSTR 1) [bPtr1,bPtr2] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
+mprint _ (ConsClosure (StgInfoTable 2 3 _ 1) [bPtr1,bPtr2] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
   = do cPtr1 <- mlp bPtr1
        cPtr2 <- mlp bPtr2
        return $ printf "Chunk[%d,%d](%s|%s)" start end cPtr1 cPtr2
@@ -174,18 +181,18 @@ mprint _ (ConsClosure (StgInfoTable 2 3 CONSTR 1) [bPtr1,bPtr2] [_,start,end] _ 
 
 mprint _ (ConsClosure (StgInfoTable 1 0 CONSTR_1_0 _) [bPtr] [] _ _ name)
   = do cPtr <- mlp bPtr
-       return $ printf "%s (%s)" name cPtr
+       return $ name ++ " " ++ mbParens cPtr
 
-mprint _ (ConsClosure (StgInfoTable 0 0 CONSTR_NOCAF_STATIC _) [] [] _ _ name)
-  = return name
+--mprint _ (ConsClosure (StgInfoTable 0 0 CONSTR_NOCAF_STATIC _) [] [] _ _ name)
+--  = return name
 
 mprint _ (ConsClosure (StgInfoTable 0 _ CONSTR_NOCAF_STATIC _) [] args _ _ name)
-  = return $ printf "%s (%s)" name (show args)
+  = return $ name ++ " " ++ show args
 
 mprint _ (ConsClosure (StgInfoTable 2 0 CONSTR_2_0 1) [bHead,bTail] [] _ "GHC.Types" ":")
   = do cHead <- mlp bHead
        cTail <- mlp bTail
-       return $ printf "%s : %s" cHead cTail
+       return $ printf "%s:%s" cHead cTail
 
 mprint _ (ArrWordsClosure (StgInfoTable 0 0 ARR_WORDS 0) bytes arrWords)
   = return $ intercalate "," (map (printf "0x%x") arrWords :: [String])
@@ -193,22 +200,22 @@ mprint _ (ArrWordsClosure (StgInfoTable 0 0 ARR_WORDS 0) bytes arrWords)
 mprint _ (IndClosure (StgInfoTable 1 0 BLACKHOLE 0) b)
   = mlp b
 
-mprint b (ThunkClosure (StgInfoTable 0 0 THUNK_STATIC 3) [] [])
-  = getSetName b
+--mprint b (ThunkClosure (StgInfoTable 0 0 THUNK_STATIC 3) [] [])
+--  = getSetName b
 
-mprint b (ThunkClosure (StgInfoTable 1 1 THUNK_1_1 0) [bPtr] [arg])
-  = do name <- getSetName b
-       cPtr <- mlp bPtr
-       return $ printf "%s(%s, %s)" name cPtr (show arg)
+--mprint b (ThunkClosure (StgInfoTable 1 1 THUNK_1_1 0) [bPtr] [arg])
+--  = do name <- getSetName b
+--       cPtr <- mlp bPtr
+--       return $ printf "%s[%s](%s)" name (show arg) cPtr
 
 -- TODO: Reverse order of ptrs?
 mprint b (ThunkClosure (StgInfoTable _ _ _ _) bPtrs args)
   = do name <- getSetName b
        cPtrs <- mapM mlp bPtrs
-       let cArgs = map show args
-           tPtrs = intercalate ", " cPtrs
-           tArgs = intercalate ", " cArgs
-       return $ printf "%s(%s | %s)" name tPtrs tArgs
+       let tPtrs = intercalate ", " cPtrs
+       return $ case null args of
+         True  -> name ++ "(" ++ tPtrs ++ ")"
+         False -> name ++ show args ++ "(" ++ tPtrs ++ ")"
 
 --mprint b (ThunkClosure (StgInfoTable 3 0 THUNK 0) [bPtr1, bPtr2, bPtr3] [])
 --  = do name <- getSetName b
@@ -225,12 +232,13 @@ mprint b (ThunkClosure (StgInfoTable _ _ _ _) bPtrs args)
 --       cPtr2 <- mlp bPtr2
 --       return $ printf "Fun(%s, %s)" cPtr1 cPtr2
 
-mprint _ (FunClosure (StgInfoTable _ _ _ _) bPtrs args)
-  = do cPtrs <- mapM mlp bPtrs
-       let cArgs = map show args
-           tPtrs = intercalate ", " cPtrs
-           tArgs = intercalate ", " cArgs
-       return $ printf "Fun(%s | %s)" tPtrs tArgs
+mprint b (FunClosure (StgInfoTable _ _ _ _) bPtrs args)
+  = do name <- getSetName b
+       cPtrs <- mapM mlp bPtrs
+       let tPtrs = intercalate ", " cPtrs
+       return $ case null args of
+         True  -> name ++ "(" ++ tPtrs ++ ")"
+         False -> name ++ show args ++ "(" ++ tPtrs ++ ")"
 
 mprint b (APClosure (StgInfoTable 0 0 _ _) _ _ _ _)
   = getSetName b
