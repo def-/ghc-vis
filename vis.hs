@@ -67,7 +67,7 @@ walkHeap a = go (asBox a) Map.empty
                    Just _  -> return l
                    Nothing -> do
                      c' <- getBoxedClosureData b
-                     l' <- foldM (\l x -> go x l) l (allPtrs c')
+                     l' <- foldM (\l x -> go x l) (Map.insert b (Nothing, c') l) (allPtrs c')
                      return $ (Map.insert b (Nothing, c') l')
 
 --walkHeapDepth a d = go (asBox a) d IntMap.empty
@@ -173,16 +173,21 @@ mprint _ (ConsClosure (StgInfoTable 1 0 CONSTR_1_0 _) [bPtr] [] _ _ name)
   = do cPtr <- mlp bPtr
        return $ name ++ " " ++ mbParens cPtr
 
---mprint _ (ConsClosure (StgInfoTable 0 0 CONSTR_NOCAF_STATIC _) [] [] _ _ name)
---  = return name
+mprint _ (ConsClosure (StgInfoTable 0 0 CONSTR_NOCAF_STATIC _) [] [] _ _ name)
+  = return name
 
 mprint _ (ConsClosure (StgInfoTable 0 _ CONSTR_NOCAF_STATIC _) [] args _ _ name)
   = return $ name ++ " " ++ show args
 
-mprint _ (ConsClosure (StgInfoTable 2 0 CONSTR_2_0 1) [bHead,bTail] [] _ "GHC.Types" ":")
-  = do cHead <- mlp bHead
-       cTail <- mlp bTail
-       return $ printf "%s:%s" cHead cTail
+mprint b (ConsClosure (StgInfoTable 2 0 CONSTR_2_0 1) [bHead,bTail] [] _ "GHC.Types" ":")
+  = do b' <- getName b
+       case b' of
+         Just n  -> return n
+         Nothing -> do setName b
+                       n <- liftM fromJust $ getName b
+                       cHead <- mlp bHead
+                       cTail <- mlp bTail
+                       return $ printf "%s=(%s:%s)" n cHead cTail
 
 mprint _ (ArrWordsClosure (StgInfoTable 0 0 ARR_WORDS 0) bytes arrWords)
   = return $ intercalate "," (map (printf "0x%x") arrWords :: [String])
