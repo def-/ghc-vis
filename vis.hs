@@ -1,7 +1,5 @@
 {-# LANGUAGE MagicHash, BangPatterns #-}
 
--- BCOClosure says 4 ptrs, has only 3
-
 import GHC.HeapView
 import Control.Monad
 import Control.Monad.State
@@ -59,6 +57,11 @@ isF _ = False
 --boxAddr :: Box -> Int
 --boxAddr (Box any) = fromIntegral $ W# (aToWord# any)
 
+-- Don't inspect deep pointers in BCOClosures for now, they never end
+-- TODO: What we could do is output the instrs and literals of it
+nearlyAllPtrs (BCOClosure (StgInfoTable _ _ _ _) i l _b _ _ _) = [i,l]
+nearlyAllPtrs x = allPtrs x
+
 -- Run performGC from System.Mem first to get pointers not to change as much
 -- while executing
 walkHeap :: a -> IO HeapMap
@@ -67,7 +70,7 @@ walkHeap a = go (asBox a) Map.empty
                    Just _  -> return l
                    Nothing -> do
                      c' <- getBoxedClosureData b
-                     l' <- foldM (\l x -> go x l) (Map.insert b (Nothing, c') l) (allPtrs c')
+                     l' <- foldM (\l x -> go x l) (Map.insert b (Nothing, c') l) (nearlyAllPtrs c')
                      return $ (Map.insert b (Nothing, c') l')
 
 --walkHeapDepth a d = go (asBox a) d IntMap.empty
@@ -129,6 +132,12 @@ mbParens t@('(':_) = t
 mbParens t | ' ' `elem` t = "(" ++ t ++ ")"
            | otherwise    = t
 
+countReferences :: Box -> PrintState Int
+countReferences b = do
+  (_,h) <- get
+  return $ sum $ map countR (Map.elems h)
+ where countR (_,c) = length $ filter (== b) $ allPtrs c
+
 -- TODO: Make examples.hs
 -- TODO: Generalize mprint
 
@@ -166,9 +175,6 @@ mprint _ (ConsClosure (StgInfoTable 2 3 _ 1) [bPtr1,bPtr2] [_,start,end] _ "Data
        cPtr2 <- mlp bPtr2
        return $ printf "Chunk[%d,%d](%s|%s)" start end cPtr1 cPtr2
 
---mprint _ (ConsClosure (StgInfoTable 1 0 CONSTR_1_0 2) [bPtr] [] _ "GHC.ForeignPtr" "PlainPtr")
---  = mlp bPtr
-
 mprint _ (ConsClosure (StgInfoTable 1 0 CONSTR_1_0 _) [bPtr] [] _ _ name)
   = do cPtr <- mlp bPtr
        return $ name ++ " " ++ mbParens cPtr
@@ -185,9 +191,12 @@ mprint b (ConsClosure (StgInfoTable 2 0 CONSTR_2_0 1) [bHead,bTail] [] _ "GHC.Ty
          Just n  -> return n
          Nothing -> do setName b
                        n <- liftM fromJust $ getName b
-                       cHead <- mlp bHead
-                       cTail <- mlp bTail
-                       return $ printf "%s=(%s:%s)" n cHead cTail
+                       cHead <- liftM mbParens $ mlp bHead
+                       cTail <- liftM mbParens $ mlp bTail
+                       r <- countReferences b
+                       return $ case r > 1 of
+                         True -> printf "%s=(%s:%s)" n cHead cTail
+                         False -> printf "%s:%s" cHead cTail
 
 mprint _ (ArrWordsClosure (StgInfoTable 0 0 ARR_WORDS 0) bytes arrWords)
   = return $ intercalate "," (map (printf "0x%x") arrWords :: [String])
@@ -195,42 +204,19 @@ mprint _ (ArrWordsClosure (StgInfoTable 0 0 ARR_WORDS 0) bytes arrWords)
 mprint _ (IndClosure (StgInfoTable 1 0 BLACKHOLE 0) b)
   = mlp b
 
---mprint b (ThunkClosure (StgInfoTable 0 0 THUNK_STATIC 3) [] [])
---  = getSetName b
-
---mprint b (ThunkClosure (StgInfoTable 1 1 THUNK_1_1 0) [bPtr] [arg])
---  = do name <- getSetName b
---       cPtr <- mlp bPtr
---       return $ printf "%s[%s](%s)" name (show arg) cPtr
-
--- TODO: Reverse order of ptrs?
+-- Reversed order of ptrs
 mprint b (ThunkClosure (StgInfoTable _ _ _ _) bPtrs args)
   = do name <- getSetName b
-       cPtrs <- mapM mlp bPtrs
-       let tPtrs = intercalate ", " cPtrs
+       cPtrs <- mapM mlp $ reverse bPtrs
+       let tPtrs = intercalate "," cPtrs
        return $ case null args of
          True  -> name ++ "(" ++ tPtrs ++ ")"
          False -> name ++ show args ++ "(" ++ tPtrs ++ ")"
 
---mprint b (ThunkClosure (StgInfoTable 3 0 THUNK 0) [bPtr1, bPtr2, bPtr3] [])
---  = do name <- getSetName b
---       cPtr1 <- mlp bPtr1
---       cPtr2 <- mlp bPtr2
---       cPtr3 <- mlp bPtr3
---       return $ printf "%s(%s, %s, %s)" name cPtr1 cPtr2 cPtr3
-
---mprint _ (FunClosure (StgInfoTable 0 1 tipe 0) [] [arg])
---  = return $ printf "Fun(%s)" (show arg)
---
---mprint _ (FunClosure (StgInfoTable 2 0 tipe 0) [bPtr1, bPtr2] [])
---  = do cPtr1 <- mlp bPtr1
---       cPtr2 <- mlp bPtr2
---       return $ printf "Fun(%s, %s)" cPtr1 cPtr2
-
 mprint b (FunClosure (StgInfoTable _ _ _ _) bPtrs args)
   = do name <- getSetName b
-       cPtrs <- mapM mlp bPtrs
-       let tPtrs = intercalate ", " cPtrs
+       cPtrs <- mapM mlp $ reverse bPtrs
+       let tPtrs = intercalate "," cPtrs
        return $ case null args of
          True  -> name ++ "(" ++ tPtrs ++ ")"
          False -> name ++ show args ++ "(" ++ tPtrs ++ ")"
