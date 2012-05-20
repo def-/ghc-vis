@@ -6,12 +6,15 @@ module GHC.Vis (
   bprint,
   mprint,
   eval,
-  eval2
+  eval2,
+  eval3
   )
   where
 
 import GHC.HeapView
 import System.Mem
+import System.Mem.StableName
+import System.IO.Unsafe
 
 import Control.DeepSeq
 import Control.Monad
@@ -41,10 +44,16 @@ type HeapMap   = Map Box HeapEntry
 --type PrintState = State HeapMap
 type PrintState = State (Integer, HeapMap)
 
--- TODO: Doesn't work!
--- Temporarily, probably use System.Mem.StableName
 instance Ord Box
-  where compare x y = compare (show x) (show y)
+  -- TODO: Doesn't work!
+  -- Temporarily, probably use System.Mem.StableName
+  --where compare x y = compare (show x) (show y)
+  -- Ok, this works for now
+  where compare (Box x) (Box y) = unsafePerformIO $ (do
+          a <- makeStableName x
+          b <- makeStableName y
+          return $ compare (hashStableName a) (hashStableName b)
+          )
 
 buildTree x = do
   cd <- getBoxedClosureData x
@@ -108,6 +117,8 @@ eval name hm = Map.mapWithKey go hm
         go _ (x,y) = (x,y)
 
 eval2 name (_,hm) = eval name hm
+
+eval3 name (_,hm) = (show $ eval name hm) `deepseq` return ()
 
 bprint :: a -> IO String
 bprint a = do h <- walkHeap a
