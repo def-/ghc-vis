@@ -11,6 +11,23 @@ import System.Mem
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
 
+-- Usage in GHCi:
+-- λ> let a = cycle "bar"
+-- λ> printP a
+-- t0
+-- λ> evalP a "t0"
+-- t0=('b':t1(t2[0](t3[51600224]()),t0))
+-- λ> evalP a "t2"
+-- t0=('b':t1('a':t3[1](t4[51600224]()),t0))
+-- λ> evalP a "t1"
+-- t0=('b':'a':t2(t3[1](t4[51600224]()),t0))
+-- λ> evalP a "t2"
+-- t0=('b':'a':'r':t3(t4[2](t5[51600224]()),t0))
+-- λ> evalP a "t4"
+-- t0=('b':'a':'r':t3([],t0))
+-- λ> evalP a "t3"
+-- t0=('b':'a':'r':t0)
+
 l = [1,2,3]
 
 main = do
@@ -46,25 +63,25 @@ main = do
   putStrLn "\nFully evaluating b step by step"
   bprint b >>= putStrInd
   putStrLn "Evaluate t0:"
-  b `evalP` "t0" >>= putStrInd
+  b `evalS` "t0" >>= putStrInd
   putStrLn "Evaluate t1:"
-  b `evalP` "t1" >>= putStrInd
+  b `evalS` "t1" >>= putStrInd
   putStrLn "Evaluate t3:"
-  b `evalP` "t3" >>= putStrInd
+  b `evalS` "t3" >>= putStrInd
   putStrLn "Evaluate t4:"
-  b `evalP` "t4" >>= putStrInd
+  b `evalS` "t4" >>= putStrInd
   putStrLn "Evaluate t5:"
-  b `evalP` "t5" >>= putStrInd
+  b `evalS` "t5" >>= putStrInd
   putStrLn "Evaluate t6:"
-  b `evalP` "t6" >>= putStrInd
+  b `evalS` "t6" >>= putStrInd
   putStrLn "Evaluate t2:"
-  b `evalP` "t2" >>= putStrInd
+  b `evalS` "t2" >>= putStrInd
   putStrLn "Evaluate t3:"
-  b `evalP` "t3" >>= putStrInd
+  b `evalS` "t3" >>= putStrInd
   putStrLn "Evaluate t4:"
-  b `evalP` "t4" >>= putStrInd
+  b `evalS` "t4" >>= putStrInd
   putStrLn "Evaluate t5:"
-  b `evalP` "t5" >>= putStrInd
+  b `evalS` "t5" >>= putStrInd
 
   putStrLn "\nByteStrings"
   let b = B.empty
@@ -79,10 +96,10 @@ main = do
   bprint l >>= putStrInd
   bprint l2 >>= putStrInd
   putStrLn "Evaluate t0:"
-  l2 `evalP` "t0" >>= putStrInd
+  l2 `evalS` "t0" >>= putStrInd
   putStrLn "Evaluate t1:"
-  l2 `evalP` "t1" >>= putStrInd
+  l2 `evalS` "t1" >>= putStrInd
   putStrLn "Evaluate t0:"
-  l2 `evalP` "t0" >>= putStrInd
+  l2 `evalS` "t0" >>= putStrInd
 
 putStrInd x = putStrLn $ "  " ++ x

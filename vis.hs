@@ -6,7 +6,9 @@ module GHC.Vis (
   bprint,
   mprint,
   eval,
-  evalP
+  evalS,
+  evalP,
+  printP
   )
   where
 
@@ -117,8 +119,13 @@ eval a name = do (_,hm) <- dprint a
         go _ (x,y) = (x,y)
 
 
-evalP a name = do eval a name
+evalS a name = do eval a name
                   bprint a
+
+evalP a name = do eval a name
+                  bprint a >>= putStrLn
+
+printP a = bprint a >>= putStrLn
 
 bprint :: a -> IO String
 bprint a = do h <- walkHeap a
