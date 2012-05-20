@@ -6,8 +6,7 @@ module GHC.Vis (
   bprint,
   mprint,
   eval,
-  eval2,
-  eval3
+  evalP
   )
   where
 
@@ -110,15 +109,16 @@ walkHeap a = do
 --                      return $ (ins b c ims)
 
 -- TODO: Proper forced evalution
-eval :: String -> HeapMap -> HeapMap
-eval name hm = Map.mapWithKey go hm
+eval a name = do (_,hm) <- dprint a
+                 (show $ Map.mapWithKey go hm) `deepseq` return ()
+
   where go (Box a) (Just n, y) | n == name = seq a (Just n, y)
                                | otherwise = (Just n, y)
         go _ (x,y) = (x,y)
 
-eval2 name (_,hm) = eval name hm
 
-eval3 name (_,hm) = (show $ eval name hm) `deepseq` return ()
+evalP a name = do eval a name
+                  bprint a
 
 bprint :: a -> IO String
 bprint a = do h <- walkHeap a

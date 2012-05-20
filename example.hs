@@ -46,35 +46,25 @@ main = do
   putStrLn "\nFully evaluating b step by step"
   bprint b >>= putStrInd
   putStrLn "Evaluate t0:"
-  dprint b >>= eval3 "t0"
-  bprint b >>= putStrInd
+  b `evalP` "t0" >>= putStrInd
   putStrLn "Evaluate t1:"
-  dprint b >>= eval3 "t1"
-  bprint b >>= putStrInd
+  b `evalP` "t1" >>= putStrInd
   putStrLn "Evaluate t3:"
-  dprint b >>= eval3 "t3"
-  bprint b >>= putStrInd
+  b `evalP` "t3" >>= putStrInd
   putStrLn "Evaluate t4:"
-  dprint b >>= eval3 "t4"
-  bprint b >>= putStrInd
+  b `evalP` "t4" >>= putStrInd
   putStrLn "Evaluate t5:"
-  dprint b >>= eval3 "t5"
-  bprint b >>= putStrInd
+  b `evalP` "t5" >>= putStrInd
   putStrLn "Evaluate t6:"
-  dprint b >>= eval3 "t6"
-  bprint b >>= putStrInd
+  b `evalP` "t6" >>= putStrInd
   putStrLn "Evaluate t2:"
-  dprint b >>= eval3 "t2"
-  bprint b >>= putStrInd
+  b `evalP` "t2" >>= putStrInd
   putStrLn "Evaluate t3:"
-  dprint b >>= eval3 "t3"
-  bprint b >>= putStrInd
+  b `evalP` "t3" >>= putStrInd
   putStrLn "Evaluate t4:"
-  dprint b >>= eval3 "t4"
-  bprint b >>= putStrInd
+  b `evalP` "t4" >>= putStrInd
   putStrLn "Evaluate t5:"
-  dprint b >>= eval3 "t5"
-  bprint b >>= putStrInd
+  b `evalP` "t5" >>= putStrInd
 
   putStrLn "\nByteStrings"
   let b = B.empty
@@ -89,13 +79,10 @@ main = do
   bprint l >>= putStrInd
   bprint l2 >>= putStrInd
   putStrLn "Evaluate t0:"
-  dprint l2 >>= eval3 "t0"
-  bprint l2 >>= putStrInd
+  l2 `evalP` "t0" >>= putStrInd
   putStrLn "Evaluate t1:"
-  dprint l2 >>= eval3 "t1"
-  bprint l2 >>= putStrInd
+  l2 `evalP` "t1" >>= putStrInd
   putStrLn "Evaluate t0:"
-  dprint l2 >>= eval3 "t0"
-  bprint l2 >>= putStrInd
+  l2 `evalP` "t0" >>= putStrInd
 
 putStrInd x = putStrLn $ "  " ++ x
