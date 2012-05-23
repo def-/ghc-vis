@@ -100,6 +100,17 @@ walkHeap a = do
                      l' <- foldM (\l x -> go x l) (Map.insert b (Nothing, c') l) (nearlyAllPtrs c')
                      return $ (Map.insert b (Nothing, c') l')
 
+walkHeapDepth a d = do
+  performGC
+  go (asBox a) d Map.empty
+  where go b d l | d == 0 = return l
+                 | otherwise = case Map.lookup b l of
+                     Just _  -> return l
+                     Nothing -> do
+                       c' <- getBoxedClosureData b
+                       l' <- foldM (\l x -> go x (d - 1) l) (Map.insert b (Nothing, c') l) (nearlyAllPtrs c')
+                       return $ (Map.insert b (Nothing, c') l')
+
 --walkHeapDepth a d = go (asBox a) d IntMap.empty
 --  where go b d im | d == 0 = return im
 --                  | (boxAddr b) `IntMap.member` im = do
@@ -284,9 +295,46 @@ mprint b (FunClosure (StgInfoTable _ _ _ _) bPtrs args)
 mprint b (APClosure (StgInfoTable 0 0 _ _) _ _ _ _)
   = getSetName b
 
+-- λ> let f x = 3 * x
+-- λ> let a = map f [1..3]
+-- λ> printP a
+-- t0
+-- λ> evalP a "t0"
+-- t1(1,t2):t3(t4(t5(3,1),1,1),t2)
+-- λ> evalP a "t3"
+-- t1(1,t2):t4(2,t2):t5(t6(t7(3,1),2,1),t2)
+-- λ> evalP a "t5"
+-- t1(1,t2):t4(2,t2):t6(3,t2):t7(t8(t9(3,1),3,1),t2)
+-- λ> evalP a "t6"
+-- (t1(1,Missing pattern for PAPClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = PAP, srtlen = 0}, arity = 2526134728, n_args = 32539, fun = 0x00007f1b9691c1c8, payload = [0x0000000041a6edf0]})):*** Exception: fromJust2
+
+mprint b (PAPClosure (StgInfoTable 0 0 _ _) _ _ _ _)
+  = getSetName b
+
+-- λ> let f x = 3 * x
+-- λ> let a = map f [1..3]
+-- λ> printP a
+-- t0
+-- λ> evalP a "t0"
+-- t1(1,t2):t3(t4(t5(3,1),1,1),t2)
+-- λ> evalP a "t3"
+-- t1(1,t2):t4(2,t2):t5(t6(t7(3,1),2,1),t2)
+-- λ> evalP a "t5"
+-- t1(1,t2):t4(2,t2):t6(3,t2):t7(t8(t9(3,1),3,1),t2)
+-- λ> evalP a "t6"
+-- *** Exception: fromJust1
+
+-- λ> let h = let y = id (:) () y in h
+-- λ> h
+-- ^CInterrupted.
+-- λ> walkHeap h
+-- *** Exception: getClosureData: Cannot handle closure type AP_STACK
+
+
 mprint _ c = return $ "Missing pattern for " ++ show c
 
 tseq (Box a) = seq a ()
 
 data Foo = Foo Int Int Int Int
 
+a x = 2 * x
