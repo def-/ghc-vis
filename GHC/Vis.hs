@@ -8,7 +8,7 @@ module GHC.Vis (
   eval,
   evalS,
   evalP,
-  printP
+  printP,
   )
   where
 
@@ -84,7 +84,9 @@ isF _ = False
 
 -- Don't inspect deep pointers in BCOClosures for now, they never end
 -- TODO: What we could do is output the instrs and literals of it
-nearlyAllPtrs (BCOClosure (StgInfoTable _ _ _ _) i l _b _ _ _) = [i,l]
+--nearlyAllPtrs (BCOClosure (StgInfoTable _ _ _ _) i l _b _ _ _) = [i,l]
+--nearlyAllPtrs x@(BCOClosure _ _ _ _ _ _ _) = filter notBreakInfo $ allPtrs x
+--  where notBreakInfo =
 nearlyAllPtrs x = allPtrs x
 
 -- Run performGC from System.Mem first to get pointers not to change as much
