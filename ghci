@@ -1,9 +1,10 @@
 -- Add to your ~/.ghci:
 -- :script $VIS_DIR/ghci
 
-visGlobalVar <- Control.Concurrent.MVar.newEmptyMVar :: IO (Control.Concurrent.MVar.MVar GHC.Vis.GTK.Signal)
+--visGlobalVar <- Control.Concurrent.MVar.newEmptyMVar :: IO (Control.Concurrent.MVar.MVar GHC.Vis.GTK.Signal)
+let view x = return $ "Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visGlobalVar (GHC.Vis.GTK.NewSignal (GHC.HeapView.asBox " ++ x ++ "))"
 
-:def vis \x -> GHC.Vis.GTK.tvis visGlobalVar >> return ""
-:def view \x -> return $ "Control.Concurrent.MVar.putMVar visGlobalVar (GHC.Vis.GTK.NewSignal (GHC.HeapView.asBox " ++ x ++ "))"
-:def eval \x -> return $ "GHC.Vis.evalP " ++ head (words x) ++ " \"" ++ last (words x) ++ "\" >> Control.Concurrent.MVar.putMVar visGlobalVar GHC.Vis.GTK.UpdateSignal"
-:def clear \_ -> return $ "Control.Concurrent.MVar.putMVar visGlobalVar GHC.Vis.GTK.ClearSignal"
+:def vis \x -> GHC.Vis.GTK.tvis GHC.Vis.GTK.visGlobalVar >> return ""
+:def view \x -> return $ "Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visGlobalVar (GHC.Vis.GTK.NewSignal (GHC.HeapView.asBox " ++ x ++ "))"
+:def eval \x -> return $ "GHC.Vis.evalP " ++ head (words x) ++ " \"" ++ last (words x) ++ "\" >> Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visGlobalVar GHC.Vis.GTK.UpdateSignal"
+:def clear \_ -> return $ "Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visGlobalVar GHC.Vis.GTK.ClearSignal"

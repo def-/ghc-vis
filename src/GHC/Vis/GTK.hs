@@ -1,7 +1,8 @@
 module GHC.Vis.GTK (
   tvis,
   vis,
-  Signal(..)
+  Signal(..),
+  visGlobalVar
   )
   where
 import Graphics.UI.Gtk hiding (Box, Signal)
@@ -12,6 +13,10 @@ import Control.Concurrent.MVar
 
 import GHC.Vis
 import GHC.HeapView
+
+import System.IO.Unsafe
+
+visGlobalVar = unsafePerformIO (Control.Concurrent.MVar.newEmptyMVar :: IO (Control.Concurrent.MVar.MVar GHC.Vis.GTK.Signal))
 
 data Signal = NewSignal Box
             | UpdateSignal
@@ -39,11 +44,11 @@ vis ref = do
 
   widgetShowAll window
 
-  forkIO $ react ref bref window
+  forkIO $ react ref bref canvas
 
   mainGUI
 
-react ref bref window = do
+react ref bref canvas = do
   signal <- takeMVar ref
   case signal of
     NewSignal x  -> modifyMVar_ bref (\y -> return $ y ++ [x])
@@ -51,8 +56,8 @@ react ref bref window = do
     UpdateSignal -> return ()
 
   threadDelay 10000 -- 10 ms, else sometimes redraw happens too fast (Why?)
-  widgetQueueDraw window
-  react ref bref window
+  widgetQueueDraw canvas
+  react ref bref canvas
 
 redraw canvas bref = do
   boxes <- readMVar bref
