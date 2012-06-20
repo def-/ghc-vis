@@ -1,11 +1,5 @@
--- :set -XTemplateHaskell
--- :m +Language.Haskell.TH
---let vis = do
---  GHC.Vis.GTK.tvis visGlobalVar
---  return ()
---let printP x = Data.IORef.modifyIORef visGlobalVar (\y -> y ++ [GHC.HeapView.asBox x]) >> return ""
--- :def a \x -> putStrLn $(varE (mkName x)) >> return ""
--- :def b \x -> return $ x ++ "foo"
+-- Add to your ~/.ghci:
+-- :script $VIS_DIR/ghci
 
 visGlobalVar <- Data.IORef.newIORef [] :: IO (GHC.IORef.IORef [GHC.HeapView.Box])
 :def vis \x -> GHC.Vis.GTK.tvis visGlobalVar >> return ""
