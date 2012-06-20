@@ -156,6 +156,8 @@ dprint a = do h <- walkHeap a
 
 -- This fromJust can fail because of garbage collection
 -- That means some pointer to b inside the data structure has changed
+--
+-- TODO: Should we copy the whole structure beforehand?
 mlp :: Box -> PrintState String
 mlp b = do (_,h) <- get
            mprint b (snd $ (fromJust2 "1") $ Map.lookup b h)
@@ -165,6 +167,8 @@ setName b = modify go
   where go (i,h) = (i + 1, Map.adjust (set i) b h)
         set i (Nothing, closure) = (Just ("t" ++ show i), closure)
 
+-- This fromJust can fail because of garbage collection
+-- That means some pointer to b inside the data structure has changed
 getName :: Box -> PrintState (Maybe String)
 getName b = do (_,h) <- get
                return $ fst $ (fromJust2 "2") $ Map.lookup b h

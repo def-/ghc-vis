@@ -1,9 +1,10 @@
 module GHC.Vis.GTK (
   tvis,
-  vis
+  vis,
+  Signal(..)
   )
   where
-import Graphics.UI.Gtk
+import Graphics.UI.Gtk hiding (Box, Signal)
 import Graphics.Rendering.Cairo
 
 import Control.Concurrent
@@ -12,10 +13,16 @@ import Control.Concurrent.MVar
 import GHC.Vis
 import GHC.HeapView
 
-tvis ref bref = do
-  forkIO $ vis ref bref
+data Signal = NewSignal Box
+            | UpdateSignal
+            | ClearSignal
 
-vis ref bref = do
+tvis ref = do
+  forkIO $ vis ref
+
+vis ref = do
+  bref <- newMVar [] :: IO (MVar [Box])
+
   initGUI
   window <- windowNew
   onDestroy window mainQuit
@@ -27,22 +34,28 @@ vis ref bref = do
              ]
 
   onExpose canvas $ const $ do
-    redraw canvas ref
+    redraw canvas bref
     return True
 
   widgetShowAll window
 
-  forkIO $ react bref window
+  forkIO $ react ref bref window
 
   mainGUI
 
-react bref window = do
-  takeMVar bref
-  widgetQueueDraw window
-  react bref window
+react ref bref window = do
+  signal <- takeMVar ref
+  case signal of
+    NewSignal x  -> modifyMVar_ bref (\y -> return $ y ++ [x])
+    ClearSignal  -> modifyMVar_ bref (\_ -> return [])
+    UpdateSignal -> return ()
 
-redraw canvas ref = do
-  boxes <- readMVar ref
+  threadDelay 10000 -- 10 ms, else sometimes redraw happens too fast (Why?)
+  widgetQueueDraw window
+  react ref bref window
+
+redraw canvas bref = do
+  boxes <- readMVar bref
   texts <- mapM (\(Box a) -> bprint a) boxes
   render canvas $ do
     setSourceRGB 0 0 0
