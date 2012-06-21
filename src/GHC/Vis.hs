@@ -418,11 +418,20 @@ fparse a = do h <- walkHeap a
               return $ pullTogether $ evalState (parseClosure b (snd $ h Map.! b)) (0,h)
   where b = asBox a
 
-fmmp h bs = mapM (\b -> pullTogether $ evalState (parseClosure b (snd $ h Map.! b)) (0,h)) bs
+fmmp bs h = return $ evalState (go bs) (0,h)
+  where go (b:bs) = do (_,h) <- get
+                       r <- parseClosure b (snd $ h Map.! b)
+                       rs <- go bs
+                       return ((pullTogether r):rs)
+        go [] = return []
 
-fmparse bs = do h <- mWalkHeap bs
-                return $ mapM (\b -> pullTogether $ evalState (parseClosure b (snd $ h Map.! b)) (0,h)) bs
-  where b = asBox a
+fmparse bs = mWalkHeap bs >>= fmmp bs
+
+--fmparse bs = do h <- mWalkHeap bs
+--                return $ mapM (\b -> pullTogether $ evalState (parseClosure b (snd $ h Map.! b)) (0,h)) bs
+--  where b = asBox a
+
+--testp b h = pullTogether $ evalState (parseClosure b (snd $ h Map.! b)) (0,h)
 
 flp b = do (_,h) <- get
            parseClosure b (snd $ (fromJust2 "1") $ Map.lookup b h)

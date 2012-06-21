@@ -65,11 +65,14 @@ react ref bref canvas = do
 
 redraw canvas bref = do
   boxes <- readMVar bref
-  heapMap <- mWalkHeap boxes
-  let texts = fmmp heapMap boxes
+  --heapMap <- mWalkHeap boxes
+  --let texts = fmmp boxes heapMap
+  texts <- fmparse boxes
   --texts <- mapM (\(Box a) -> bprint a) boxes
   render canvas $ do
-    mapM (drawEntry) texts
+    pos <- mapM (\text -> height text) texts
+    let rpos = scanl (\a b -> a + b + 30) 30 pos
+    mapM (drawEntry) (zip texts rpos)
     --setSourceRGB 0 0 0
     --moveTo 10 10
     --showText $ show texts
@@ -81,33 +84,36 @@ render canvas r = do
           setFontSize fontSize
           r
 
-drawEntry texts = do
-  save
-  translate 10 30
-  mapM draw [Unnamed "'f':'o':'o':asdasda", Link "testistaojsdlSADm"]
-  restore
-  save
-  translate 10 130
-  mapM draw [Named "t0" [Unnamed "'f':'o':'o':asdasda", Link "testistaojsdlSADm"]]
-  restore
-  save
-  translate 10 230
-  mapM draw [Named "t1" [Named "t0" [Unnamed "'f':'o':'o':asdasda", Link "testistaojsdlSADm"]]]
-  restore
-  save
-  translate 10 330
-  mapM draw [Named "t1" [Link "t1", Unnamed "foba2", Named "t0" [Unnamed "'f':'o':'o':asdasda", Link "testistaojsdlSADm"]]]
-  restore
-  save
-  translate 10 430
-  mapM draw [Named "t1" [Unnamed "1"], Unnamed ":"]
-  restore
-  save
-  translate 10 530
-  mapM draw [Named "t1" [Unnamed "1"],Unnamed ":",Function "t2",Unnamed "(",Function "t3",Unnamed "(5,",Named "t5" [Unnamed "1"],Unnamed "),",Link "t1",Unnamed ",",Link "t5",Unnamed ")"]
-  restore
+drawEntry (text,pos) = do
+  --save
+  --translate 10 30
+  --mapM draw [Unnamed "'f':'o':'o':asdasda", Link "testistaojsdlSADm"]
+  --restore
+  --save
+  --translate 10 130
+  --mapM draw [Named "t0" [Unnamed "'f':'o':'o':asdasda", Link "testistaojsdlSADm"]]
+  --restore
+  --save
+  --translate 10 230
+  --mapM draw [Named "t1" [Named "t0" [Unnamed "'f':'o':'o':asdasda", Link "testistaojsdlSADm"]]]
+  --restore
+  --save
+  --translate 10 330
+  --mapM draw [Named "t1" [Link "t1", Unnamed "foba2", Named "t0" [Unnamed "'f':'o':'o':asdasda", Link "testistaojsdlSADm"]]]
+  --restore
+  --save
+  --translate 10 430
+  --mapM draw [Named "t1" [Unnamed "1"], Unnamed ":"]
+  --restore
+  --save
+  --translate 10 530
+  --mapM draw [Named "t1" [Unnamed "1"],Unnamed ":",Function "t2",Unnamed "(",Function "t3",Unnamed "(5,",Named "t5" [Unnamed "1"],Unnamed "),",Link "t1",Unnamed ",",Link "t5",Unnamed ")"]
+  --restore
   --mapM draw [Named "t0" [Unnamed "'f':'o':'o':", Link "t0"]]
-  --mapM draw texts
+  save
+  translate 10 pos
+  mapM draw text
+  restore
 
 height xs = do
   FontExtents fa fd fh fmx fmy <- fontExtents
@@ -123,24 +129,25 @@ width (Named x ys) = do
   return $ (max w (sum w2s)) + 10
 
 width (Unnamed x) = do
-  TextExtents _ _ w _ _ _ <- textExtents x
-  return $ w + 10
+  TextExtents xb _ w _ xa _ <- textExtents x
+  return $ (xa - xb) + 10
 
 width (Link x) = do
   TextExtents _ _ w _ _ _ <- textExtents x
-  return $ w + 20
+  return $ w + 15
 
 width (Function x) = do
   TextExtents _ _ w _ _ _ <- textExtents x
-  return $ w + 20
+  return $ w + 15
 
 draw (Unnamed content) = do
   let padding = 5
+  wc <- width (Unnamed content)
   moveTo padding 0
   TextExtents xb yb w h xa ya <- textExtents content
   setSourceRGB 0 0 0
   showText content
-  translate (xa + 2 * padding) 0
+  translate wc 0
 
 draw (Function target) = do
   moveTo 0 0
@@ -148,6 +155,7 @@ draw (Function target) = do
   let margin = 2
   TextExtents xb yb w h xa ya <- textExtents target
   FontExtents fa fd fh fmx fmy <- fontExtents
+  wc <- width (Function target)
 
   let (ux, uy, uw, uh) =
         (  margin
@@ -165,7 +173,7 @@ draw (Function target) = do
 
   moveTo (margin/2 + padding) 0
   showText target
-  translate (xa + 2 * padding) 0
+  translate wc 0
 
 draw (Link target) = do
   moveTo 0 0
@@ -173,6 +181,7 @@ draw (Link target) = do
   let margin = 2
   TextExtents xb yb w h xa ya <- textExtents target
   FontExtents fa fd fh fmx fmy <- fontExtents
+  wc <- width (Link target)
 
   let (ux, uy, uw, uh) =
         (  margin
@@ -183,14 +192,14 @@ draw (Link target) = do
 
   setLineCap LineCapRound
   roundedRect ux uy uw uh
-  setSourceRGB 1 0 0
+  setSourceRGB 0 0 1
   fillPreserve
   setSourceRGB 0 0 0
   stroke
 
   moveTo (margin/2 + padding) 0
   showText target
-  translate (xa + 2 * padding) 0
+  translate wc 0
 
 draw (Named name content) = do
   moveTo 0 0
@@ -205,7 +214,7 @@ draw (Named name content) = do
   let (ux, uy, uw, uh) =
         ( 0
         , -fa - padding
-        , wc + 3 * padding
+        , wc
         , fh + 10 + hc
         )
 
@@ -229,9 +238,9 @@ draw (Named name content) = do
   --lineTo nxa 100
   --stroke
   restore
-  moveTo (wc/2 + 1.5 * padding - (w1/2)) (hc + 7.5 - padding)
+  moveTo (uw/2 - w1/2) (hc + 7.5 - padding)
   showText name
-  translate (wc + 3 * padding) 0
+  translate wc 0
 
 roundedRect x y w h = do
   moveTo       x            (y+pad)
