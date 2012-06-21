@@ -66,9 +66,10 @@ react ref bref canvas = do
 redraw canvas bref = do
   boxes <- readMVar bref
   heapMap <- mWalkHeap boxes
+  let texts = fmmp heapMap boxes
   --texts <- mapM (\(Box a) -> bprint a) boxes
   render canvas $ do
-    mapM (drawEntry heapMap) boxes
+    mapM (drawEntry) texts
     --setSourceRGB 0 0 0
     --moveTo 10 10
     --showText $ show texts
@@ -80,26 +81,79 @@ render canvas r = do
           setFontSize fontSize
           r
 
-drawEntry heapMap box = do
-  let text = show box
-  TextExtents xb yb w h _ _ <- textExtents text
-  translate 100 30
-  setSourceRGB 0 0 0
-  moveTo (-w/2) (h/2)
-  showText text
+drawEntry texts = do
+  save
+  translate 10 30
+  mapM draw [Unnamed "'f':'o':'o':asdasda", Link "testistaojsdlSADm"]
+  restore
+  save
+  translate 10 130
+  mapM draw [Named "t0" [Unnamed "'f':'o':'o':asdasda", Link "testistaojsdlSADm"]]
+  restore
+  save
+  translate 10 230
+  mapM draw [Named "t1" [Named "t0" [Unnamed "'f':'o':'o':asdasda", Link "testistaojsdlSADm"]]]
+  restore
+  save
+  translate 10 330
+  mapM draw [Named "t1" [Link "t1", Unnamed "foba2", Named "t0" [Unnamed "'f':'o':'o':asdasda", Link "testistaojsdlSADm"]]]
+  restore
+  save
+  translate 10 430
+  mapM draw [Named "t1" [Unnamed "1"], Unnamed ":"]
+  restore
+  save
+  translate 10 530
+  mapM draw [Named "t1" [Unnamed "1"],Unnamed ":",Function "t2",Unnamed "(",Function "t3",Unnamed "(5,",Named "t5" [Unnamed "1"],Unnamed "),",Link "t1",Unnamed ",",Link "t5",Unnamed ")"]
+  restore
+  --mapM draw [Named "t0" [Unnamed "'f':'o':'o':", Link "t0"]]
+  --mapM draw texts
 
-drawLinkObject heapMap box = do
-  let text = "t1"
+height xs = do
+  FontExtents fa fd fh fmx fmy <- fontExtents
+  let go (Named _ ys) = (fh + 15) + (maximum $ map go ys)
+      go (Unnamed _)  = fh
+      go (Link _)     = (fh + 10)
+      go (Function _)     = (fh + 10)
+  return $ maximum $ map go xs
+
+width (Named x ys) = do
+  TextExtents _ _ w _ _ _ <- textExtents x
+  w2s <- mapM width ys
+  return $ (max w (sum w2s)) + 10
+
+width (Unnamed x) = do
+  TextExtents _ _ w _ _ _ <- textExtents x
+  return $ w + 10
+
+width (Link x) = do
+  TextExtents _ _ w _ _ _ <- textExtents x
+  return $ w + 20
+
+width (Function x) = do
+  TextExtents _ _ w _ _ _ <- textExtents x
+  return $ w + 20
+
+draw (Unnamed content) = do
   let padding = 5
-  TextExtents xb yb w h _ _ <- textExtents text
+  moveTo padding 0
+  TextExtents xb yb w h xa ya <- textExtents content
+  setSourceRGB 0 0 0
+  showText content
+  translate (xa + 2 * padding) 0
 
-  translate 100 30
+draw (Function target) = do
+  moveTo 0 0
+  let padding = 5
+  let margin = 2
+  TextExtents xb yb w h xa ya <- textExtents target
+  FontExtents fa fd fh fmx fmy <- fontExtents
 
   let (ux, uy, uw, uh) =
-        ( -w/2 + xb - padding
-        ,  h/2 + yb - padding
-        ,  w   +  2 * padding
-        ,  h   +  2 * padding
+        (  margin
+        ,  (-fa) -  padding
+        ,  w    +  2 * padding
+        ,  fh   +  10
         )
 
   setLineCap LineCapRound
@@ -109,23 +163,50 @@ drawLinkObject heapMap box = do
   setSourceRGB 0 0 0
   stroke
 
-  moveTo (-w/2) (h/2)
-  showText text
+  moveTo (margin/2 + padding) 0
+  showText target
+  translate (xa + 2 * padding) 0
 
-drawNamedObject heapMap box = do
-  let text = show box
-  let text1 = "t1"
+draw (Link target) = do
+  moveTo 0 0
   let padding = 5
-  TextExtents xb yb w h _ _ <- textExtents text
-  TextExtents xb1 yb1 w1 h1 _ _ <- textExtents text1
-
-  translate 100 30
+  let margin = 2
+  TextExtents xb yb w h xa ya <- textExtents target
+  FontExtents fa fd fh fmx fmy <- fontExtents
 
   let (ux, uy, uw, uh) =
-        ( -(max w w1)/2 + xb - 1.5 * padding
-        ,  (h + h1)/2   + yb - 1.5 * padding
-        ,  (max w w1)   +  3 * padding
-        ,  (h + h1)     +  3 * padding
+        (  margin
+        ,  (-fa) -  padding
+        ,  w    +  2 * padding
+        ,  fh   +  10
+        )
+
+  setLineCap LineCapRound
+  roundedRect ux uy uw uh
+  setSourceRGB 1 0 0
+  fillPreserve
+  setSourceRGB 0 0 0
+  stroke
+
+  moveTo (margin/2 + padding) 0
+  showText target
+  translate (xa + 2 * padding) 0
+
+draw (Named name content) = do
+  moveTo 0 0
+  let padding = 5
+  TextExtents _ _ w1 _ _ _ <- textExtents name
+  FontExtents fa fd fh fmx fmy <- fontExtents
+  hc <- height content
+  wc <- width (Named name content)
+
+  --translate 100 30
+
+  let (ux, uy, uw, uh) =
+        ( 0
+        , -fa - padding
+        , wc + 3 * padding
+        , fh + 10 + hc
         )
 
   --setLineWidth 10
@@ -135,13 +216,22 @@ drawNamedObject heapMap box = do
   fillPreserve
   setSourceRGB 0 0 0
   stroke
-  moveTo ux (h + padding/2)
-  lineTo (ux + uw) (h + padding/2)
+  moveTo ux (hc + 5 - fa - padding)
+  lineTo (ux + uw) (hc + 5 - fa - padding)
   stroke
-  moveTo (-w/2) (h/2 + padding)
-  showText text
-  moveTo (-w1/2) (h + h1/2 + 2 * padding)
-  showText text1
+  save
+  --moveTo (150 + 1.5 * padding - (w/2)) (hc/2 + padding)
+  --showText $ show content
+  translate padding 0
+  mapM draw content
+  --TextExtents nxb nyb nw nh nxa nya <- textExtents "TEST"
+  --moveTo nxa 0
+  --lineTo nxa 100
+  --stroke
+  restore
+  moveTo (wc/2 + 1.5 * padding - (w1/2)) (hc + 7.5 - padding)
+  showText name
+  translate (wc + 3 * padding) 0
 
 roundedRect x y w h = do
   moveTo       x            (y+pad)

@@ -6,6 +6,9 @@ module GHC.Vis (
   dprint,
   bprint,
   mprint,
+  fparse,
+  fmmp,
+  fmparse,
   parseClosure,
   VisObject(..),
   getID,
@@ -65,6 +68,8 @@ instance Ord Box
 data VisObject = Unnamed String
                | Named String [VisObject]
                | Link String
+               | Function String
+               deriving (Show)
 
 getID a = makeStableName a >>= return . hashStableName
 
@@ -79,6 +84,12 @@ buildGraph boxes = foldM go empty boxes
             else do
                   graph' <- foldM go (insNode (nodename, closure) graph) $ nearlyAllPtrs closure 
                   return $ insEdges edges graph'
+
+--graphToVisObjectList :: Gr Closure () -> [Box] -> [[VisObject]]
+--graphToVisObjectList graph startnodes = mapM go startnodes
+--  where go node = if indeg graph node <= 1
+--                  then
+--                  else NamedObject node (packVisObjects 
 
 buildTree x = do
   cd <- getBoxedClosureData x
@@ -113,10 +124,10 @@ nearlyAllPtrs (BCOClosure (StgInfoTable _ _ _ _) i l _b _ _ _) = []
 --  where notBreakInfo =
 nearlyAllPtrs x = allPtrs x
 
-mWalkHeap :: [a] -> IO HeapMap
-mWalkHeap as = do
+mWalkHeap :: [Box] -> IO HeapMap
+mWalkHeap bs = do
   performGC
-  foldM (\l a -> go (asBox a) l) Map.empty as
+  foldM (\l b -> go b l) Map.empty bs
   where go b l = case Map.lookup b l of
                    Just _  -> return l
                    Nothing -> do
@@ -374,9 +385,67 @@ mprint b (PAPClosure (StgInfoTable 0 0 _ _) _ _ _ _)
 
 mprint _ c = return $ "Missing pattern for " ++ show c
 
-parseClosure :: Box -> Closure -> PrintState VisObject
-parseClosure _ (ConsClosure (StgInfoTable _ _ _ _) _ [dataArg] _ modl name) =
- return $ Unnamed $ case (modl, name) of
+pullTogether :: [VisObject] -> [VisObject]
+pullTogether [] = []
+pullTogether [Named a bs] = [Named a (pullTogether bs)]
+pullTogether [a] = [a]
+pullTogether ((Unnamed a):(Unnamed b):xs) = pullTogether $ (Unnamed (a ++ b)):xs
+pullTogether ((Named a bs):xs) = (Named a (pullTogether bs)) : (pullTogether xs)
+pullTogether (a:xs) = a : (pullTogether xs)
+
+correctObject :: Box -> PrintState VisObject
+correctObject box = do
+  i <- getCount
+  r <- countReferences box
+  n <- getName box
+
+  case n of
+    Just name -> return $ Link name
+    Nothing -> do setName box
+                  name <- liftM (fromJust2 "4") $ getName box
+                  return $ case r > 1 || (i == 0 && r == 1) of
+                    True -> Named name []
+                    False -> Unnamed ""
+
+insertObjects :: VisObject -> [VisObject] -> [VisObject]
+insertObjects _ xs@((Function name):_) = xs
+insertObjects (Link name) _ = [Link name]
+insertObjects (Named name _) xs = [Named name xs]
+insertObjects (Unnamed _) xs = xs
+
+--fparse :: a -> IO String
+fparse a = do h <- walkHeap a
+              return $ pullTogether $ evalState (parseClosure b (snd $ h Map.! b)) (0,h)
+  where b = asBox a
+
+fmmp h bs = mapM (\b -> pullTogether $ evalState (parseClosure b (snd $ h Map.! b)) (0,h)) bs
+
+fmparse bs = do h <- mWalkHeap bs
+                return $ mapM (\b -> pullTogether $ evalState (parseClosure b (snd $ h Map.! b)) (0,h)) bs
+  where b = asBox a
+
+flp b = do (_,h) <- get
+           parseClosure b (snd $ (fromJust2 "1") $ Map.lookup b h)
+
+fmbParens t@((Unnamed ('"':_)):_) = t
+fmbParens t@((Unnamed ('(':_)):_) = t
+fmbParens t | ' ' `vElem` t = Unnamed "(" : t ++ [Unnamed ")"]
+--            | ':' `vElem` t = Unnamed "(" : t ++ [Unnamed ")"]
+            | otherwise     = t
+
+vElem c t = any go t
+  where go (Unnamed xs) = c `elem` xs
+        go (Named _ os) = any go os
+        go _ = False
+
+parseClosure :: Box -> Closure -> PrintState [VisObject]
+parseClosure b c = do
+  o <- correctObject b
+  i <- parseInternal b c
+  return $ insertObjects o i
+
+parseInternal _ (ConsClosure (StgInfoTable _ _ _ _) _ [dataArg] _ modl name) =
+ return [Unnamed $ case (modl, name) of
     k | k `elem` [ ("GHC.Word", "W#")
                  , ("GHC.Word", "W8#")
                  , ("GHC.Word", "W16#")
@@ -398,123 +467,105 @@ parseClosure _ (ConsClosure (StgInfoTable _ _ _ _) _ [dataArg] _ modl name) =
     ("Types", "F#") -> printf "%0.5f" (unsafeCoerce dataArg :: Double)
 
     c -> "Missing ConsClosure pattern for " ++ show c
+  ]
 
 -- Empty ByteStrings point to a nullForeignPtr, evaluating it leads to an
 -- Prelude.undefined exception
---parseClosure _ (ConsClosure (StgInfoTable 1 3 _ 0) _ [_,0,0] _ "Data.ByteString.Internal" "PS")
---  = return "ByteString[0,0]()"
---
---parseClosure _ (ConsClosure (StgInfoTable 1 3 _ 0) [bPtr] [_,start,end] _ "Data.ByteString.Internal" "PS")
---  = do cPtr  <- mlp bPtr
---       return $ printf "ByteString[%d,%d](%s)" start end cPtr
---
---parseClosure _ (ConsClosure (StgInfoTable 2 3 _ 1) [bPtr1,bPtr2] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
---  = do cPtr1 <- mlp bPtr1
---       cPtr2 <- mlp bPtr2
---       return $ printf "Chunk[%d,%d](%s,%s)" start end cPtr1 cPtr2
---
---parseClosure _ (ConsClosure (StgInfoTable 1 0 CONSTR_1_0 _) [bPtr] [] _ _ name)
---  = do cPtr <- mlp bPtr
---       return $ name ++ " " ++ mbParens cPtr
---
---parseClosure _ (ConsClosure (StgInfoTable 0 0 CONSTR_NOCAF_STATIC _) [] [] _ _ name)
---  = return name
---
---parseClosure _ (ConsClosure (StgInfoTable 0 _ CONSTR_NOCAF_STATIC _) [] args _ _ name)
---  = return $ name ++ " " ++ show args
---
---parseClosure b (ConsClosure (StgInfoTable 2 0 _ 1) [bHead,bTail] [] _ "GHC.Types" ":")
---  = do b' <- getName b
---       case b' of
---         Just n  -> return n
---         Nothing -> do i <- getCount
---                       setName b
---                       n <- liftM (fromJust2 "4") $ getName b
---                       cHead <- liftM mbParens $ mlp bHead
---                       cTail <- liftM mbParens $ mlp bTail
---                       r <- countReferences b
---                       return $ case r > 1 || (i == 0 && r == 1) of
---                         True -> printf "%s=(%s:%s)" n cHead cTail
---                         False -> printf "%s:%s" cHead cTail
---
---parseClosure b (ConsClosure (StgInfoTable _ 0 _ _) bPtrs [] _ _ name)
---  = do b' <- getName b
---       case b' of
---         Just n  -> return n
---         Nothing -> do i <- getCount
---                       setName b
---                       n <- liftM (fromJust2 "5") $ getName b
---                       cPtrs <- mapM ((liftM mbParens) . mlp) bPtrs
---                       let tPtrs = intercalate " " cPtrs
---                       r <- countReferences b
---                       return $ case r > 1 || (i == 0 && r == 1) of
---                         True -> printf "%s=(%s %s)" n name tPtrs
---                         False -> printf "%s %s" name tPtrs
---
---
---parseClosure _ (ArrWordsClosure (StgInfoTable 0 0 ARR_WORDS 0) bytes arrWords)
---  = return $ intercalate "," (map (printf "0x%x") arrWords :: [String])
---
---parseClosure _ (IndClosure (StgInfoTable 1 0 _ 0) b)
---  = mlp b
---
----- Reversed order of ptrs
---parseClosure b (ThunkClosure (StgInfoTable _ _ _ _) bPtrs args)
---  = do name <- getSetName b
---       cPtrs <- mapM mlp $ reverse bPtrs
---       let tPtrs = intercalate "," cPtrs
---       return $ case null args of
---         True  -> name ++ "(" ++ tPtrs ++ ")"
---         False -> name ++ show args ++ "(" ++ tPtrs ++ ")"
---
---parseClosure b (FunClosure (StgInfoTable _ _ _ _) bPtrs args)
---  = do name <- getSetName b
---       cPtrs <- mapM mlp $ reverse bPtrs
---       let tPtrs = intercalate "," cPtrs
---       return $ case null args of
---         True  -> name ++ "(" ++ tPtrs ++ ")"
---         False -> name ++ show args ++ "(" ++ tPtrs ++ ")"
---
---parseClosure b (APClosure (StgInfoTable 0 0 _ _) _ _ _ _)
---  = getSetName b
---
----- λ> let f x = 3 * x
----- λ> let a = map f [1..3]
----- λ> printP a
----- t0
----- λ> evalP a "t0"
----- t1(1,t2):t3(t4(t5(3,1),1,1),t2)
----- λ> evalP a "t3"
----- t1(1,t2):t4(2,t2):t5(t6(t7(3,1),2,1),t2)
----- λ> evalP a "t5"
----- t1(1,t2):t4(2,t2):t6(3,t2):t7(t8(t9(3,1),3,1),t2)
----- λ> evalP a "t6"
----- (t1(1,Missing pattern for PAPClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = PAP, srtlen = 0}, arity = 2526134728, n_args = 32539, fun = 0x00007f1b9691c1c8, payload = [0x0000000041a6edf0]})):*** Exception: fromJust2
---
---parseClosure b (PAPClosure (StgInfoTable 0 0 _ _) _ _ _ _)
---  = getSetName b
---
----- λ> let f x = 3 * x
----- λ> let a = map f [1..3]
----- λ> printP a
----- t0
----- λ> evalP a "t0"
----- t1(1,t2):t3(t4(t5(3,1),1,1),t2)
----- λ> evalP a "t3"
----- t1(1,t2):t4(2,t2):t5(t6(t7(3,1),2,1),t2)
----- λ> evalP a "t5"
----- t1(1,t2):t4(2,t2):t6(3,t2):t7(t8(t9(3,1),3,1),t2)
----- λ> evalP a "t6"
----- *** Exception: fromJust1
---
----- λ> let h = let y = id (:) () y in h
----- λ> h
----- ^CInterrupted.
----- λ> walkHeap h
----- *** Exception: getClosureData: Cannot handle closure type AP_STACK
---
---
---parseClosure _ c = return $ "Missing pattern for " ++ show c
+parseInternal _ (ConsClosure (StgInfoTable 1 3 _ 0) _ [_,0,0] _ "Data.ByteString.Internal" "PS")
+  = return [Unnamed "ByteString[0,0]()"]
+
+parseInternal _ (ConsClosure (StgInfoTable 1 3 _ 0) [bPtr] [_,start,end] _ "Data.ByteString.Internal" "PS")
+  = do cPtr  <- flp bPtr
+       return $ (Unnamed (printf "ByteString[%d,%d](" start end)) : cPtr ++ [Unnamed ")"]
+
+parseInternal _ (ConsClosure (StgInfoTable 2 3 _ 1) [bPtr1,bPtr2] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
+  = do cPtr1 <- flp bPtr1
+       cPtr2 <- flp bPtr2
+       return $ (Unnamed (printf "Chunk[%d,%d](" start end)) : cPtr1 ++ [Unnamed ","] ++ cPtr2 ++ [Unnamed ")"]
+
+parseInternal _ (ConsClosure (StgInfoTable 1 0 CONSTR_1_0 _) [bPtr] [] _ _ name)
+  = do cPtr <- flp bPtr
+       return $ (Unnamed (name ++ " ")) : fmbParens cPtr
+
+parseInternal _ (ConsClosure (StgInfoTable 0 0 CONSTR_NOCAF_STATIC _) [] [] _ _ name)
+  = return [Unnamed name]
+
+parseInternal _ (ConsClosure (StgInfoTable 0 _ CONSTR_NOCAF_STATIC _) [] args _ _ name)
+  = return [Unnamed (name ++ " " ++ show args)]
+
+parseInternal _ (ConsClosure (StgInfoTable 2 0 _ 1) [bHead,bTail] [] _ "GHC.Types" ":")
+  = do cHead <- liftM fmbParens $ flp bHead
+       cTail <- liftM fmbParens $ flp bTail
+       return $ cHead ++ [Unnamed ":"] ++ cTail
+
+parseInternal _ (ConsClosure (StgInfoTable _ 0 _ _) bPtrs [] _ _ name)
+  = do cPtrs <- mapM ((liftM fmbParens) . flp) bPtrs
+       let tPtrs = intercalate [Unnamed " "] cPtrs
+       return $ (Unnamed name) : tPtrs
+
+parseInternal _ (ArrWordsClosure (StgInfoTable 0 0 ARR_WORDS 0) bytes arrWords)
+  = return $ intercalate [Unnamed ","] (map (\x -> [Unnamed (printf "0x%x" x)]) arrWords)
+
+parseInternal _ (IndClosure (StgInfoTable 1 0 _ 0) b)
+  = flp b
+
+-- Reversed order of ptrs
+parseInternal b (ThunkClosure (StgInfoTable _ _ _ _) bPtrs args)
+  = do name <- getSetName b
+       cPtrs <- mapM flp $ reverse bPtrs
+       let tPtrs = intercalate [Unnamed ","] cPtrs
+       return $ case null args of
+         True  -> (Function name) : Unnamed "(" : tPtrs ++ [Unnamed ")"]
+         False -> (Function name) : (Unnamed $ show args ++ "(") : tPtrs ++ [Unnamed ")"]
+
+parseInternal b (FunClosure (StgInfoTable _ _ _ _) bPtrs args)
+  = do name <- getSetName b
+       cPtrs <- mapM flp $ reverse bPtrs
+       let tPtrs = intercalate [Unnamed ","] cPtrs
+       return $ case null args of
+         True  -> (Function name) : Unnamed "(" : tPtrs ++ [Unnamed ")"]
+         False -> (Function name) : (Unnamed $ show args ++ "(") : tPtrs ++ [Unnamed ")"]
+
+parseInternal b (APClosure (StgInfoTable 0 0 _ _) _ _ _ _)
+  = getSetName b >>= \x -> return [Function x]
+
+-- λ> let f x = 3 * x
+-- λ> let a = map f [1..3]
+-- λ> printP a
+-- t0
+-- λ> evalP a "t0"
+-- t1(1,t2):t3(t4(t5(3,1),1,1),t2)
+-- λ> evalP a "t3"
+-- t1(1,t2):t4(2,t2):t5(t6(t7(3,1),2,1),t2)
+-- λ> evalP a "t5"
+-- t1(1,t2):t4(2,t2):t6(3,t2):t7(t8(t9(3,1),3,1),t2)
+-- λ> evalP a "t6"
+-- (t1(1,Missing pattern for PAPClosure {info = StgInfoTable {ptrs = 0, nptrs = 0, tipe = PAP, srtlen = 0}, arity = 2526134728, n_args = 32539, fun = 0x00007f1b9691c1c8, payload = [0x0000000041a6edf0]})):*** Exception: fromJust2
+
+parseInternal b (PAPClosure (StgInfoTable 0 0 _ _) _ _ _ _)
+  = getSetName b >>= \x -> return [Function x]
+
+-- λ> let f x = 3 * x
+-- λ> let a = map f [1..3]
+-- λ> printP a
+-- t0
+-- λ> evalP a "t0"
+-- t1(1,t2):t3(t4(t5(3,1),1,1),t2)
+-- λ> evalP a "t3"
+-- t1(1,t2):t4(2,t2):t5(t6(t7(3,1),2,1),t2)
+-- λ> evalP a "t5"
+-- t1(1,t2):t4(2,t2):t6(3,t2):t7(t8(t9(3,1),3,1),t2)
+-- λ> evalP a "t6"
+-- *** Exception: fromJust1
+
+-- λ> let h = let y = id (:) () y in h
+-- λ> h
+-- ^CInterrupted.
+-- λ> walkHeap h
+-- *** Exception: getClosureData: Cannot handle closure type AP_STACK
+
+
+parseInternal _ c = return [Unnamed ("Missing pattern for " ++ show c)]
 
 tseq (Box a) = seq a ()
 
