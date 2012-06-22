@@ -135,7 +135,7 @@ nearlyAllPtrs x = allPtrs x
 
 mWalkHeap :: [Box] -> IO HeapMap
 mWalkHeap bs = do
-  performGC
+  --performGC
   -- Add a special pointer to detect number of pointers to start boxes
   foldM (\l b -> go b l) [dummy] bs
   where dummy = (asBox 1, (Nothing, ConsClosure (StgInfoTable 0 0 CONSTR_0_1 0) bs [] "" "" ""))
@@ -148,9 +148,10 @@ mWalkHeap bs = do
 
 -- Run performGC from System.Mem first to get pointers not to change as much
 -- while executing
+-- Not relevant anymore, was only necessary because of StableNames it seems
 walkHeap :: a -> IO HeapMap
 walkHeap a = do
-  performGC
+  --performGC
   go (asBox a) [dummy]
   where dummy = (asBox 1, (Nothing, ConsClosure (StgInfoTable 0 0 CONSTR_0_1 0) [asBox a] [] "" "" ""))
         go b l = case lookup b l of
@@ -161,7 +162,7 @@ walkHeap a = do
                      return $ insert (b, (Nothing, c')) l'
 
 walkHeapDepth a d = do
-  performGC
+  --performGC
   go (asBox a) d [dummy]
   where dummy = (asBox 1, (Nothing, ConsClosure (StgInfoTable 0 0 CONSTR_0_1 0) [asBox a] [] "" "" ""))
         go b d l | d == 0 = return l
