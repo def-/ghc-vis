@@ -2,7 +2,11 @@ module GHC.Vis.GTK (
   tvis,
   vis,
   Signal(..),
-  visGlobalVar
+  visGlobalVar,
+  visGlobalBoxes,
+  gtkBprint,
+  gtkDprint,
+  gtkEval,
   )
   where
 import Graphics.UI.Gtk hiding (Box, Signal)
@@ -10,8 +14,11 @@ import Graphics.Rendering.Cairo
 
 import Control.Concurrent
 import Control.Concurrent.MVar
-
+import Control.DeepSeq
 import Control.Monad
+
+import Data.List
+import qualified Data.Map as Map
 
 import System.IO.Unsafe
 
@@ -20,18 +27,36 @@ import GHC.HeapView
 
 fontSize = 15
 
-visGlobalVar = unsafePerformIO (Control.Concurrent.MVar.newEmptyMVar :: IO (Control.Concurrent.MVar.MVar GHC.Vis.GTK.Signal))
+visGlobalVar = unsafePerformIO (newEmptyMVar :: IO (MVar GHC.Vis.GTK.Signal))
+visGlobalBoxes = unsafePerformIO (newMVar [] :: IO (MVar [Box]))
+
+gtkBprint a = do
+  bs <- readMVar visGlobalBoxes
+  case findIndex (asBox a ==) bs of
+    Just pos -> do
+      t  <- fmparse bs
+      return $ show (t !! pos)
+    Nothing -> return "Add entry first"
+
+gtkDprint = do
+  bs <- readMVar visGlobalBoxes
+  (t,(_,h)) <- fhmparse bs
+  return (show t, h)
+
+gtkEval name = do (_,hm) <- gtkDprint
+                  (show $ Map.mapWithKey go hm) `deepseq` return ()
+
+  where go (Box a) (Just n, y) | n == name = seq a (Just n, y)
+                               | otherwise = (Just n, y)
+        go _ (x,y) = (x,y)
 
 data Signal = NewSignal Box
             | UpdateSignal
             | ClearSignal
 
-tvis ref = do
-  forkIO $ vis ref
+tvis ref bref = forkIO $ vis ref bref
 
-vis ref = do
-  bref <- newMVar [] :: IO (MVar [Box])
-
+vis ref bref = do
   initGUI
   window <- windowNew
   onDestroy window mainQuit
@@ -57,7 +82,7 @@ react ref bref canvas = do
   case signal of
     NewSignal x  -> modifyMVar_ bref (\y -> return $ y ++ [x])
     ClearSignal  -> modifyMVar_ bref (\_ -> return [])
-    UpdateSignal -> putStrLn "update" >> return ()
+    UpdateSignal -> return ()
 
   threadDelay 10000 -- 10 ms, else sometimes redraw happens too fast (Why?)
   widgetQueueDraw canvas
@@ -221,7 +246,7 @@ draw (Named name content) = do
   --setLineWidth 10
   setLineCap LineCapRound
   roundedRect ux uy uw uh
-  setSourceRGB 1 0 0
+  setSourceRGB 0 1 0
   fillPreserve
   setSourceRGB 0 0 0
   stroke

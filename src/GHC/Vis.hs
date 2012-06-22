@@ -9,6 +9,10 @@ module GHC.Vis (
   fparse,
   fmmp,
   fmparse,
+  fhmparse,
+  newBprint,
+  newEval,
+  newEvalP,
   parseClosure,
   VisObject(..),
   getID,
@@ -69,7 +73,15 @@ data VisObject = Unnamed String
                | Named String [VisObject]
                | Link String
                | Function String
-               deriving (Show)
+
+instance Show VisObject where
+  show (Unnamed x) = x
+  show (Named x ys) = x ++ "=(" ++ show ys ++ ")"
+  show (Link x) = x
+  show (Function x) = x
+
+  showList []       = showString ""
+  showList (c:cs)   = showString (show c) . showList cs
 
 getID a = makeStableName a >>= return . hashStableName
 
@@ -385,6 +397,15 @@ mprint b (PAPClosure (StgInfoTable 0 0 _ _) _ _ _ _)
 
 mprint _ c = return $ "Missing pattern for " ++ show c
 
+newEval = True
+
+newEvalP = True
+--newEvalP a name = do newEval a name
+--                  newBprint a >>= putStrLn
+
+newBprint :: a -> IO String
+newBprint a = fparse a >>= return . show
+
 pullTogether :: [VisObject] -> [VisObject]
 pullTogether [] = []
 pullTogether [Named a bs] = [Named a (pullTogether bs)]
@@ -401,11 +422,12 @@ correctObject box = do
 
   case n of
     Just name -> return $ Link name
-    Nothing -> do setName box
-                  name <- liftM (fromJust2 "4") $ getName box
-                  return $ case r > 1 || (i == 0 && r == 1) of
-                    True -> Named name []
-                    False -> Unnamed ""
+    --Nothing -> case r > 1 || (i == 0 && r == 1) of
+    Nothing -> case r > 1 of
+                    True -> do setName box
+                               name <- liftM (fromJust2 "4") $ getName box
+                               return $ Named name []
+                    False -> return $ Unnamed ""
 
 insertObjects :: VisObject -> [VisObject] -> [VisObject]
 insertObjects _ xs@((Function name):_) = xs
@@ -426,6 +448,15 @@ fmmp bs h = return $ evalState (go bs) (0,h)
         go [] = return []
 
 fmparse bs = mWalkHeap bs >>= fmmp bs
+
+fhmmp bs h = return $ runState (go bs) (0,h)
+  where go (b:bs) = do (_,h) <- get
+                       r <- parseClosure b (snd $ h Map.! b)
+                       rs <- go bs
+                       return ((pullTogether r):rs)
+        go [] = return []
+
+fhmparse bs = mWalkHeap bs >>= fhmmp bs
 
 --fmparse bs = do h <- mWalkHeap bs
 --                return $ mapM (\b -> pullTogether $ evalState (parseClosure b (snd $ h Map.! b)) (0,h)) bs
