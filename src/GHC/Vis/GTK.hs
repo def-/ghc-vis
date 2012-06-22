@@ -44,11 +44,10 @@ gtkDprint = do
   return (show t, h)
 
 gtkEval name = do (_,hm) <- gtkDprint
-                  (show $ Map.mapWithKey go hm) `deepseq` return ()
-
-  where go (Box a) (Just n, y) | n == name = seq a (Just n, y)
-                               | otherwise = (Just n, y)
-        go _ (x,y) = (x,y)
+                  (show $ map go hm) `deepseq` return ()
+  where go ((Box a),(Just n, y)) | n == name = seq a (Just n, y)
+                                 | otherwise = (Just n, y)
+        go (_,(x,y)) = (x,y)
 
 data Signal = NewSignal Box
             | UpdateSignal
@@ -80,7 +79,7 @@ vis ref bref = do
 react ref bref canvas = do
   signal <- takeMVar ref
   case signal of
-    NewSignal x  -> modifyMVar_ bref (\y -> return $ y ++ [x])
+    NewSignal x  -> modifyMVar_ bref (\y -> if elem x y then return y else return $ y ++ [x])
     ClearSignal  -> modifyMVar_ bref (\_ -> return [])
     UpdateSignal -> return ()
 
@@ -177,52 +176,50 @@ draw (Unnamed content) = do
 draw (Function target) = do
   moveTo 0 0
   let padding = 5
-  let margin = 2
   TextExtents xb yb w h xa ya <- textExtents target
   FontExtents fa fd fh fmx fmy <- fontExtents
   wc <- width (Function target)
 
   let (ux, uy, uw, uh) =
-        (  margin
+        (  0
         ,  (-fa) -  padding
-        ,  w    +  2 * padding
+        ,  wc
         ,  fh   +  10
         )
 
   setLineCap LineCapRound
   roundedRect ux uy uw uh
-  setSourceRGB 1 0 0
+  setSourceRGB 1 0.5 0.5
   fillPreserve
   setSourceRGB 0 0 0
   stroke
 
-  moveTo (margin/2 + padding) 0
+  moveTo padding 0
   showText target
   translate wc 0
 
 draw (Link target) = do
   moveTo 0 0
   let padding = 5
-  let margin = 2
   TextExtents xb yb w h xa ya <- textExtents target
   FontExtents fa fd fh fmx fmy <- fontExtents
   wc <- width (Link target)
 
   let (ux, uy, uw, uh) =
-        (  margin
+        (  0
         ,  (-fa) -  padding
-        ,  w    +  2 * padding
+        ,  wc
         ,  fh   +  10
         )
 
   setLineCap LineCapRound
   roundedRect ux uy uw uh
-  setSourceRGB 0 0 1
+  setSourceRGB 0.5 0.5 1
   fillPreserve
   setSourceRGB 0 0 0
   stroke
 
-  moveTo (margin/2 + padding) 0
+  moveTo padding 0
   showText target
   translate wc 0
 
@@ -246,7 +243,7 @@ draw (Named name content) = do
   --setLineWidth 10
   setLineCap LineCapRound
   roundedRect ux uy uw uh
-  setSourceRGB 0 1 0
+  setSourceRGB 0.5 1 0.5
   fillPreserve
   setSourceRGB 0 0 0
   stroke

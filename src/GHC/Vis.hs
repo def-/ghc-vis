@@ -10,9 +10,6 @@ module GHC.Vis (
   fmmp,
   fmparse,
   fhmparse,
-  newBprint,
-  newEval,
-  newEvalP,
   parseClosure,
   VisObject(..),
   getID,
@@ -36,7 +33,7 @@ import Data.Tree
 import Data.Graph.Inductive
 import Data.Word
 import Data.Char
-import Data.List
+import Data.List hiding (insert)
 import Data.Maybe
 import GHC.Prim
 import GHC.Exts
@@ -54,7 +51,7 @@ fromJust2 s Nothing = error ("fromJust" ++ s)
 --import qualified Data.IntMap as IntMap
 
 type HeapEntry = (Maybe String, Closure)
-type HeapMap   = Map Box HeapEntry
+type HeapMap   = [(Box, HeapEntry)]
 --type PrintState = State HeapMap
 type PrintState = State (Integer, HeapMap)
 
@@ -139,39 +136,43 @@ nearlyAllPtrs x = allPtrs x
 mWalkHeap :: [Box] -> IO HeapMap
 mWalkHeap bs = do
   performGC
-  foldM (\l b -> go b l) Map.empty bs
-  where go b l = case Map.lookup b l of
+  -- Add a special pointer to detect number of pointers to start boxes
+  foldM (\l b -> go b l) [dummy] bs
+  where dummy = (asBox 1, (Nothing, ConsClosure (StgInfoTable 0 0 CONSTR_0_1 0) bs [] "" "" ""))
+        go b l = case lookup b l of
                    Just _  -> return l
                    Nothing -> do
                      c' <- getBoxedClosureData b
-                     l' <- foldM (\l x -> go x l) (Map.insert b (Nothing, c') l) (nearlyAllPtrs c')
-                     return $ (Map.insert b (Nothing, c') l')
+                     l' <- foldM (\l x -> go x l) (insert (b, (Nothing, c')) l) (nearlyAllPtrs c')
+                     return $ insert (b, (Nothing, c')) l'
 
 -- Run performGC from System.Mem first to get pointers not to change as much
 -- while executing
 walkHeap :: a -> IO HeapMap
 walkHeap a = do
   performGC
-  go (asBox a) Map.empty
-  where go b l = case Map.lookup b l of
+  go (asBox a) [dummy]
+  where dummy = (asBox 1, (Nothing, ConsClosure (StgInfoTable 0 0 CONSTR_0_1 0) [asBox a] [] "" "" ""))
+        go b l = case lookup b l of
                    Just _  -> return l
                    Nothing -> do
                      c' <- getBoxedClosureData b
-                     l' <- foldM (\l x -> go x l) (Map.insert b (Nothing, c') l) (nearlyAllPtrs c')
-                     return $ (Map.insert b (Nothing, c') l')
+                     l' <- foldM (\l x -> go x l) (insert (b, (Nothing, c')) l) (nearlyAllPtrs c')
+                     return $ insert (b, (Nothing, c')) l'
 
 walkHeapDepth a d = do
   performGC
-  go (asBox a) d Map.empty
-  where go b d l | d == 0 = return l
-                 | otherwise = case Map.lookup b l of
+  go (asBox a) d [dummy]
+  where dummy = (asBox 1, (Nothing, ConsClosure (StgInfoTable 0 0 CONSTR_0_1 0) [asBox a] [] "" "" ""))
+        go b d l | d == 0 = return l
+                 | otherwise = case lookup b l of
                      Just _  -> return l
                      Nothing -> do
                        c' <- getBoxedClosureData b
-                       l' <- foldM (\l x -> go x (d - 1) l) (Map.insert b (Nothing, c') l) (nearlyAllPtrs c')
-                       return $ (Map.insert b (Nothing, c') l')
+                       l' <- foldM (\l x -> go x (d - 1) l) (insert (b, (Nothing, c')) l) (nearlyAllPtrs c')
+                       return $ insert (b, (Nothing, c')) l'
 
---walkHeapDepth a d = go (asBox a) d IntMap.empty
+--walkHeapDepth a d = go (asBox a) d Int[]
 --  where go b d im | d == 0 = return im
 --                  | (boxAddr b) `IntMap.member` im = do
 --                      return im
@@ -183,11 +184,11 @@ walkHeapDepth a d = do
 
 -- TODO: Proper forced evalution
 eval a name = do (_,hm) <- dprint a
-                 (show $ Map.mapWithKey go hm) `deepseq` return ()
+                 (show $ map go hm) `deepseq` return ()
 
-  where go (Box a) (Just n, y) | n == name = seq a (Just n, y)
-                               | otherwise = (Just n, y)
-        go _ (x,y) = (x,y)
+  where go ((Box a),(Just n, y)) | n == name = seq a (Just n, y)
+                                 | otherwise = (Just n, y)
+        go (_,(x,y)) = (x,y)
 
 
 evalS a name = do eval a name
@@ -200,13 +201,13 @@ printP a = bprint a >>= putStrLn
 
 bprint :: a -> IO String
 bprint a = do h <- walkHeap a
-              return $ evalState (mprint b (snd $ h Map.! b)) (0,h)
+              return $ evalState (mprint b (snd $ fromJust $ lookup b h)) (0,h)
   where b = asBox a
 
 dprint :: a -> IO (String, HeapMap)
 dprint a = do h <- walkHeap a
               return $ evalState (do
-                s <- mprint b (snd $ h Map.! b)
+                s <- mprint b (snd $ fromJust $ lookup b h)
                 (_,h) <- get
                 return (s,h)
                 ) (0,h)
@@ -216,20 +217,31 @@ dprint a = do h <- walkHeap a
 -- That means some pointer to b inside the data structure has changed
 --
 -- TODO: Should we copy the whole structure beforehand?
+--       Or catch the error and reread the heap?
+--       Nope, this probably means my "instance Ord Box" is wrong,
+--       makeStableName doesn't seem so stalbe after all
 mlp :: Box -> PrintState String
 mlp b = do (_,h) <- get
-           mprint b (snd $ (fromJust2 "1") $ Map.lookup b h)
+           mprint b (snd $ fromJust $ lookup b h)
+
+insert (b,x) xs = case find (\(c,y) -> c == b) xs of
+  Just _  -> xs
+  Nothing -> (b,x):xs
+
+adjust f b h = h1 ++ ((b,f x) : h2)
+  where i = fromJust $ findIndex (\(x,_) -> x == b) h
+        (h1,(b1,x):h2) = splitAt i h
 
 setName :: Box -> PrintState ()
 setName b = modify go
-  where go (i,h) = (i + 1, Map.adjust (set i) b h)
+  where go (i,h) = (i + 1, adjust (set i) b h)
         set i (Nothing, closure) = (Just ("t" ++ show i), closure)
 
 -- This fromJust can fail because of garbage collection
 -- That means some pointer to b inside the data structure has changed
 getName :: Box -> PrintState (Maybe String)
 getName b = do (_,h) <- get
-               return $ fst $ (fromJust2 "2") $ Map.lookup b h
+               return $ fst $ fromJust $ lookup b h
 
 
 getCount :: PrintState Integer
@@ -252,8 +264,8 @@ mbParens t | ' ' `elem` t = "(" ++ t ++ ")"
 countReferences :: Box -> PrintState Int
 countReferences b = do
   (_,h) <- get
-  return $ sum $ map countR (Map.elems h)
- where countR (_,c) = length $ filter (== b) $ allPtrs c
+  return $ sum $ map countR h
+ where countR (_,(_,c)) = length $ filter (== b) $ allPtrs c
 
 mprint :: Box -> Closure -> PrintState String
 mprint _ (ConsClosure (StgInfoTable _ _ _ _) _ [dataArg] _ modl name) =
@@ -397,15 +409,6 @@ mprint b (PAPClosure (StgInfoTable 0 0 _ _) _ _ _ _)
 
 mprint _ c = return $ "Missing pattern for " ++ show c
 
-newEval = True
-
-newEvalP = True
---newEvalP a name = do newEval a name
---                  newBprint a >>= putStrLn
-
-newBprint :: a -> IO String
-newBprint a = fparse a >>= return . show
-
 pullTogether :: [VisObject] -> [VisObject]
 pullTogether [] = []
 pullTogether [Named a bs] = [Named a (pullTogether bs)]
@@ -422,7 +425,7 @@ correctObject box = do
 
   case n of
     Just name -> return $ Link name
-    --Nothing -> case r > 1 || (i == 0 && r == 1) of
+    --Nothing -> case r > 1 || (i == 0 && r == 1) of -- Special case for start nodes
     Nothing -> case r > 1 of
                     True -> do setName box
                                name <- liftM (fromJust2 "4") $ getName box
@@ -437,12 +440,12 @@ insertObjects (Unnamed _) xs = xs
 
 --fparse :: a -> IO String
 fparse a = do h <- walkHeap a
-              return $ pullTogether $ evalState (parseClosure b (snd $ h Map.! b)) (0,h)
+              return $ pullTogether $ evalState (parseClosure b (snd $ fromJust $ lookup b h)) (0,h)
   where b = asBox a
 
 fmmp bs h = return $ evalState (go bs) (0,h)
   where go (b:bs) = do (_,h) <- get
-                       r <- parseClosure b (snd $ h Map.! b)
+                       r <- parseClosure b (snd $ fromJust $ lookup b h)
                        rs <- go bs
                        return ((pullTogether r):rs)
         go [] = return []
@@ -451,7 +454,7 @@ fmparse bs = mWalkHeap bs >>= fmmp bs
 
 fhmmp bs h = return $ runState (go bs) (0,h)
   where go (b:bs) = do (_,h) <- get
-                       r <- parseClosure b (snd $ h Map.! b)
+                       r <- parseClosure b (snd $ fromJust $ lookup b h)
                        rs <- go bs
                        return ((pullTogether r):rs)
         go [] = return []
@@ -464,8 +467,8 @@ fhmparse bs = mWalkHeap bs >>= fhmmp bs
 
 --testp b h = pullTogether $ evalState (parseClosure b (snd $ h Map.! b)) (0,h)
 
-flp b = do (_,h) <- get
-           parseClosure b (snd $ (fromJust2 "1") $ Map.lookup b h)
+flp b@(Box a) = do (_,h) <- get
+                   parseClosure b (snd $ (fromJust2 "1") $ lookup b h)
 
 fmbParens t@((Unnamed ('"':_)):_) = t
 fmbParens t@((Unnamed ('(':_)):_) = t
@@ -481,8 +484,10 @@ vElem c t = any go t
 parseClosure :: Box -> Closure -> PrintState [VisObject]
 parseClosure b c = do
   o <- correctObject b
-  i <- parseInternal b c
-  return $ insertObjects o i
+  case o of
+    Link n -> return [Link n] -- Don't build infinite heaps
+    otherwise -> do i <- parseInternal b c
+                    return $ insertObjects o i
 
 parseInternal _ (ConsClosure (StgInfoTable _ _ _ _) _ [dataArg] _ modl name) =
  return [Unnamed $ case (modl, name) of

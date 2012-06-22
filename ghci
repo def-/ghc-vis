@@ -10,4 +10,5 @@
 :def view \x -> return $ "Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visGlobalVar (GHC.Vis.GTK.NewSignal (GHC.HeapView.asBox " ++ x ++ "))"
 :def eval \x -> return $ "GHC.Vis.GTK.gtkEval \"" ++ x ++ "\" >> Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visGlobalVar GHC.Vis.GTK.UpdateSignal"
 :def clear \_ -> return $ "Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visGlobalVar GHC.Vis.GTK.ClearSignal"
+:def update \_ -> return $ "Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visGlobalVar GHC.Vis.GTK.UpdateSignal"
 
