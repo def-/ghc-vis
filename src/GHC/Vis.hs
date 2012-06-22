@@ -471,10 +471,10 @@ fhmparse bs = mWalkHeap bs >>= fhmmp bs
 flp b@(Box a) = do (_,h) <- get
                    parseClosure b (snd $ (fromJust2 "1") $ lookup b h)
 
+-- TODO: Doesn't work quite right, for example with (1,"fo")
 fmbParens t@((Unnamed ('"':_)):_) = t
 fmbParens t@((Unnamed ('(':_)):_) = t
 fmbParens t | ' ' `vElem` t = Unnamed "(" : t ++ [Unnamed ")"]
---            | ':' `vElem` t = Unnamed "(" : t ++ [Unnamed ")"]
             | otherwise     = t
 
 vElem c t = any go t
@@ -547,7 +547,7 @@ parseInternal _ (ConsClosure (StgInfoTable 2 0 _ 1) [bHead,bTail] [] _ "GHC.Type
 parseInternal _ (ConsClosure (StgInfoTable _ 0 _ _) bPtrs [] _ _ name)
   = do cPtrs <- mapM ((liftM fmbParens) . flp) bPtrs
        let tPtrs = intercalate [Unnamed " "] cPtrs
-       return $ (Unnamed name) : tPtrs
+       return $ (Unnamed (name ++ " ")) : tPtrs
 
 parseInternal _ (ArrWordsClosure (StgInfoTable 0 0 ARR_WORDS 0) bytes arrWords)
   = return $ intercalate [Unnamed ","] (map (\x -> [Unnamed (printf "0x%x" x)]) arrWords)
