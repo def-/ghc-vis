@@ -148,26 +148,26 @@ height xs = do
   return $ maximum $ map go xs
 
 width (Named x ys) = do
-  TextExtents _ _ w _ _ _ <- textExtents x
+  TextExtents xb _ _ _ xa _ <- textExtents x
   w2s <- mapM width ys
-  return $ (max w (sum w2s)) + 10
+  return $ (max (xa - xb) (sum w2s)) + 10
 
 width (Unnamed x) = do
-  TextExtents xb _ w _ xa _ <- textExtents x
+  TextExtents xb _ _ _ xa _ <- textExtents x
   return $ (xa - xb) + 10
 
 width (Link x) = do
-  TextExtents _ _ w _ _ _ <- textExtents x
-  return $ w + 15
+  TextExtents xb _ _ _ xa _ <- textExtents x
+  return $ xa - xb + 10
 
 width (Function x) = do
-  TextExtents _ _ w _ _ _ <- textExtents x
-  return $ w + 15
+  TextExtents xb _ _ _ xa _ <- textExtents x
+  return $ xa - xb + 10
 
 draw (Unnamed content) = do
   let padding = 5
   wc <- width (Unnamed content)
-  moveTo padding 0
+  moveTo (padding/2) 0
   TextExtents xb yb w h xa ya <- textExtents content
   setSourceRGB 0 0 0
   showText content
@@ -226,7 +226,7 @@ draw (Link target) = do
 draw (Named name content) = do
   moveTo 0 0
   let padding = 5
-  TextExtents _ _ w1 _ _ _ <- textExtents name
+  TextExtents xb _ _ _ xa _ <- textExtents name
   FontExtents fa fd fh fmx fmy <- fontExtents
   hc <- height content
   wc <- width (Named name content)
@@ -260,7 +260,7 @@ draw (Named name content) = do
   --lineTo nxa 100
   --stroke
   restore
-  moveTo (uw/2 - w1/2) (hc + 7.5 - padding)
+  moveTo (uw/2 - (xa - xb)/2) (hc + 7.5 - padding)
   showText name
   translate wc 0
 
