@@ -1,0 +1,21 @@
+- Der Code sieht gerade schrecklich aus, weil ich viel rumprobiert habe und
+  jetzt erst merke was gut klappt und was nicht. Aufräumen.
+
+- Die Links hoverable und clickable machen.
+
+- Bei großen Datenstrukturen ist diese (lineare) Art der Visualisierung
+  unbrauchbar. Ich würde Graphen bevorzugen. Mit Graphviz gezeichnete Graphen
+  lassen sich jedoch in Cairo nur schwer interaktiv machen. Ich halte es für zu
+  viel Aufwand Graphenvisualisierung a la graphviz neu zu schreiben. Dot kann
+  Graphen im XDot-Format[1] ausgeben, das schon z.B. Koordinaten und Punkte für
+  Bezier-Kurven enthält. Deshalb würde ich einen interaktiven XDot-Viewer für
+  Cairo ähnlich wie xdot.py[2] schreiben, so dass man in den Graphen auch
+  Objekte hervoheben und auswählen kann.
+
+- Mit kompiliertem Code auch laufen (wie?)
+
+- Und noch ein feature-request für wenn noch Zeit ist: Der GHCi-Debugger kann
+  die macht die Namen der thunks (t6 etc.) auch in GHCi verfügbar; das kann
+  dein Tool noch nicht. Vermutlich musst du dafür aber den Typen inferieren,
+  was möglich ist (GHCi machts ja und den Code müsste man eigentlich auch
+  übernehmen können).
