@@ -1,8 +1,8 @@
 -- Add to your ~/.ghci:
 -- :script $VIS_DIR/ghci
 
-:def vis \x -> return $ "GHC.Vis.GTK.tvis"
-:def view \x -> return $ "Control.Concurrent.MVar.tryPutMVar GHC.Vis.GTK.visGlobalVar (GHC.Vis.GTK.NewSignal (GHC.HeapView.asBox " ++ x ++ ")) >> return ()"
-:def eval \x -> return $ "GHC.Vis.GTK.gtkEval \"" ++ x ++ "\" >> Control.Concurrent.MVar.tryPutMVar GHC.Vis.GTK.visGlobalVar GHC.Vis.GTK.UpdateSignal >> return ()"
-:def clear \_ -> return $ "Control.Concurrent.MVar.tryPutMVar GHC.Vis.GTK.visGlobalVar GHC.Vis.GTK.ClearSignal >> return ()"
-:def update \_ -> return $ "Control.Concurrent.MVar.tryPutMVar GHC.Vis.GTK.visGlobalVar GHC.Vis.GTK.UpdateSignal >> return ()"
+:def vis \x -> return $ "GHC.Vis.GTK.visualization"
+:def view \x -> return $ "Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visSignal (GHC.Vis.GTK.NewSignal (GHC.HeapView.asBox " ++ x ++ "))"
+:def eval \x -> return $ "GHC.Vis.GTK.evaluate \"" ++ x ++ "\" >> Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visSignal GHC.Vis.GTK.UpdateSignal"
+:def clear \_ -> return $ "Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visSignal GHC.Vis.GTK.ClearSignal"
+:def update \_ -> return $ "Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visSignal GHC.Vis.GTK.UpdateSignal"
