@@ -3,7 +3,8 @@ module GHC.Vis.GTK (
   vis,
   Signal(..),
   visGlobalVar,
-  visGlobalBoxes,
+  --visGlobalBoxes,
+  --visRunning,
   gtkBprint,
   gtkDprint,
   gtkEval,
@@ -21,12 +22,14 @@ import Data.List
 import qualified Data.Map as Map
 
 import System.IO.Unsafe
+import System.Timeout
 
 import GHC.Vis
 import GHC.HeapView
 
 fontSize = 15
 
+visRunning = unsafePerformIO (newMVar False :: IO (MVar Bool))
 visGlobalVar = unsafePerformIO (newEmptyMVar :: IO (MVar GHC.Vis.GTK.Signal))
 visGlobalBoxes = unsafePerformIO (newMVar [] :: IO (MVar [Box]))
 
@@ -53,12 +56,16 @@ data Signal = NewSignal Box
             | UpdateSignal
             | ClearSignal
 
-tvis ref bref = forkIO $ vis ref bref
+tvis = do
+  vr <- swapMVar visRunning True
+  case vr of
+    False -> forkIO vis >> return ()
+    True  -> return ()
 
-vis ref bref = do
+vis = do
   initGUI
   window <- windowNew
-  onDestroy window mainQuit
+  --onDestroy window mainQuit -- Causes :r problems with multiple windows
 
   canvas <- drawingAreaNew
 
@@ -67,28 +74,48 @@ vis ref bref = do
              ]
 
   onExpose canvas $ const $ do
-    redraw canvas bref
+    redraw canvas
     return True
 
   widgetShowAll window
 
-  forkIO $ react ref bref canvas
+  reactThread <- forkIO $ react canvas window
+  onDestroy window (quit reactThread)
 
   mainGUI
+  --swapMVar visRunning False
+  return ()
 
-react ref bref canvas = do
-  signal <- takeMVar ref
-  case signal of
-    NewSignal x  -> modifyMVar_ bref (\y -> if elem x y then return y else return $ y ++ [x])
-    ClearSignal  -> modifyMVar_ bref (\_ -> return [])
-    UpdateSignal -> return ()
+quit reactThread = do
+  swapMVar visRunning False
+  killThread reactThread
 
-  threadDelay 10000 -- 10 ms, else sometimes redraw happens too fast (Why?)
-  widgetQueueDraw canvas
-  react ref bref canvas
 
-redraw canvas bref = do
-  boxes <- readMVar bref
+react canvas window = do
+  -- Timeout used to handle ghci reloads (:r)
+  -- Reloads cause the visGlobalVar to be reinitialized, but takeMVar is still
+  -- waiting for the old one.  This solution is not perfect, but it works for
+  -- now.
+  mbSignal <- timeout 1000000 (takeMVar visGlobalVar)
+  case mbSignal of
+    Nothing -> do
+      running <- readMVar visRunning
+      case running of
+        -- :r caused this
+        False -> swapMVar visRunning True >> putMVar visGlobalVar UpdateSignal >> react canvas window
+        True -> react canvas window
+    Just signal -> do
+      case signal of
+        NewSignal x  -> modifyMVar_ visGlobalBoxes (\y -> if elem x y then return y else return $ y ++ [x])
+        ClearSignal  -> modifyMVar_ visGlobalBoxes (\_ -> return [])
+        UpdateSignal -> return ()
+
+      threadDelay 10000 -- 10 ms, else sometimes redraw happens too fast (Why?)
+      widgetQueueDraw canvas
+      react canvas window
+
+redraw canvas = do
+  boxes <- readMVar visGlobalBoxes
   --heapMap <- mWalkHeap boxes
   --let texts = fmmp boxes heapMap
   texts <- fmparse boxes
