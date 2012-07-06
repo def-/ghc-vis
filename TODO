@@ -1,6 +1,3 @@
-- Der Code sieht gerade schrecklich aus, weil ich viel rumprobiert habe und
-  jetzt erst merke was gut klappt und was nicht. Aufräumen.
-
 - Die Links hoverable und clickable machen.
 
 - Bei großen Datenstrukturen ist diese (lineare) Art der Visualisierung
@@ -21,6 +18,9 @@
   übernehmen können).
 
 DONE:
+
+- Der Code sieht gerade schrecklich aus, weil ich viel rumprobiert habe und
+  jetzt erst merke was gut klappt und was nicht. Aufräumen.
 
 - :r Problems with multiple windows:
 

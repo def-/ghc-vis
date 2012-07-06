@@ -9,6 +9,7 @@ module GHC.Vis.GTK (
   where
 import Graphics.UI.Gtk hiding (Box, Signal)
 import Graphics.Rendering.Cairo
+import Graphics.UI.Gtk.Gdk.Events
 
 import Control.Concurrent
 import Control.Concurrent.MVar
@@ -16,7 +17,7 @@ import Control.DeepSeq
 import Control.Monad
 
 import Data.List
-import qualified Data.Map as Map
+import Data.IORef
 
 import System.IO.Unsafe
 import System.Timeout
@@ -27,18 +28,30 @@ import GHC.HeapView
 fontSize = 15
 padding = 5
 
--- Communication channel to the visualization
-visSignal = unsafePerformIO (newEmptyMVar :: IO (MVar GHC.Vis.GTK.Signal))
-
--- Whether a visualization is currently running
-visRunning = unsafePerformIO (newMVar False)
-
--- All the visualized boxes
-visBoxes = unsafePerformIO (newMVar [] :: IO (MVar [Box]))
+data State = State
+  { boxes :: [Box]
+  , bounds :: [(VisObject, (Double, Double, Double, Double))]
+  , mousePos :: (Double, Double)
+  , hover :: Maybe Box
+  }
 
 data Signal = NewSignal Box -- Add a new Box to be visualized
             | UpdateSignal  -- Redraw
             | ClearSignal   -- Remove all Boxes
+
+-- Communication channel to the visualization
+visSignal = unsafePerformIO (newEmptyMVar :: IO (MVar Signal))
+
+-- Whether a visualization is currently running
+visRunning = unsafePerformIO (newMVar False)
+
+visState = unsafePerformIO $ newIORef $ State [] [] (0,0) Nothing
+
+-- All the visualized boxes
+visBoxes = unsafePerformIO (newMVar [] :: IO (MVar [Box]))
+
+-- All objects on the screen and their positions (x,y) and size (w,h)
+--visPositions = unsafePerformIO (newMVar [] :: IO (MVar [(VisObject, (Double, Double, Double, Double))]))
 
 printOne a = do
   bs <- readMVar visBoxes
@@ -76,7 +89,14 @@ visMainThread = do
              ]
 
   onExpose canvas $ const $ do
+    tick
     redraw canvas
+    return True
+
+  onMotionNotify canvas False $ \e -> do
+    modifyIORef visState (\s -> s {mousePos = (eventX e, eventY e)})
+    putStrLn $ (show $ eventX e) ++ "," ++ (show $ eventY e)
+    widgetQueueDrawArea canvas 0 0 300 400
     return True
 
   widgetShowAll window
@@ -87,6 +107,19 @@ visMainThread = do
 
   mainGUI
   return ()
+
+tick = do modifyIORef visState $ \s -> (
+            let (mx, my) = mousePos s
+                check (Function _ b, (x,y,w,h)) =
+                  if x <= mx && mx <= x + w &&
+                     y <= my && my <= y + h
+                  then Just b else Nothing
+                check _ = Nothing
+            in s {hover = msum $ map check (bounds s)}
+            )
+          s <- readIORef visState
+          putStrLn $ show (bounds s)
+          putStrLn $ show (hover s)
 
 quit reactThread = do
   swapMVar visRunning False
@@ -123,11 +156,18 @@ react canvas window = do
 
 redraw canvas = do
   boxes <- readMVar visBoxes
-  texts <- parseBoxes boxes
-  render canvas $ do
-    pos <- mapM (\text -> height text) texts
+  objects <- parseBoxes boxes
+
+  s <- readIORef visState
+  let h = hover s
+
+  boundingBoxes <- render canvas $ do
+    pos <- mapM height objects
     let rpos = scanl (\a b -> a + b + 30) 30 pos
-    mapM (drawEntry) (zip texts rpos)
+    mapM (drawEntry s) (zip objects rpos)
+
+  return ()
+  modifyIORef visState (\s -> s {bounds = concat boundingBoxes})
 
 render canvas r = do
         win <- widgetGetDrawWindow canvas
@@ -136,25 +176,28 @@ render canvas r = do
           setFontSize fontSize
           r
 
-drawEntry (text,pos) = do
+drawEntry s (obj, pos) = do
   save
   translate 10 pos
-  mapM draw text
+  boundingBoxes <- mapM (draw s) obj
   restore
+  return $ map (\(o, (x,y,w,h)) -> (o, (x+10,y+pos,w,h))) $ concat boundingBoxes
 
-draw (Unnamed content) = do
-  wc <- width (Unnamed content)
+draw _ o@(Unnamed content) = do
+  wc <- width o
   moveTo (padding/2) 0
   TextExtents xb yb w h xa ya <- textExtents content
   setSourceRGB 0 0 0
   showText content
   translate wc 0
 
-draw (Function target) = do
+  return []
+
+draw s o@(Function target box) = do
   moveTo 0 0
   TextExtents xb yb w h xa ya <- textExtents target
   FontExtents fa fd fh fmx fmy <- fontExtents
-  wc <- width (Function target)
+  wc <- width o
 
   let (ux, uy, uw, uh) =
         (  0
@@ -165,7 +208,11 @@ draw (Function target) = do
 
   setLineCap LineCapRound
   roundedRect ux uy uw uh
-  setSourceRGB 1 0.5 0.5
+
+  case hover s of
+    Just b -> if b == box then setSourceRGB 1 0 0 else setSourceRGB 1 0.5 0.5
+    _      -> setSourceRGB 1 0.5 0.5
+
   fillPreserve
   setSourceRGB 0 0 0
   stroke
@@ -174,11 +221,13 @@ draw (Function target) = do
   showText target
   translate wc 0
 
-draw (Link target) = do
+  return [(o, (ux, uy, uw, uh))]
+
+draw _ o@(Link target) = do
   moveTo 0 0
   TextExtents xb yb w h xa ya <- textExtents target
   FontExtents fa fd fh fmx fmy <- fontExtents
-  wc <- width (Link target)
+  wc <- width o
 
   let (ux, uy, uw, uh) =
         (  0
@@ -198,12 +247,14 @@ draw (Link target) = do
   showText target
   translate wc 0
 
-draw (Named name content) = do
+  return []
+
+draw s o@(Named name content) = do
   moveTo 0 0
   TextExtents xb _ _ _ xa _ <- textExtents name
   FontExtents fa fd fh fmx fmy <- fontExtents
   hc <- height content
-  wc <- width (Named name content)
+  wc <- width o
 
   let (ux, uy, uw, uh) =
         ( 0
@@ -224,12 +275,14 @@ draw (Named name content) = do
 
   save
   translate padding 0
-  mapM draw content
+  bb <- mapM (draw s) content
   restore
 
   moveTo (uw/2 - (xa - xb)/2) (hc + 7.5 - padding)
   showText name
   translate wc 0
+
+  return $ concat bb
 
 roundedRect x y w h = do
   moveTo       x            (y + pad)
@@ -250,7 +303,7 @@ height xs = do
   let go (Named _ ys) = (fh + 15) + (maximum $ map go ys)
       go (Unnamed _)  = fh
       go (Link _)     = (fh + 10)
-      go (Function _)     = (fh + 10)
+      go (Function _ _) = (fh + 10)
   return $ maximum $ map go xs
 
 width (Named x ys) = do
@@ -266,6 +319,6 @@ width (Link x) = do
   TextExtents xb _ _ _ xa _ <- textExtents x
   return $ xa - xb + 10
 
-width (Function x) = do
+width (Function x _) = do
   TextExtents xb _ _ _ xa _ <- textExtents x
   return $ xa - xb + 10
