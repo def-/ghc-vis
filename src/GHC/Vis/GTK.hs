@@ -160,9 +160,11 @@ react canvas window = do
         NewSignal x  -> modifyMVar_ visBoxes (
           \y -> if elem x y then return y else return $ y ++ [x])
         ClearSignal  -> modifyMVar_ visBoxes (\_ -> return [])
-        UpdateSignal -> do boxes <- readMVar visBoxes
-                           objs <- parseBoxes boxes
-                           modifyIORef visState (\s -> s {objects = objs})
+        UpdateSignal -> return ()
+
+      boxes <- readMVar visBoxes
+      objs <- parseBoxes boxes
+      modifyIORef visState (\s -> s {objects = objs})
 
       -- Doesn't seem to happen anymore:
       --threadDelay 10000 -- 10 ms, else sometimes redraw happens too fast
