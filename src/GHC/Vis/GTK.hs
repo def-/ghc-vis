@@ -188,28 +188,32 @@ render canvas r = do
 drawEntry s (obj, pos) = do
   save
   translate 10 pos
+  moveTo 0 0
   boundingBoxes <- mapM (draw s) obj
   restore
   return $ map (\(o, (x,y,w,h)) -> (o, (x+10,y+pos,w,h))) $ concat boundingBoxes
 
 draw _ o@(Unnamed content) = do
+  (x,y) <- getCurrentPoint
   wc <- width o
-  moveTo (padding/2) 0
+  moveTo (x + padding/2) 0
   TextExtents xb yb w h xa ya <- textExtents content
   setSourceRGB 0 0 0
   showText content
-  translate wc 0
+  --translate wc 0
+  moveTo (x + wc) 0
 
   return []
 
 draw s o@(Function target box) = do
-  moveTo 0 0
+  --moveTo 0 0
+  (x,y) <- getCurrentPoint
   TextExtents xb yb w h xa ya <- textExtents target
   FontExtents fa fd fh fmx fmy <- fontExtents
   wc <- width o
 
   let (ux, uy, uw, uh) =
-        (  0
+        (  x
         ,  (-fa) -  padding
         ,  wc
         ,  fh   +  10
@@ -226,20 +230,22 @@ draw s o@(Function target box) = do
   setSourceRGB 0 0 0
   stroke
 
-  moveTo padding 0
+  moveTo (x + padding) 0
   showText target
-  translate wc 0
+  --translate wc 0
+  moveTo (x + wc) 0
 
   return [(o, (ux, uy, uw, uh))]
 
 draw _ o@(Link target) = do
-  moveTo 0 0
+  --moveTo 0 0
+  (x,y) <- getCurrentPoint
   TextExtents xb yb w h xa ya <- textExtents target
   FontExtents fa fd fh fmx fmy <- fontExtents
   wc <- width o
 
   let (ux, uy, uw, uh) =
-        (  0
+        (  x
         ,  (-fa) -  padding
         ,  wc
         ,  fh   +  10
@@ -252,21 +258,23 @@ draw _ o@(Link target) = do
   setSourceRGB 0 0 0
   stroke
 
-  moveTo padding 0
+  moveTo (x + padding) 0
   showText target
-  translate wc 0
+  --translate wc 0
+  moveTo (x + wc) 0
 
   return []
 
 draw s o@(Named name content) = do
-  moveTo 0 0
+  --moveTo 0 0
+  (x,y) <- getCurrentPoint
   TextExtents xb _ _ _ xa _ <- textExtents name
   FontExtents fa fd fh fmx fmy <- fontExtents
   hc <- height content
   wc <- width o
 
   let (ux, uy, uw, uh) =
-        ( 0
+        ( x
         , -fa - padding
         , wc
         , fh + 10 + hc
@@ -283,13 +291,15 @@ draw s o@(Named name content) = do
   stroke
 
   save
-  translate padding 0
+  --translate padding 0
+  moveTo (x + padding) 0
   bb <- mapM (draw s) content
   restore
 
-  moveTo (uw/2 - (xa - xb)/2) (hc + 7.5 - padding)
+  moveTo (x + uw/2 - (xa - xb)/2) (hc + 7.5 - padding)
   showText name
-  translate wc 0
+  --translate wc 0
+  moveTo (x + wc) 0
 
   return $ concat bb
 
