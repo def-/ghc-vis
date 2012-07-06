@@ -9,7 +9,7 @@ module GHC.Vis.GTK (
   where
 import Graphics.UI.Gtk hiding (Box, Signal)
 import Graphics.Rendering.Cairo
-import Graphics.UI.Gtk.Gdk.Events
+import Graphics.UI.Gtk.Gdk.Events as E
 
 import Control.Concurrent
 import Control.Concurrent.MVar
@@ -90,15 +90,17 @@ visMainThread = do
              ]
 
   onExpose canvas $ const $ do
-    --tick canvas
     redraw canvas
     return True
 
   onMotionNotify canvas False $ \e -> do
-    modifyIORef visState (\s -> s {mousePos = (eventX e, eventY e)})
+    modifyIORef visState (\s -> s {mousePos = (E.eventX e, E.eventY e)})
     tick canvas
-    --putStrLn $ (show $ eventX e) ++ "," ++ (show $ eventY e)
-    --widgetQueueDrawArea canvas 0 0 300 400
+    return True
+
+  onButtonPress canvas $ \e -> do
+    when (E.eventButton e == LeftButton && E.eventClick e == SingleClick) $
+      click
     return True
 
   widgetShowAll window
@@ -109,6 +111,14 @@ visMainThread = do
 
   mainGUI
   return ()
+
+click = do
+  s <- readIORef visState
+  case hover s of
+    Just (Box a) -> do
+      seq a (return ())
+      putMVar visSignal UpdateSignal
+    Nothing -> return ()
 
 tick canvas = do
   s <- readIORef visState
@@ -123,8 +133,6 @@ tick canvas = do
     in s {hover = msum $ map check (bounds s)}
     )
   s <- readIORef visState
-  --putStrLn $ show (bounds s)
-  --putStrLn $ show (hover s)
   if oldHover == hover s then return () else widgetQueueDraw canvas
 
 quit reactThread = do
