@@ -30,6 +30,7 @@ padding = 5
 
 data State = State
   { boxes :: [Box]
+  , objects :: [[VisObject]]
   , bounds :: [(VisObject, (Double, Double, Double, Double))]
   , mousePos :: (Double, Double)
   , hover :: Maybe Box
@@ -45,7 +46,7 @@ visSignal = unsafePerformIO (newEmptyMVar :: IO (MVar Signal))
 -- Whether a visualization is currently running
 visRunning = unsafePerformIO (newMVar False)
 
-visState = unsafePerformIO $ newIORef $ State [] [] (0,0) Nothing
+visState = unsafePerformIO $ newIORef $ State [] [] [] (0,0) Nothing
 
 -- All the visualized boxes
 visBoxes = unsafePerformIO (newMVar [] :: IO (MVar [Box]))
@@ -89,14 +90,15 @@ visMainThread = do
              ]
 
   onExpose canvas $ const $ do
-    tick
+    --tick canvas
     redraw canvas
     return True
 
   onMotionNotify canvas False $ \e -> do
     modifyIORef visState (\s -> s {mousePos = (eventX e, eventY e)})
-    putStrLn $ (show $ eventX e) ++ "," ++ (show $ eventY e)
-    widgetQueueDrawArea canvas 0 0 300 400
+    tick canvas
+    --putStrLn $ (show $ eventX e) ++ "," ++ (show $ eventY e)
+    --widgetQueueDrawArea canvas 0 0 300 400
     return True
 
   widgetShowAll window
@@ -108,18 +110,22 @@ visMainThread = do
   mainGUI
   return ()
 
-tick = do modifyIORef visState $ \s -> (
-            let (mx, my) = mousePos s
-                check (Function _ b, (x,y,w,h)) =
-                  if x <= mx && mx <= x + w &&
-                     y <= my && my <= y + h
-                  then Just b else Nothing
-                check _ = Nothing
-            in s {hover = msum $ map check (bounds s)}
-            )
-          s <- readIORef visState
-          putStrLn $ show (bounds s)
-          putStrLn $ show (hover s)
+tick canvas = do
+  s <- readIORef visState
+  let oldHover = hover s
+  modifyIORef visState $ \s -> (
+    let (mx, my) = mousePos s
+        check (Function _ b, (x,y,w,h)) =
+          if x <= mx && mx <= x + w &&
+             y <= my && my <= y + h
+          then Just b else Nothing
+        check _ = Nothing
+    in s {hover = msum $ map check (bounds s)}
+    )
+  s <- readIORef visState
+  --putStrLn $ show (bounds s)
+  --putStrLn $ show (hover s)
+  if oldHover == hover s then return () else widgetQueueDraw canvas
 
 quit reactThread = do
   swapMVar visRunning False
@@ -146,7 +152,9 @@ react canvas window = do
         NewSignal x  -> modifyMVar_ visBoxes (
           \y -> if elem x y then return y else return $ y ++ [x])
         ClearSignal  -> modifyMVar_ visBoxes (\_ -> return [])
-        UpdateSignal -> return ()
+        UpdateSignal -> do boxes <- readMVar visBoxes
+                           objs <- parseBoxes boxes
+                           modifyIORef visState (\s -> s {objects = objs})
 
       -- Doesn't seem to happen anymore:
       --threadDelay 10000 -- 10 ms, else sometimes redraw happens too fast
@@ -155,16 +163,17 @@ react canvas window = do
       react canvas window
 
 redraw canvas = do
-  boxes <- readMVar visBoxes
-  objects <- parseBoxes boxes
+  --boxes <- readMVar visBoxes
+  --objects <- parseBoxes boxes
 
   s <- readIORef visState
+  let objs = objects s
   let h = hover s
 
   boundingBoxes <- render canvas $ do
-    pos <- mapM height objects
+    pos <- mapM height objs
     let rpos = scanl (\a b -> a + b + 30) 30 pos
-    mapM (drawEntry s) (zip objects rpos)
+    mapM (drawEntry s) (zip objs rpos)
 
   return ()
   modifyIORef visState (\s -> s {bounds = concat boundingBoxes})
