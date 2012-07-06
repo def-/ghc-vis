@@ -37,13 +37,14 @@ type PrintState = State (Integer, HeapMap)
 data VisObject = Unnamed String
                | Named String [VisObject]
                | Link String
-               | Function String Box
+               | Function String
+               deriving Eq
 
 instance Show VisObject where
   show (Unnamed x) = x
   show (Named x ys) = x ++ "=(" ++ show ys ++ ")"
   show (Link x) = x
-  show (Function x _) = x
+  show (Function x) = x
 
   showList []       = showString ""
   showList (c:cs)   = showString (show c) . showList cs
@@ -92,7 +93,7 @@ correctObject box = do
                     False -> return $ Unnamed ""
 
 insertObjects :: VisObject -> [VisObject] -> [VisObject]
-insertObjects _ xs@((Function name _):_) = xs
+insertObjects _ xs@((Function name):_) = xs
 insertObjects (Link name) _ = [Link name]
 insertObjects (Named name _) xs = [Named name xs]
 insertObjects (Unnamed _) xs = xs
@@ -235,16 +236,16 @@ parseInternal b (ThunkClosure (StgInfoTable _ _ _ _) bPtrs args)
        cPtrs <- mapM contParse $ reverse bPtrs
        let tPtrs = intercalate [Unnamed ","] cPtrs
        return $ case null args of
-         True  -> (Function name b) : Unnamed "(" : tPtrs ++ [Unnamed ")"]
-         False -> (Function name b) : (Unnamed $ show args ++ "(") : tPtrs ++ [Unnamed ")"]
+         True  -> (Function name) : Unnamed "(" : tPtrs ++ [Unnamed ")"]
+         False -> (Function name) : (Unnamed $ show args ++ "(") : tPtrs ++ [Unnamed ")"]
 
 parseInternal b (FunClosure (StgInfoTable _ _ _ _) bPtrs args)
   = do name <- getSetName b
        cPtrs <- mapM contParse $ reverse bPtrs
        let tPtrs = intercalate [Unnamed ","] cPtrs
        return $ case null args of
-         True  -> (Function name b) : Unnamed "(" : tPtrs ++ [Unnamed ")"]
-         False -> (Function name b) : (Unnamed $ show args ++ "(") : tPtrs ++ [Unnamed ")"]
+         True  -> (Function name) : Unnamed "(" : tPtrs ++ [Unnamed ")"]
+         False -> (Function name) : (Unnamed $ show args ++ "(") : tPtrs ++ [Unnamed ")"]
 
 -- bPtrs here can currently point to Nothing, because else we might get infinite heaps
 parseInternal _ (MutArrClosure (StgInfoTable _ _ _ _) _ _ bPtrs)
@@ -257,10 +258,10 @@ parseInternal _ (BCOClosure (StgInfoTable 4 0 BCO 0) _ _ bPtr _ _ _)
 
 parseInternal b (APClosure (StgInfoTable 0 0 _ _) _ _ fun _)
   = do cPtr <- contParse fun
-       getSetName b >>= \x -> return $ [Function x b] ++ cPtr
+       getSetName b >>= \x -> return $ [Function x] ++ cPtr
 
 parseInternal b (PAPClosure (StgInfoTable 0 0 _ _) _ _ _ _)
-  = getSetName b >>= \x -> return [Function x b]
+  = getSetName b >>= \x -> return [Function x]
 
 parseInternal _ c = return [Unnamed ("Missing pattern for " ++ show c)]
 

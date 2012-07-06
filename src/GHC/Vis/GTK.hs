@@ -31,9 +31,9 @@ padding = 5
 data State = State
   { boxes :: [Box]
   , objects :: [[VisObject]]
-  , bounds :: [(VisObject, (Double, Double, Double, Double))]
+  , bounds :: [(String, (Double, Double, Double, Double))]
   , mousePos :: (Double, Double)
-  , hover :: Maybe Box
+  , hover :: Maybe String
   }
 
 data Signal = NewSignal Box -- Add a new Box to be visualized
@@ -115,21 +115,21 @@ visMainThread = do
 click = do
   s <- readIORef visState
   case hover s of
-    Just (Box a) -> do
-      seq a (return ())
+    Just t -> do
+      --seq a (return ())
+      evaluate t
       putMVar visSignal UpdateSignal
-    Nothing -> return ()
+    _ -> return ()
 
 tick canvas = do
   s <- readIORef visState
   let oldHover = hover s
   modifyIORef visState $ \s -> (
     let (mx, my) = mousePos s
-        check (Function _ b, (x,y,w,h)) =
+        check (o, (x,y,w,h)) =
           if x <= mx && mx <= x + w &&
              y <= my && my <= y + h
-          then Just b else Nothing
-        check _ = Nothing
+          then Just o else Nothing
     in s {hover = msum $ map check (bounds s)}
     )
   s <- readIORef visState
@@ -215,7 +215,7 @@ draw _ o@(Unnamed content) = do
 
   return []
 
-draw s o@(Function target box) = do
+draw s o@(Function target) = do
   --moveTo 0 0
   (x,y) <- getCurrentPoint
   TextExtents xb yb w h xa ya <- textExtents target
@@ -233,8 +233,8 @@ draw s o@(Function target box) = do
   roundedRect ux uy uw uh
 
   case hover s of
-    Just b -> if b == box then setSourceRGB 1 0 0 else setSourceRGB 1 0.5 0.5
-    _      -> setSourceRGB 1 0.5 0.5
+    Just t -> if t == target then setSourceRGB 1 0 0 else setSourceRGB 1 0.5 0.5
+    _ -> setSourceRGB 1 0.5 0.5
 
   fillPreserve
   setSourceRGB 0 0 0
@@ -245,9 +245,9 @@ draw s o@(Function target box) = do
   --translate wc 0
   moveTo (x + wc) 0
 
-  return [(o, (ux, uy, uw, uh))]
+  return [(target, (ux, uy, uw, uh))]
 
-draw _ o@(Link target) = do
+draw s o@(Link target) = do
   --moveTo 0 0
   (x,y) <- getCurrentPoint
   TextExtents xb yb w h xa ya <- textExtents target
@@ -263,7 +263,11 @@ draw _ o@(Link target) = do
 
   setLineCap LineCapRound
   roundedRect ux uy uw uh
-  setSourceRGB 0.5 0.5 1
+
+  case hover s of
+    Just t -> if t == target then setSourceRGB 0 0 1 else setSourceRGB 0.5 0.5 1
+    _ -> setSourceRGB 0.5 0.5 1
+
   fillPreserve
   setSourceRGB 0 0 0
   stroke
@@ -273,7 +277,7 @@ draw _ o@(Link target) = do
   --translate wc 0
   moveTo (x + wc) 0
 
-  return []
+  return [(target, (ux, uy, uw, uh))]
 
 draw s o@(Named name content) = do
   --moveTo 0 0
@@ -292,7 +296,11 @@ draw s o@(Named name content) = do
 
   setLineCap LineCapRound
   roundedRect ux uy uw uh
-  setSourceRGB 0.5 1 0.5
+
+  case hover s of
+    Just t -> if t == name then setSourceRGB 0 1 0 else setSourceRGB 0.5 1 0.5
+    _ -> setSourceRGB 0.5 1 0.5
+
   fillPreserve
   setSourceRGB 0 0 0
   stroke
@@ -311,7 +319,7 @@ draw s o@(Named name content) = do
   --translate wc 0
   moveTo (x + wc) 0
 
-  return $ concat bb
+  return $ concat bb ++ [(name, (ux, uy, uw, uh))]
 
 roundedRect x y w h = do
   moveTo       x            (y + pad)
@@ -332,7 +340,7 @@ height xs = do
   let go (Named _ ys) = (fh + 15) + (maximum $ map go ys)
       go (Unnamed _)  = fh
       go (Link _)     = (fh + 10)
-      go (Function _ _) = (fh + 10)
+      go (Function _) = (fh + 10)
   return $ maximum $ map go xs
 
 width (Named x ys) = do
@@ -348,6 +356,6 @@ width (Link x) = do
   TextExtents xb _ _ _ xa _ <- textExtents x
   return $ xa - xb + 10
 
-width (Function x _) = do
+width (Function x) = do
   TextExtents xb _ _ _ xa _ <- textExtents x
   return $ xa - xb + 10
