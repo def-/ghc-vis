@@ -1,0 +1,4 @@
+digraph hello_world {
+  node [href="javascript:void(click_node('\N'))"]
+  hello:e->world:w
+}

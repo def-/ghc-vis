@@ -6,6 +6,8 @@ module GHC.Vis (
   parseBoxesHeap,
   parseClosure,
   VisObject(..),
+  pointersToFollow,
+  HeapMap
   )
   where
 

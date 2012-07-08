@@ -1,0 +1,9 @@
+digraph hello_world {
+	node [label="\N", href="javascript:void(click_node('\N'))"];
+	graph [bb="0,0,130,112",
+		_draw_="c 9 -#ffffffff C 9 -#ffffffff P 4 0 -1 0 112 131 112 131 -1 ",
+		xdotversion="1.2"];
+	hello [pos="31,93", width="0.86111", height="0.52778", _draw_="c 9 -#000000ff e 31 93 31 19 ", _ldraw_="F 14.000000 11 -Times-Roman c 9 -#000000ff T 31 89 0 28 5 -hello "];
+	world [pos="96,19", width="0.94444", height="0.52778", _draw_="c 9 -#000000ff e 96 19 34 19 ", _ldraw_="F 14.000000 11 -Times-Roman c 9 -#000000ff T 96 15 0 32 5 -world "];
+	hello:e -> world:w [pos="e,62,19 62,93 89.75,93 47.258,40.318 53.057,23.855", _draw_="c 9 -#000000ff B 4 62 93 90 93 47 40 53 24 ", _hdraw_="S 5 -solid c 9 -#000000ff C 9 -#000000ff P 3 55 27 62 19 52 21 "];
+}
