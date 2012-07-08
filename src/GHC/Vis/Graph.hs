@@ -43,8 +43,11 @@ import GHC.Vis
 -- Maybe add edge labels as type of link (params, pointer, ...)
 buildGraph :: HeapMap -> Gr Closure ()
 buildGraph hm = insEdges edges $ insNodes nodes empty
-  where nodes = zip [0..] $ map (\(_,(_,c)) -> c) hm
+  where nodes = zip [0..] $ map (\(_,(_,c)) -> c) rhm
         edges = foldr toLEdge [] $ foldr mbEdges [] nodes
+        -- Reversing it fixes the ordering of nodes in the graph. Should run
+        -- through allPtrs and sort by order inside of all allPtrs lists.
+        rhm = reverse hm
 
         toLEdge (f, Just t) xs = (f,t,()):xs
         toLEdge _ xs = xs
@@ -53,7 +56,7 @@ buildGraph hm = insEdges edges $ insNodes nodes empty
         -- heap map out emulates pointersToFollow without being in IO
         mbEdges (p,c) xs = (map (\b -> (p, boxPos b)) (allPtrs c)) ++ xs
 
-        boxPos b = lookup b $ zip (map (\(b,_) -> b) hm) [0..]
+        boxPos b = lookup b $ zip (map (\(b,_) -> b) rhm) [0..]
 
 -- Probably have to do some kind of fold over the graph to remove for example unwanted pointers
 toViewableGraph :: Gr Closure () -> Gr String String
