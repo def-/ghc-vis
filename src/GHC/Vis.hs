@@ -7,7 +7,8 @@ module GHC.Vis (
   parseClosure,
   VisObject(..),
   pointersToFollow,
-  HeapMap
+  HeapMap,
+  showClosure
   )
   where
 
@@ -286,3 +287,71 @@ objElem c t = any go t
   where go (Unnamed xs) = c `elem` xs
         go (Named _ os) = any go os
         go _ = False
+
+showClosure (ConsClosure (StgInfoTable _ _ _ _) _ [dataArg] _ modl name) =
+ case (modl, name) of
+    k | k `elem` [ ("GHC.Word", "W#")
+                 , ("GHC.Word", "W8#")
+                 , ("GHC.Word", "W16#")
+                 , ("GHC.Word", "W32#")
+                 , ("GHC.Word", "W64#")
+                 ] -> show dataArg
+
+    k | k `elem` [ ("GHC.Integer.Type", "S#")
+                 , ("GHC.Types", "I#")
+                 , ("GHC.Int", "I8#")
+                 , ("GHC.Int", "I16#")
+                 , ("GHC.Int", "I32#")
+                 , ("GHC.Int", "I64#")
+                 ] -> show $ (fromIntegral :: Word -> Int) dataArg
+
+    ("GHC.Types", "C#") -> show . chr $ fromIntegral dataArg
+
+    ("Types", "D#") -> printf "%0.5f" (unsafeCoerce dataArg :: Double)
+    ("Types", "F#") -> printf "%0.5f" (unsafeCoerce dataArg :: Double)
+
+    c -> "Missing ConsClosure pattern for " ++ show c
+
+showClosure (ConsClosure (StgInfoTable 1 3 _ 0) _ [_,0,0] _ "Data.ByteString.Internal" "PS")
+  = "ByteString[0,0]()"
+
+showClosure (ConsClosure (StgInfoTable 1 3 _ 0) [bPtr] [_,start,end] _ "Data.ByteString.Internal" "PS")
+  = printf "ByteString[%d,%d](" start end
+
+showClosure (ConsClosure (StgInfoTable 2 3 _ 1) [bPtr1,bPtr2] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
+  = printf "Chunk[%d,%d](" start end
+
+showClosure (ConsClosure (StgInfoTable _ _ _ _) _ _ _ _ name)
+  = name
+
+showClosure (ArrWordsClosure (StgInfoTable 0 0 ARR_WORDS 0) bytes arrWords)
+  = intercalate ", " $ map (\x -> printf "0x%x" x) arrWords
+
+-- Probably should delete these from Graph
+showClosure (IndClosure (StgInfoTable 1 0 _ 0) b)
+  = ""
+
+showClosure (BlackholeClosure (StgInfoTable 1 0 _ 0) b)
+  = ""
+
+-- Reversed order of ptrs
+showClosure (ThunkClosure (StgInfoTable _ _ _ _) bPtrs args)
+  = "Thunk"
+
+showClosure (FunClosure (StgInfoTable _ _ _ _) bPtrs args)
+  = "Fun"
+
+showClosure (MutArrClosure (StgInfoTable _ _ _ _) _ _ bPtrs)
+  = ""
+
+showClosure (BCOClosure (StgInfoTable 4 0 BCO 0) _ _ bPtr _ _ _)
+  = ""
+
+showClosure (APClosure (StgInfoTable 0 0 _ _) _ _ fun _)
+  = "AP"
+
+showClosure (PAPClosure (StgInfoTable 0 0 _ _) _ _ _ _)
+  = "PAP"
+
+showClosure c = "Missing pattern for " ++ show c
+

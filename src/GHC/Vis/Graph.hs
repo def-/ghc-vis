@@ -40,6 +40,7 @@ import GHC.Vis
 --             ,([],3,"test3",[("",2)])
 --             ]
 
+-- Maybe add edge labels as type of link (params, pointer, ...)
 buildGraph :: HeapMap -> Gr Closure ()
 buildGraph hm = insEdges edges $ insNodes nodes empty
   where nodes = zip [0..] $ map (\(_,(_,c)) -> c) hm
@@ -48,9 +49,15 @@ buildGraph hm = insEdges edges $ insNodes nodes empty
         toLEdge (f, Just t) xs = (f,t,()):xs
         toLEdge _ xs = xs
 
+        -- Using allPtrs and then filtering the closures not available in the
+        -- heap map out emulates pointersToFollow without being in IO
         mbEdges (p,c) xs = (map (\b -> (p, boxPos b)) (allPtrs c)) ++ xs
 
         boxPos b = lookup b $ zip (map (\(b,_) -> b) hm) [0..]
+
+-- Probably have to do some kind of fold over the graph to remove for example unwanted pointers
+toViewableGraph :: Gr Closure () -> Gr String String
+toViewableGraph cg = emap (const "") $ nmap showClosure cg
 
 parseXDot :: FilePath -> IO (DotGraph String)
 parseXDot x = do
@@ -71,4 +78,6 @@ defaultVis = graphToDot params
   where params = nonClusteredParams { fmtNode = \ (_,l) -> [toLabel l] }
 
 main = do
-  putStrLn $ show $ printDotGraph $ defaultVis cyc3
+  --putStrLn $ show $ printDotGraph $ defaultVis cyc3
+  hm <-walkHeap [asBox 1]
+  preview $ toViewableGraph $ buildGraph hm
