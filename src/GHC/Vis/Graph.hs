@@ -79,5 +79,9 @@ defaultVis = graphToDot params
 
 main = do
   --putStrLn $ show $ printDotGraph $ defaultVis cyc3
-  hm <-walkHeap [asBox 1]
+  hm <- walkHeapWithoutDummy [asBox 1]
+  preview $ toViewableGraph $ buildGraph hm
+
+pr as = do
+  hm <- walkHeapWithoutDummy as
   preview $ toViewableGraph $ buildGraph hm

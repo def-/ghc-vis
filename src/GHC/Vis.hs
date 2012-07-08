@@ -2,6 +2,7 @@
 
 module GHC.Vis (
   walkHeap,
+  walkHeapWithoutDummy,
   parseBoxes,
   parseBoxesHeap,
   parseClosure,
@@ -100,6 +101,18 @@ insertObjects _ xs@((Function name):_) = xs
 insertObjects (Link name) _ = [Link name]
 insertObjects (Named name _) xs = [Named name xs]
 insertObjects (Unnamed _) xs = xs
+
+walkHeapWithoutDummy :: [Box] -> IO HeapMap
+walkHeapWithoutDummy bs = do
+  -- Add a special pointer to detect number of pointers to start boxes
+  foldM (\l b -> go b l) [] bs
+  where go b l = case lookup b l of
+          Just _  -> return l
+          Nothing -> do
+            c' <- getBoxedClosureData b
+            p  <- pointersToFollow c'
+            l' <- foldM (\l x -> go x l) (insert (b, (Nothing, c')) l) p
+            return $ insert (b, (Nothing, c')) l'
 
 walkHeap :: [Box] -> IO HeapMap
 walkHeap bs = do
@@ -329,10 +342,10 @@ showClosure (ArrWordsClosure (StgInfoTable 0 0 ARR_WORDS 0) bytes arrWords)
 
 -- Probably should delete these from Graph
 showClosure (IndClosure (StgInfoTable 1 0 _ 0) b)
-  = ""
+  = "Ind"
 
 showClosure (BlackholeClosure (StgInfoTable 1 0 _ 0) b)
-  = ""
+  = "Blackhole"
 
 -- Reversed order of ptrs
 showClosure (ThunkClosure (StgInfoTable _ _ _ _) bPtrs args)
@@ -342,10 +355,10 @@ showClosure (FunClosure (StgInfoTable _ _ _ _) bPtrs args)
   = "Fun"
 
 showClosure (MutArrClosure (StgInfoTable _ _ _ _) _ _ bPtrs)
-  = ""
+  = "MutArr"
 
 showClosure (BCOClosure (StgInfoTable 4 0 BCO 0) _ _ bPtr _ _ _)
-  = ""
+  = "BCO"
 
 showClosure (APClosure (StgInfoTable 0 0 _ _) _ _ fun _)
   = "AP"
