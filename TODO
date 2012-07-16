@@ -1,16 +1,20 @@
-- Bei großen Datenstrukturen ist diese (lineare) Art der Visualisierung
-  unbrauchbar. Ich würde Graphen bevorzugen. Mit Graphviz gezeichnete Graphen
-  lassen sich jedoch in Cairo nur schwer interaktiv machen. Ich halte es für zu
-  viel Aufwand Graphenvisualisierung a la graphviz neu zu schreiben. Dot kann
-  Graphen im XDot-Format[1] ausgeben, das schon z.B. Koordinaten und Punkte für
-  Bezier-Kurven enthält. Deshalb würde ich einen interaktiven XDot-Viewer für
-  Cairo ähnlich wie xdot.py[2] schreiben, so dass man in den Graphen auch
-  Objekte hervoheben und auswählen kann.
+- Clickable xdot
+
+- Add top level identifiers to xdot
+
+- xdot and list view at the same time, either deactivatable
 
 - Sometimes fromJust still fails (Probably garbage collector starts running
   while we look at heap data or expression is evaluated)
+  Possible solutions:
+  - Perform GC before
+  - Rerun on fail
 
 - Mit kompiliertem Code auch laufen (wie?)
+
+- Show types (see GHCi)
+
+- find out where a Thunk closure comes from and additional information about it
 
 - Und noch ein feature-request für wenn noch Zeit ist: Der GHCi-Debugger kann
   die macht die Namen der thunks (t6 etc.) auch in GHCi verfügbar; das kann
@@ -19,6 +23,15 @@
   übernehmen können).
 
 DONE:
+
+- Bei großen Datenstrukturen ist diese (lineare) Art der Visualisierung
+  unbrauchbar. Ich würde Graphen bevorzugen. Mit Graphviz gezeichnete Graphen
+  lassen sich jedoch in Cairo nur schwer interaktiv machen. Ich halte es für zu
+  viel Aufwand Graphenvisualisierung a la graphviz neu zu schreiben. Dot kann
+  Graphen im XDot-Format[1] ausgeben, das schon z.B. Koordinaten und Punkte für
+  Bezier-Kurven enthält. Deshalb würde ich einen interaktiven XDot-Viewer für
+  Cairo ähnlich wie xdot.py[2] schreiben, so dass man in den Graphen auch
+  Objekte hervoheben und auswählen kann.
 
 - Die Links hoverable und clickable machen.
 
