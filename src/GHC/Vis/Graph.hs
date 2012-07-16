@@ -142,25 +142,25 @@ op as = dg as >>= return . getOperations
 
 getOperations :: (G.DotGraph String) -> [Operation]
 getOperations (G.DotGraph _ _ _ graphStatements) = F.foldr handle [] graphStatements
-  where handle (G.GA (GraphAttrs attrs)) l = (foldr handleInternal [] attrs) ++ l
+  where --handle (G.GA (GraphAttrs attrs)) l = (foldr handleInternal [] attrs) ++ l
         handle (G.DN (DotNode _ attrs)) l = (foldr handleInternal [] attrs) ++ l
+        handle (G.DE (DotEdge _ _ attrs)) l = (foldr handleInternal [] attrs) ++ l
         handle _ l = l
 
         handleInternal (A.UnknownAttribute "_draw_" r) l = (parse r) ++ l
         handleInternal (A.UnknownAttribute "_ldraw_" r) l = (parse r) ++ l
+        handleInternal (A.UnknownAttribute "_hdraw_" r) l = (parse r) ++ l
+        handleInternal (A.UnknownAttribute "_tdraw_" r) l = (parse r) ++ l
+        handleInternal (A.UnknownAttribute "_hldraw_" r) l = (parse r) ++ l
+        handleInternal (A.UnknownAttribute "_tlldraw_" r) l = (parse r) ++ l
         handleInternal _ l = l
 
-drawAll = mapM draw
-
-draw (Color _ _) = return ()
-
-draw (Polygon _ _) = return ()
---draw (Polygon ((x,y):xys) filled) = do
---  moveTo x y
---  mapM (\(x,y) -> lineTo x y) xys
---  closePath
---  if filled then fillPreserve >> fill else stroke
---  return ()
+drawAll ops = do
+  save
+  translate 100 400
+  scale 1 (-1)
+  mapM draw ops
+  restore
 
 draw (Ellipse (x,y) w h filled) = do
   save
@@ -171,7 +171,26 @@ draw (Ellipse (x,y) w h filled) = do
   restore
   if filled then fill else stroke
 
-draw (Font _ _) = return ()
+--draw (Polygon _ _) = return ()
+draw (Polygon ((x,y):xys) filled) = do
+  moveTo x y
+  mapM (\(x,y) -> lineTo x y) xys
+  closePath
+  if filled then fillPreserve >> fill else stroke
+  return ()
+
+draw (Polyline _) = return ()
+
+draw (BSpline ((x,y):xys) filled) = do
+  moveTo x y
+  drawBezier xys
+  if filled then fillPreserve >> fill else stroke
+  return ()
+
+  where drawBezier xys@((x1,y1):(x2,y2):(x3,y3):_) = do
+          curveTo x1 y1 x2 y2 x3 y3
+          drawBezier $ tail xys
+        drawBezier _ = return ()
 
 -- Should be done with Pango
 draw (Text (x,y) alignment width text) = do
@@ -179,13 +198,23 @@ draw (Text (x,y) alignment width text) = do
              LeftAlign -> x
              CenterAlign -> x - 0.5 * width
              RightAlign -> x - width
-  let height = 0
+  TextExtents _ _ _ height _ _ <- textExtents text
   let y2 = y - height + 2 -- TODO: proper descent from font metrics
 
   moveTo x2 y2
   save
+  scale 1 (-1)
   showText text
   restore
+
+draw (Color _ _) = return ()
+
+draw (Font size name) = do
+  selectFontFace "Times-Roman" FontSlantNormal FontWeightNormal
+  setFontSize size
+
+draw (Style _) = return ()
+draw (Image _ _ _ _) = return ()
 
 type Point = (Double, Double)
 
@@ -220,8 +249,8 @@ parse = Data.GraphViz.Parsing.runParser' $ P.many $ do
     'P' -> parsePolygon True
     'p' -> parsePolygon False
     'L' -> parsePolyline
-    'B' -> parseBSpline True
-    'b' -> parseBSpline False
+    'B' -> parseBSpline False
+    'b' -> parseBSpline True
     'T' -> parseText
     'C' -> parseColor True
     'c' -> parseColor False

@@ -180,7 +180,9 @@ redraw canvas = do
   s <- readIORef visState
   let objs = objects s
   let h = hover s
-  o <- op [asBox 1]
+  let x = "foo"
+  putStrLn x
+  o <- op [asBox x]
 
   boundingBoxes <- render canvas $ do
     pos <- mapM height objs
