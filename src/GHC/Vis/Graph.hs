@@ -142,7 +142,7 @@ op as = dg as >>= return . getOperations
 
 getOperations :: (G.DotGraph String) -> [Operation]
 getOperations (G.DotGraph _ _ _ graphStatements) = F.foldr handle [] graphStatements
-  where --handle (G.GA (GraphAttrs attrs)) l = (foldr handleInternal [] attrs) ++ l
+  where handle (G.GA (GraphAttrs attrs)) l = (foldr handleInternal [] attrs) ++ l
         handle (G.DN (DotNode _ attrs)) l = (foldr handleInternal [] attrs) ++ l
         handle (G.DE (DotEdge _ _ attrs)) l = (foldr handleInternal [] attrs) ++ l
         handle _ l = l
