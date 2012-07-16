@@ -23,6 +23,7 @@ import System.IO.Unsafe
 import System.Timeout
 
 import GHC.Vis
+import GHC.Vis.Graph hiding (width)
 import GHC.HeapView
 
 fontSize = 15
@@ -179,10 +180,12 @@ redraw canvas = do
   s <- readIORef visState
   let objs = objects s
   let h = hover s
+  o <- op [asBox 1]
 
   boundingBoxes <- render canvas $ do
     pos <- mapM height objs
     let rpos = scanl (\a b -> a + b + 30) 30 pos
+    drawAll o
     mapM (drawEntry s) (zip objs rpos)
 
   return ()

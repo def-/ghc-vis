@@ -1,8 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 
---module GHC.Vis.Graph (
---)
---where
+module GHC.Vis.Graph (
+  dg,
+  pr,
+  op,
+  getOperations,
+  Operation(..),
+  parse,
+  drawAll
+)
+where
 
 import Control.Monad
 import Data.Tuple
@@ -18,14 +25,18 @@ import qualified Text.ParserCombinators.Poly.StateText as P
 
 import Data.Graph.Inductive
 
-import Data.GraphViz hiding (Ellipse, Polygon)
-import Data.GraphViz.Types
-import Data.GraphViz.Parsing
+import Data.GraphViz hiding (Ellipse, Polygon, parse)
+import Data.GraphViz.Types hiding (parse)
+import Data.GraphViz.Parsing hiding (parse)
 import qualified Data.GraphViz.Attributes.Complete as A
 import qualified Data.GraphViz.Types.Generalised as G
 
 import GHC.HeapView
 import GHC.Vis
+
+import Graphics.UI.Gtk hiding (Box, Signal, Color, Alignment, Point, Dot, toLabel)
+import Graphics.Rendering.Cairo
+import Graphics.UI.Gtk.Gdk.Events as E
 
 --buildGraph :: [Box] -> IO (Gr Closure ())
 --buildGraph boxes = foldM go empty boxes
@@ -127,18 +138,54 @@ dg as = do
   xDotText <- graphvizWithHandle Dot (defaultVis $ toViewableGraph $ buildGraph hm) XDot hGetContents
   return $ parseDotGraph $ B.fromChunks [xDotText]
 
+op as = dg as >>= return . getOperations
+
 getOperations :: (G.DotGraph String) -> [Operation]
 getOperations (G.DotGraph _ _ _ graphStatements) = F.foldr handle [] graphStatements
   where handle (G.GA (GraphAttrs attrs)) l = (foldr handleInternal [] attrs) ++ l
         handle (G.DN (DotNode _ attrs)) l = (foldr handleInternal [] attrs) ++ l
         handle _ l = l
 
-        handleInternal (A.UnknownAttribute "_draw_" r) l = (Main.parse r) ++ l
-        handleInternal (A.UnknownAttribute "_ldraw_" r) l = (Main.parse r) ++ l
+        handleInternal (A.UnknownAttribute "_draw_" r) l = (parse r) ++ l
+        handleInternal (A.UnknownAttribute "_ldraw_" r) l = (parse r) ++ l
         handleInternal _ l = l
 
+drawAll = mapM draw
+
 draw (Color _ _) = return ()
---draw (Polygon ps filled) =
+
+draw (Polygon _ _) = return ()
+--draw (Polygon ((x,y):xys) filled) = do
+--  moveTo x y
+--  mapM (\(x,y) -> lineTo x y) xys
+--  closePath
+--  if filled then fillPreserve >> fill else stroke
+--  return ()
+
+draw (Ellipse (x,y) w h filled) = do
+  save
+  translate x y
+  scale w h
+  moveTo 1 0
+  arc 0 0 1 0 (2 * pi)
+  restore
+  if filled then fill else stroke
+
+draw (Font _ _) = return ()
+
+-- Should be done with Pango
+draw (Text (x,y) alignment width text) = do
+  let x2 = case alignment of
+             LeftAlign -> x
+             CenterAlign -> x - 0.5 * width
+             RightAlign -> x - width
+  let height = 0
+  let y2 = y - height + 2 -- TODO: proper descent from font metrics
+
+  moveTo x2 y2
+  save
+  showText text
+  restore
 
 type Point = (Double, Double)
 
