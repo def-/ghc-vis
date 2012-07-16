@@ -157,7 +157,7 @@ getOperations (G.DotGraph _ _ _ graphStatements) = F.foldr handle [] graphStatem
 
 drawAll ops = do
   save
-  translate 100 400
+  translate 300 1000
   scale 1 (-1)
   mapM draw ops
   restore
@@ -186,12 +186,12 @@ draw (BSpline ((x,y):xys) filled) = do
   if filled then fillPreserve >> fill else stroke
   return ()
 
-  where drawBezier xys@((x1,y1):(x2,y2):(x3,y3):_) = do
+  where drawBezier ((x1,y1):(x2,y2):(x3,y3):xys) = do
           curveTo x1 y1 x2 y2 x3 y3
-          drawBezier $ tail xys
+          drawBezier xys
         drawBezier _ = return ()
 
--- Should be done with Pango
+-- TODO: Should be done with Pango
 draw (Text (x,y) alignment width text) = do
   let x2 = case alignment of
              LeftAlign -> x
@@ -209,9 +209,12 @@ draw (Text (x,y) alignment width text) = do
 draw (Color (r,g,b,a) filled) = do
   setSourceRGBA r g b a
 
+-- TODO: Should be done with Pango
 draw (Font size name) = do
-  selectFontFace "Times-Roman" FontSlantNormal FontWeightNormal
+  selectFontFace name FontSlantNormal FontWeightNormal
   setFontSize size
+  --layout <- createLayout "test"
+  --return ()
 
 draw (Style _) = return ()
 draw (Image _ _ _ _) = return ()

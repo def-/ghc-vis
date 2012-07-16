@@ -174,24 +174,22 @@ react canvas window = do
       react canvas window
 
 redraw canvas = do
-  --boxes <- readMVar visBoxes
+  boxes <- readMVar visBoxes
   --objects <- parseBoxes boxes
 
   s <- readIORef visState
-  let objs = objects s
-  let h = hover s
-  let x = "foo"
-  putStrLn x
-  o <- op [asBox x]
+  --let objs = objects s
+  --let h = hover s
+  o <- op boxes
 
   boundingBoxes <- render canvas $ do
-    pos <- mapM height objs
-    let rpos = scanl (\a b -> a + b + 30) 30 pos
+    --pos <- mapM height objs
+    --let rpos = scanl (\a b -> a + b + 30) 30 pos
     drawAll o
-    mapM (drawEntry s) (zip objs rpos)
+    --mapM (drawEntry s) (zip objs rpos)
 
   return ()
-  modifyIORef visState (\s -> s {bounds = concat boundingBoxes})
+  --modifyIORef visState (\s -> s {bounds = concat boundingBoxes})
 
 render canvas r = do
         win <- widgetGetDrawWindow canvas
