@@ -171,7 +171,6 @@ draw (Ellipse (x,y) w h filled) = do
   restore
   if filled then fill else stroke
 
---draw (Polygon _ _) = return ()
 draw (Polygon ((x,y):xys) filled) = do
   moveTo x y
   mapM (\(x,y) -> lineTo x y) xys
@@ -207,7 +206,8 @@ draw (Text (x,y) alignment width text) = do
   showText text
   restore
 
-draw (Color _ _) = return ()
+draw (Color (r,g,b,a) filled) = do
+  setSourceRGBA r g b a
 
 draw (Font size name) = do
   selectFontFace "Times-Roman" FontSlantNormal FontWeightNormal
