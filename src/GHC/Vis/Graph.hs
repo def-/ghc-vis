@@ -137,6 +137,9 @@ getOperations (G.DotGraph _ _ _ graphStatements) = F.foldr handle [] graphStatem
         handleInternal (A.UnknownAttribute "_ldraw_" r) l = (Main.parse r) ++ l
         handleInternal _ l = l
 
+draw (Color _ _) = return ()
+--draw (Polygon ps filled) =
+
 type Point = (Double, Double)
 
 data Alignment = LeftAlign
@@ -150,7 +153,7 @@ data Operation = Ellipse { xy :: Point, w :: Double, h :: Double, filled :: Bool
                | Polyline { points :: [Point] }
                | BSpline { points :: [Point], filled :: Bool }
                | Text { baseline :: Point, alignment :: Alignment, width :: Double, text :: String }
-               | Color { color :: String, filled :: Bool }
+               | Color { rgba :: (Double, Double, Double, Double), filled :: Bool }
                | Font { size :: Double, name :: String }
                | Style { style :: String }
                | Image { xy :: Point, w :: Double, h :: Double, name :: String }
@@ -208,10 +211,6 @@ parseText = do
   text <- parseString
   return $ Text baseline alignment width text
 
-parseColor filled = do
-  color <- parseString
-  return $ Color color filled
-
 parseFont = do
   size <- parseFloat'
   character ' '
@@ -245,6 +244,20 @@ parsePoint = do
   y <- parseFloat'
   character ' '
   return (x,y)
+
+parseColor filled = do -- Not complete
+  n <- parseInt
+  character ' '
+  character '-'
+  character '#'
+  r <- parseHex
+  g <- parseHex
+  b <- parseHex
+  a <- parseHex
+  character ' '
+  return $ Color (r,g,b,a) filled
+ where parseHex = ((sequence . replicate 2) P.next) >>= return . hexToFloat
+       hexToFloat s = (foldl (\x y -> 16 * x + fromIntegral (digitToInt y)) 0 s) / 255
 
 parseSigned p = (character '-' >> liftM negate p)
                 `P.onFail`
