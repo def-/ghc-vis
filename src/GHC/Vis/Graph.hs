@@ -17,7 +17,7 @@ import qualified Text.ParserCombinators.Poly.StateText as P
 
 import Data.Graph.Inductive
 
-import Data.GraphViz hiding (Ellipse)
+import Data.GraphViz hiding (Ellipse, Polygon)
 import Data.GraphViz.Types
 import Data.GraphViz.Parsing
 import qualified Data.GraphViz.Types.Generalised as G
@@ -135,6 +135,7 @@ data Alignment = LeftAlign
 -- http://www.graphviz.org/doc/info/output.html#d:xdot
 data Operation = Ellipse { xy :: Point, w :: Double, h :: Double, filled :: Bool }
                | Polygon { points :: [Point], filled :: Bool }
+               | Polyline { points :: [Point] }
                | BSpline { points :: [Point], filled :: Bool }
                | Text { baseline :: Point, alignment :: Alignment, width :: Double, text :: String }
                | Color { color :: String, filled :: Bool }
@@ -143,34 +144,95 @@ data Operation = Ellipse { xy :: Point, w :: Double, h :: Double, filled :: Bool
                | Image { xy :: Point, w :: Double, h :: Double, name :: String }
                deriving Show
 
-parse = P.runParser p [] str3
-  where str1 = B.pack "c 9 -#000000ff e 63 167 27 19 "
-        str2 = B.pack "F 14.000000 11 -Times-Roman c 9 -#000000ff T 63 163 0 4 1 -: "
-        str3 = B.pack "e 1.00000 2.3 2 4"
-        p = do
-          t <- P.next
-          s <- P.next
-          r <- case s of
-            ' ' -> case t of
-                     'E' -> parseEllipse True
-                     'e' -> parseEllipse False
-                     _   -> fail "Unknown Operation"
-            _   -> fail "Space missing"
-          P.next
-          return r
-        parseEllipse filled = do
-          x <- P.manySatisfy (/= ' ')
-          P.next
-          y <- P.manySatisfy (/= ' ')
-          P.next
-          w <- P.manySatisfy (/= ' ')
-          P.next
-          h <- P.manySatisfy (/= ' ')
-          return $ Ellipse (0,0) 0 0 filled
+str1 = B.pack "c 9 -#000000ff e 63 167 27 19 "
+str2 = B.pack "F 14.000000 11 -Times-Roman c 9 -#000000ff T 63 163 0 4 1 -: "
+str3 = B.pack "e 1.00000 2.3 2 4 "
 
-runParser' p = checkValidParse . fst . P.runParser p'
-  where
-    p' = p `discard` (whitespace >> P.eof)
+parse = Data.GraphViz.Parsing.runParser' $ P.many $ do
+  t <- P.next
+  character ' '
+
+  case t of
+    'E' -> parseEllipse True
+    'e' -> parseEllipse False
+    'P' -> parsePolygon True
+    'p' -> parsePolygon False
+    'L' -> parsePolyline
+    'B' -> parseBSpline True
+    'b' -> parseBSpline False
+    'T' -> parseText
+    'C' -> parseColor True
+    'c' -> parseColor False
+    'F' -> parseFont
+    'S' -> parseStyle
+    'I' -> parseImage
+    _   -> fail "Unknown Operation"
+
+parseEllipse filled = do
+  p <- parsePoint
+  (w,h) <- parsePoint
+  return $ Ellipse p w h filled
+
+parsePolygon filled = do
+  xs <- parsePoints
+  return $ Polygon xs filled
+
+parsePolyline = parsePoints >>= return . Polyline
+
+parseBSpline filled = do
+  xs <- parsePoints
+  return $ BSpline xs filled
+
+parseText = do
+  baseline <- parsePoint
+  j <- parseInt'
+  let alignment = case j of
+                    -1 -> LeftAlign
+                    0  -> CenterAlign
+                    1  -> RightAlign
+  character ' '
+  width <- parseFloat'
+  character ' '
+  text <- parseString
+  return $ Text baseline alignment width text
+
+parseColor filled = do
+  color <- parseString
+  return $ Color color filled
+
+parseFont = do
+  size <- parseFloat'
+  character ' '
+  name <- parseString
+  return $ Font size name
+
+parseStyle = parseString >>= return . Style
+
+parseImage = do
+  xy <- parsePoint
+  (w,h) <- parsePoint
+  name <- parseString
+  return $ Image xy w h name
+
+parseString = do
+  n <- parseInt
+  character ' '
+  character '-'
+  text <- sequence . replicate (fromInteger n) $ P.next
+  character ' '
+  return text
+
+parsePoints = do
+  n <- parseInt
+  character ' '
+  sequence . replicate (fromInteger n) $ parsePoint
+
+parsePoint = do
+  x <- parseFloat'
+  character ' '
+  y <- parseFloat'
+  character ' '
+  return (x,y)
 
 parseSigned p = (character '-' >> liftM negate p)
                 `P.onFail`
@@ -197,7 +259,7 @@ parseFloat = do ds   <- P.manySatisfy isDigit
                 let frac' = fromMaybe "" frac
                     expn' = fromMaybe 0 expn
                 ( return . fromRational . (* (10^^(expn' - fromIntegral (B.length frac'))))
-                  . (%1) . P.runParser parseInt) (ds `B.append` frac')
+                  . (%1) . Data.GraphViz.Parsing.runParser' parseInt) (ds `B.append` frac')
              `P.onFail`
              fail "Expected a floating point number"
   where
@@ -206,3 +268,11 @@ parseFloat = do ds   <- P.manySatisfy isDigit
                    `P.onFail`
                    parseInt')
     noDec = maybe True B.null
+
+parseFloat' = parseSigned ( parseFloat
+                            `onFail`
+                            liftM fI parseInt
+                          )
+  where
+    fI :: Integer -> Double
+    fI = fromIntegral
