@@ -10,6 +10,7 @@ import Data.Maybe
 import Data.Char
 import Data.Ratio
 import Data.Text.IO
+import qualified Data.Foldable as F
 import qualified Data.Text.Lazy as B
 import qualified Data.Text.Lazy.Read as B
 
@@ -20,6 +21,7 @@ import Data.Graph.Inductive
 import Data.GraphViz hiding (Ellipse, Polygon)
 import Data.GraphViz.Types
 import Data.GraphViz.Parsing
+import qualified Data.GraphViz.Attributes.Complete as A
 import qualified Data.GraphViz.Types.Generalised as G
 
 import GHC.HeapView
@@ -119,11 +121,21 @@ pr as = do
   hm <- walkHeapWithoutDummy as
   preview $ toViewableGraph $ buildGraph hm
 
-dg :: [Box] -> IO (DotGraph String)
+dg :: [Box] -> IO (G.DotGraph String)
 dg as = do
   hm <- walkHeapWithoutDummy as
   xDotText <- graphvizWithHandle Dot (defaultVis $ toViewableGraph $ buildGraph hm) XDot hGetContents
   return $ parseDotGraph $ B.fromChunks [xDotText]
+
+getOperations :: (G.DotGraph String) -> [Operation]
+getOperations (G.DotGraph _ _ _ graphStatements) = F.foldr handle [] graphStatements
+  where handle (G.GA (GraphAttrs attrs)) l = (foldr handleInternal [] attrs) ++ l
+        handle (G.DN (DotNode _ attrs)) l = (foldr handleInternal [] attrs) ++ l
+        handle _ l = l
+
+        handleInternal (A.UnknownAttribute "_draw_" r) l = (Main.parse r) ++ l
+        handleInternal (A.UnknownAttribute "_ldraw_" r) l = (Main.parse r) ++ l
+        handleInternal _ l = l
 
 type Point = (Double, Double)
 
