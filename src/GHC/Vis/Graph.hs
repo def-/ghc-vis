@@ -233,12 +233,12 @@ draw s (mn, BSpline ((x,y):xys) filled) = do
 
 -- TODO: Should be done with Pango
 draw s (mn, Text (x,y) alignment width text) = do
+  TextExtents _ _ width2 height _ _ <- textExtents text
   let x2 = case alignment of
              LeftAlign -> x
-             CenterAlign -> x - 0.5 * width
-             RightAlign -> x - width
-  TextExtents _ _ _ height _ _ <- textExtents text
-  let y2 = y - height + 2 -- TODO: proper descent from font metrics
+             CenterAlign -> x - 0.5 * width2
+             RightAlign -> x - width2
+  let y2 = y - height / 2 + 4 -- TODO: proper descent from font metrics
 
   moveTo x2 y2
   save

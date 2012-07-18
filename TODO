@@ -1,5 +1,3 @@
-- Add top level identifiers to xdot
-
 - xdot and list view at the same time, either deactivatable
 
 - Sometimes fromJust still fails (Probably garbage collector starts running
@@ -21,6 +19,8 @@
 - Generalize interactive xdot viewer into a seperate library
 
 DONE:
+
+- Add top level identifiers to xdot
 
 - Scale and position xdot and list views automatically
 
