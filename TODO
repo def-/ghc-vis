@@ -1,3 +1,8 @@
+- Can't click on Mutable Array:
+  ghc: internal error: MUT_ARR_PTRS_FROZEN object entered!
+  (GHC version 7.4.2 for x86_64_unknown_linux)
+  Please report this as a GHC bug:  http://www.haskell.org/ghc/reportabug
+
 - xdot and list view at the same time, either deactivatable
 
 - Sometimes fromJust still fails (Probably garbage collector starts running

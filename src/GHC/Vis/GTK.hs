@@ -21,6 +21,7 @@ import Data.IORef
 
 import System.IO.Unsafe
 import System.Timeout
+import System.Mem
 
 import GHC.Vis
 import GHC.Vis.Graph hiding (width)
@@ -166,6 +167,7 @@ react canvas window = do
         UpdateSignal -> return ()
 
       boxes <- readMVar visBoxes
+      performGC -- TODO: Else Blackholes appear. Do we want this?
       objs <- parseBoxes boxes
       modifyIORef visState (\s -> s {objects = objs})
 
