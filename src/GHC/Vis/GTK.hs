@@ -29,14 +29,6 @@ import GHC.HeapView
 fontSize = 15
 padding = 5
 
-data State = State
-  { boxes :: [Box]
-  , objects :: [[VisObject]]
-  , bounds :: [(String, (Double, Double, Double, Double))]
-  , mousePos :: (Double, Double)
-  , hover :: Maybe String
-  }
-
 data Signal = NewSignal Box -- Add a new Box to be visualized
             | UpdateSignal  -- Redraw
             | ClearSignal   -- Remove all Boxes
@@ -47,7 +39,7 @@ visSignal = unsafePerformIO (newEmptyMVar :: IO (MVar Signal))
 -- Whether a visualization is currently running
 visRunning = unsafePerformIO (newMVar False)
 
-visState = unsafePerformIO $ newIORef $ State [] [] [] (0,0) Nothing
+visState = unsafePerformIO $ newIORef $ State [] [] [] [] (0,0) Nothing Nothing
 
 -- All the visualized boxes
 visBoxes = unsafePerformIO (newMVar [] :: IO (MVar [Box]))
@@ -124,17 +116,19 @@ click = do
 
 tick canvas = do
   s <- readIORef visState
-  let oldHover = hover s
+  --let oldHover = hover s
+  let oldHover2 = hover2 s
   modifyIORef visState $ \s -> (
     let (mx, my) = mousePos s
         check (o, (x,y,w,h)) =
           if x <= mx && mx <= x + w &&
              y <= my && my <= y + h
           then Just o else Nothing
-    in s {hover = msum $ map check (bounds s)}
+    --in s {hover = msum $ map check (bounds s)}
+    in s {hover2 = msum $ map check (bounds2 s)}
     )
   s <- readIORef visState
-  if oldHover == hover s then return () else widgetQueueDraw canvas
+  if oldHover2 == hover2 s then return () else widgetQueueDraw canvas
 
 quit reactThread = do
   swapMVar visRunning False
@@ -180,16 +174,17 @@ redraw canvas = do
   s <- readIORef visState
   --let objs = objects s
   --let h = hover s
-  o <- op boxes
+  (ops, boxes2) <- op boxes
 
   boundingBoxes <- render canvas $ do
     --pos <- mapM height objs
     --let rpos = scanl (\a b -> a + b + 30) 30 pos
-    drawAll o
+    drawAll s ops
     --mapM (drawEntry s) (zip objs rpos)
 
   return ()
   --modifyIORef visState (\s -> s {bounds = concat boundingBoxes})
+  modifyIORef visState (\s -> s {bounds2 = boundingBoxes})
 
 render canvas r = do
         win <- widgetGetDrawWindow canvas

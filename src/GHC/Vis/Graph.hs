@@ -87,6 +87,9 @@ buildGraph hm = insEdges edges $ insNodes nodes empty
 
         boxPos b = lookup b $ zip (map (\(b,_) -> b) rhm) [0..]
 
+getBoxes :: HeapMap -> [Box]
+getBoxes hm = map (\(b,(_,_)) -> b) $ reverse hm
+
 -- Probably have to do some kind of fold over the graph to remove for example unwanted pointers
 toViewableGraph :: Gr Closure () -> Gr String String
 toViewableGraph cg = emap (const "") $ nmap showClosure cg
@@ -132,19 +135,33 @@ pr as = do
   hm <- walkHeapWithoutDummy as
   preview $ toViewableGraph $ buildGraph hm
 
-dg :: [Box] -> IO (G.DotGraph String)
+dg :: [Box] -> IO (G.DotGraph Node, [Box])
 dg as = do
   hm <- walkHeapWithoutDummy as
   xDotText <- graphvizWithHandle Dot (defaultVis $ toViewableGraph $ buildGraph hm) XDot hGetContents
-  return $ parseDotGraph $ B.fromChunks [xDotText]
+  return (parseDotGraph $ B.fromChunks [xDotText], getBoxes hm)
 
-op as = dg as >>= return . getOperations
+--drawGraph bs (G.DotGraph _ _ _ graphStatements) = do
+--  mapM (drawGS bs) graphStatements
+--
+--drawGS bs (G.GA (GraphAttrs attrs)) = do
+--  foldr parseDraw [] attrs
+--
+--drawGS bs (G.DN (DotNode id attrs)) = do
+--  foldr parseDraw [] attrs
+--
+--drawGS bs (G.DE (DotEdge _ _ attrs)) = do
+--  foldr parseDraw [] attrs
 
-getOperations :: (G.DotGraph String) -> [Operation]
+op as = do
+  (dotGraph, boxes) <- dg as
+  return (getOperations dotGraph, boxes)
+
+getOperations :: (G.DotGraph Node) -> [(Maybe Node, Operation)]
 getOperations (G.DotGraph _ _ _ graphStatements) = F.foldr handle [] graphStatements
-  where handle (G.GA (GraphAttrs attrs)) l = (foldr handleInternal [] attrs) ++ l
-        handle (G.DN (DotNode _ attrs)) l = (foldr handleInternal [] attrs) ++ l
-        handle (G.DE (DotEdge _ _ attrs)) l = (foldr handleInternal [] attrs) ++ l
+  where handle (G.GA (GraphAttrs attrs)) l = (zip (repeat Nothing) (foldr handleInternal [] attrs)) ++ l
+        handle (G.DN (DotNode id attrs)) l = (zip (repeat $ Just id) (foldr handleInternal [] attrs)) ++ l
+        handle (G.DE (DotEdge _ _ attrs)) l = (zip (repeat Nothing) (foldr handleInternal [] attrs)) ++ l
         handle _ l = l
 
         handleInternal (A.UnknownAttribute "_draw_" r) l = (parse r) ++ l
@@ -155,36 +172,47 @@ getOperations (G.DotGraph _ _ _ graphStatements) = F.foldr handle [] graphStatem
         handleInternal (A.UnknownAttribute "_tlldraw_" r) l = (parse r) ++ l
         handleInternal _ l = l
 
-drawAll ops = do
+drawAll s ops = do
   save
   translate 300 1000
   scale 1 (-1)
-  mapM draw ops
+  boundingBoxes <- mapM (draw s) ops
   restore
+  --return $ concat boundingBoxes
+  return $ map (\(o, (x,y,w,h)) -> (o, (x+300,y*(-1)+1000,w,h))) $ concat boundingBoxes
 
-draw (Ellipse (x,y) w h filled) = do
+draw s (mn, Ellipse (x,y) w h filled) = do
   save
   translate x y
   scale w h
   moveTo 1 0
   arc 0 0 1 0 (2 * pi)
   restore
+  case mn of
+    Nothing -> setSourceRGB 0 0 0
+    Just name -> case hover2 s of
+      Just name2 -> if name == name2 then setSourceRGB 1 0 0 else setSourceRGB 0 0 0
+      _ -> setSourceRGB 0 0 0
   if filled then fill else stroke
+  setSourceRGB 0 0 0
+  return $ case mn of
+    Just node -> [(node, (x-w,y+h,2*w,2*h))]
+    Nothing   -> []
 
-draw (Polygon ((x,y):xys) filled) = do
+draw s (mn, Polygon ((x,y):xys) filled) = do
   moveTo x y
   mapM (\(x,y) -> lineTo x y) xys
   closePath
   if filled then fillPreserve >> fill else stroke
-  return ()
+  return []
 
-draw (Polyline _) = return ()
+draw s (mn, Polyline _) = return []
 
-draw (BSpline ((x,y):xys) filled) = do
+draw s (mn, BSpline ((x,y):xys) filled) = do
   moveTo x y
   drawBezier xys
   if filled then fillPreserve >> fill else stroke
-  return ()
+  return []
 
   where drawBezier ((x1,y1):(x2,y2):(x3,y3):xys) = do
           curveTo x1 y1 x2 y2 x3 y3
@@ -192,7 +220,7 @@ draw (BSpline ((x,y):xys) filled) = do
         drawBezier _ = return ()
 
 -- TODO: Should be done with Pango
-draw (Text (x,y) alignment width text) = do
+draw s (mn, Text (x,y) alignment width text) = do
   let x2 = case alignment of
              LeftAlign -> x
              CenterAlign -> x - 0.5 * width
@@ -205,19 +233,21 @@ draw (Text (x,y) alignment width text) = do
   scale 1 (-1)
   showText text
   restore
+  return []
 
-draw (Color (r,g,b,a) filled) = do
+draw s (mn, Color (r,g,b,a) filled) = do
   setSourceRGBA r g b a
+  return []
 
 -- TODO: Should be done with Pango
-draw (Font size name) = do
+draw s (mn, Font size name) = do
   selectFontFace name FontSlantNormal FontWeightNormal
   setFontSize size
   --layout <- createLayout "test"
-  --return ()
+  return []
 
-draw (Style _) = return ()
-draw (Image _ _ _ _) = return ()
+draw s (mn, Style _) = return []
+draw s (mn, Image _ _ _ _) = return []
 
 type Point = (Double, Double)
 
