@@ -155,7 +155,15 @@ dg as = do
 
 op as = do
   (dotGraph, boxes) <- dg as
-  return (getOperations dotGraph, boxes)
+  return (getOperations dotGraph, boxes, getSize dotGraph)
+
+getSize :: (G.DotGraph Node) -> (Double, Double, Double, Double)
+getSize (G.DotGraph _ _ _ graphStatements) = F.foldr handle (0,0,0,0) graphStatements
+  where handle (G.GA (GraphAttrs attrs)) l = foldr handleInternal (0,0,0,0) attrs
+        handle _ l = l
+
+        handleInternal (A.BoundingBox (A.Rect (A.Point x y _ _) (A.Point w h _ _))) l = (x,y,w,h)
+        handleInternal _ l = l
 
 getOperations :: (G.DotGraph Node) -> [(Maybe Node, Operation)]
 getOperations (G.DotGraph _ _ _ graphStatements) = F.foldr handle [] graphStatements
@@ -172,14 +180,14 @@ getOperations (G.DotGraph _ _ _ graphStatements) = F.foldr handle [] graphStatem
         handleInternal (A.UnknownAttribute "_tlldraw_" r) l = (parse r) ++ l
         handleInternal _ l = l
 
-drawAll s ops = do
+drawAll s (x,y,w,h) ops = do
   save
-  translate 300 1000
   scale 1 (-1)
+  translate (-0.5 * w) (-0.5 * h)
   boundingBoxes <- mapM (draw s) ops
   restore
   --return $ concat boundingBoxes
-  return $ map (\(o, (x,y,w,h)) -> (o, (x+300,y*(-1)+1000,w,h))) $ concat boundingBoxes
+  return $ map (\(o, (x,y,w,h)) -> (o, (x,y*(-1),w,h))) $ concat boundingBoxes
 
 draw s (mn, Ellipse (x,y) w h filled) = do
   save

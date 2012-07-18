@@ -10,8 +10,6 @@
   - Perform GC before
   - Rerun on fail
 
-- Mit kompiliertem Code auch laufen (wie?)
-
 - Show types (see GHCi)
 
 - find out where a Thunk closure comes from and additional information about it

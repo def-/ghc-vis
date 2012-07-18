@@ -182,14 +182,21 @@ redraw canvas = do
   s <- readIORef visState
   --let objs = objects s
   --let h = hover s
-  (ops, boxes2) <- op boxes
+  (ops, boxes2, size@(sx,sy,sw,sh)) <- op boxes
+  Rectangle rx ry rw rh <- widgetGetAllocation canvas
 
   boundingBoxes <- render canvas $ do
+    save
+    translate (0.5 * (fromIntegral rw)) (0.5 * (fromIntegral rh))
+    --scale ((fromIntegral rx)/sx) ((fromIntegral ry)/sy)
+
     --pos <- mapM height objs
     --let rpos = scanl (\a b -> a + b + 30) 30 pos
-    drawAll s ops
+    result <- drawAll s size ops
     --mapM (drawEntry s) (zip objs rpos)
 
+    restore
+    return result
   return ()
   --modifyIORef visState (\s -> s {bounds = concat boundingBoxes})
   modifyIORef visState (\s -> s {boxes2 = boxes2})
