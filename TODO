@@ -22,6 +22,8 @@
   was möglich ist (GHCi machts ja und den Code müsste man eigentlich auch
   übernehmen können).
 
+- Generalize interactive xdot viewer into a seperate library
+
 DONE:
 
 - Clickable xdot
