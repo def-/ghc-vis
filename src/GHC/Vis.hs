@@ -36,6 +36,7 @@ import qualified Data.Map as Map
 
 data State = State
   { boxes :: [Box]
+  , boxes2 :: [Box]
   , objects :: [[VisObject]]
   , bounds :: [(String, (Double, Double, Double, Double))]
   , bounds2 :: [(Int, (Double, Double, Double, Double))]

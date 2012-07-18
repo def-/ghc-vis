@@ -39,7 +39,7 @@ visSignal = unsafePerformIO (newEmptyMVar :: IO (MVar Signal))
 -- Whether a visualization is currently running
 visRunning = unsafePerformIO (newMVar False)
 
-visState = unsafePerformIO $ newIORef $ State [] [] [] [] (0,0) Nothing Nothing
+visState = unsafePerformIO $ newIORef $ State [] [] [] [] [] (0,0) Nothing Nothing
 
 -- All the visualized boxes
 visBoxes = unsafePerformIO (newMVar [] :: IO (MVar [Box]))
@@ -65,6 +65,8 @@ evaluate identifier = do (_,hm) <- printAll
   where go ((Box a),(Just n, y)) | n == identifier = seq a (Just n, y)
                                  | otherwise = (Just n, y)
         go (_,(x,y)) = (x,y)
+
+evaluate2 (Box a) = a `seq` return ()
 
 visualization = do
   vr <- swapMVar visRunning True
@@ -107,10 +109,16 @@ visMainThread = do
 
 click = do
   s <- readIORef visState
-  case hover s of
+  --case hover s of
+  --  Just t -> do
+  --    --seq a (return ())
+  --    evaluate t
+  --    putMVar visSignal UpdateSignal
+  --  _ -> return ()
+  case hover2 s of
     Just t -> do
       --seq a (return ())
-      evaluate t
+      evaluate2 $ (boxes2 s) !! t
       putMVar visSignal UpdateSignal
     _ -> return ()
 
@@ -184,6 +192,7 @@ redraw canvas = do
 
   return ()
   --modifyIORef visState (\s -> s {bounds = concat boundingBoxes})
+  modifyIORef visState (\s -> s {boxes2 = boxes2})
   modifyIORef visState (\s -> s {bounds2 = boundingBoxes})
 
 render canvas r = do

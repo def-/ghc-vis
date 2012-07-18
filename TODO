@@ -1,5 +1,3 @@
-- Clickable xdot
-
 - Scale and position xdot and list views automatically
 
 - Add top level identifiers to xdot
@@ -25,6 +23,8 @@
   übernehmen können).
 
 DONE:
+
+- Clickable xdot
 
 - Bei großen Datenstrukturen ist diese (lineare) Art der Visualisierung
   unbrauchbar. Ich würde Graphen bevorzugen. Mit Graphviz gezeichnete Graphen
