@@ -186,9 +186,16 @@ redraw canvas = do
   Rectangle rx ry rw rh <- widgetGetAllocation canvas
 
   boundingBoxes <- render canvas $ do
+    --let scalex = (fromIntegral rw)/sw
+    --    scaley = (fromIntegral rh)/sh
+    -- Proportional scaling
+    let scalex = min ((fromIntegral rw)/sw) ((fromIntegral rh)/sh)
+        scaley = scalex
+        offsetx = 0.5 * (fromIntegral rw)
+        offsety = 0.5 * (fromIntegral rh)
     save
-    translate (0.5 * (fromIntegral rw)) (0.5 * (fromIntegral rh))
-    --scale ((fromIntegral rx)/sx) ((fromIntegral ry)/sy)
+    translate offsetx offsety
+    scale scalex scaley
 
     --pos <- mapM height objs
     --let rpos = scanl (\a b -> a + b + 30) 30 pos
@@ -196,7 +203,8 @@ redraw canvas = do
     --mapM (drawEntry s) (zip objs rpos)
 
     restore
-    return result
+    --return result
+    return $ map (\(o, (x,y,w,h)) -> (o, (x*scalex+offsetx,y*scaley+offsety,w*scalex,h*scaley))) result
   return ()
   --modifyIORef visState (\s -> s {bounds = concat boundingBoxes})
   modifyIORef visState (\s -> s {boxes2 = boxes2})

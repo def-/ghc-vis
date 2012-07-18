@@ -1,5 +1,3 @@
-- Scale and position xdot and list views automatically
-
 - Add top level identifiers to xdot
 
 - xdot and list view at the same time, either deactivatable
@@ -23,6 +21,8 @@
 - Generalize interactive xdot viewer into a seperate library
 
 DONE:
+
+- Scale and position xdot and list views automatically
 
 - Clickable xdot
 

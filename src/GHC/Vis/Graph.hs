@@ -180,14 +180,18 @@ getOperations (G.DotGraph _ _ _ graphStatements) = F.foldr handle [] graphStatem
         handleInternal (A.UnknownAttribute "_tlldraw_" r) l = (parse r) ++ l
         handleInternal _ l = l
 
-drawAll s (x,y,w,h) ops = do
+drawAll s (sx,sy,sw,sh) ops = do
+  let scalex = 1
+      scaley = -1
+      offsetx = -0.5 * sw
+      offsety = 0.5 * sh
   save
-  scale 1 (-1)
-  translate (-0.5 * w) (-0.5 * h)
+  translate offsetx offsety
+  scale scalex scaley
   boundingBoxes <- mapM (draw s) ops
   restore
   --return $ concat boundingBoxes
-  return $ map (\(o, (x,y,w,h)) -> (o, (x,y*(-1),w,h))) $ concat boundingBoxes
+  return $ map (\(o, (x,y,w,h)) -> (o, (x*scalex+offsetx,y*scaley+offsety,w,h))) $ concat boundingBoxes
 
 draw s (mn, Ellipse (x,y) w h filled) = do
   save
