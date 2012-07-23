@@ -71,11 +71,11 @@ parseBoxes = generalParseBoxes evalState
 parseBoxesHeap = generalParseBoxes runState
 
 generalParseBoxes f bs = walkHeap bs >>= \h -> return $ f (go bs) (0,h)
-  where go (b:bs) = do (_,h) <- get
-                       r <- parseClosure b (snd $ fromJust $ lookup b h)
-                       rs <- go bs
-                       --return (r:rs)
-                       return ((simplify r):rs)
+  where go ((b,n):bs) = do (_,h) <- get
+                           r <- parseClosure b (snd $ fromJust $ lookup b h)
+                           rs <- go bs
+                           --return (r:rs)
+                           return ((simplify r):rs)
         go [] = return []
 
 -- Pulls together multiple Unnamed objects to one
@@ -127,19 +127,22 @@ walkHeapWithoutDummy bs = do
             l' <- foldM (\l x -> go x l) (insert (b, (Nothing, c')) l) p
             return $ insert (b, (Nothing, c')) l'
 
-walkHeap :: [Box] -> IO HeapMap
+walkHeap :: [(Box, String)] -> IO HeapMap
 walkHeap bs = do
   -- Add a special pointer to detect number of pointers to start boxes
-  foldM (\l b -> go b l) [dummy] bs
+  foldM (\l (b,n) -> goStart b n l) [dummy] bs
   where dummy = (asBox 1,
-          (Nothing, ConsClosure (StgInfoTable 0 0 CONSTR_0_1 0) bs [] "" "" ""))
+          (Nothing, ConsClosure (StgInfoTable 0 0 CONSTR_0_1 0) (map fst bs) [] "" "" ""))
+        goStart b n l = do
+            c' <- getBoxedClosureData b
+            p  <- pointersToFollow c'
+            foldM (\l x -> go x l) (insert (b, (Just n, c')) l) p
         go b l = case lookup b l of
           Just _  -> return l
           Nothing -> do
             c' <- getBoxedClosureData b
             p  <- pointersToFollow c'
-            l' <- foldM (\l x -> go x l) (insert (b, (Nothing, c')) l) p
-            return $ insert (b, (Nothing, c')) l'
+            foldM (\l x -> go x l) (insert (b, (Nothing, c')) l) p
 
 -- Don't inspect deep pointers in BCOClosures for now, they never end
 pointersToFollow (BCOClosure (StgInfoTable _ _ _ _) _ _ _ _ _ _) = return []

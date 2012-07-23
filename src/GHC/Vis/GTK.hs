@@ -30,7 +30,7 @@ import GHC.HeapView
 fontSize = 15
 padding = 5
 
-data Signal = NewSignal Box -- Add a new Box to be visualized
+data Signal = NewSignal Box String -- Add a new Box to be visualized
             | UpdateSignal  -- Redraw
             | ClearSignal   -- Remove all Boxes
 
@@ -43,14 +43,14 @@ visRunning = unsafePerformIO (newMVar False)
 visState = unsafePerformIO $ newIORef $ State [] [] [] [] [] (0,0) Nothing Nothing
 
 -- All the visualized boxes
-visBoxes = unsafePerformIO (newMVar [] :: IO (MVar [Box]))
+visBoxes = unsafePerformIO (newMVar [] :: IO (MVar [(Box, String)]))
 
 -- All objects on the screen and their positions (x,y) and size (w,h)
 --visPositions = unsafePerformIO (newMVar [] :: IO (MVar [(VisObject, (Double, Double, Double, Double))]))
 
 printOne a = do
   bs <- readMVar visBoxes
-  case findIndex (asBox a ==) bs of
+  case findIndex (\(b,_) -> asBox a == b) bs of
     Just pos -> do
       t  <- parseBoxes bs
       return $ show (t !! pos)
@@ -161,10 +161,10 @@ react canvas window = do
         True -> react canvas window
     Just signal -> do
       case signal of
-        NewSignal x  -> modifyMVar_ visBoxes (
-          \y -> if elem x y then return y else return $ y ++ [x])
-        ClearSignal  -> modifyMVar_ visBoxes (\_ -> return [])
-        UpdateSignal -> return ()
+        NewSignal x n -> modifyMVar_ visBoxes (
+          \y -> if elem (x,n) y then return y else return $ y ++ [(x,n)])
+        ClearSignal   -> modifyMVar_ visBoxes (\_ -> return [])
+        UpdateSignal  -> return ()
 
       boxes <- readMVar visBoxes
       performGC -- TODO: Else Blackholes appear. Do we want this?

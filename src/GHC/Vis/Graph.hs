@@ -63,7 +63,7 @@ import Graphics.UI.Gtk.Gdk.Events as E
 --             ]
 
 -- Maybe add edge labels as type of link (params, pointer, ...)
-buildGraph :: HeapMap -> Gr Closure ()
+buildGraph :: HeapMap -> Gr Closure String
 buildGraph hm = insEdges edges $ insNodes nodes empty
   where nodes = zip [0..] $ map (\(_,(_,c)) -> c) rhm
         edges = foldr toLEdge [] $ foldr mbEdges [] nodes
@@ -78,7 +78,10 @@ buildGraph hm = insEdges edges $ insNodes nodes empty
         -- a way in graphviz to specify outgoing edge orientation after all?
         rhm = reverse hm
 
-        toLEdge (f, Just t) xs = (f,t,()):xs
+        toLEdge (0, Just t) xs = case rhm !! t of
+          (_,(Just name, _)) -> (0,t,name):xs
+          _                  -> error "unexpected"
+        toLEdge (f, Just t) xs = (f,t,""):xs
         toLEdge _ xs = xs
 
         -- Using allPtrs and then filtering the closures not available in the
@@ -91,8 +94,8 @@ getBoxes :: HeapMap -> [Box]
 getBoxes hm = map (\(b,(_,_)) -> b) $ reverse hm
 
 -- Probably have to do some kind of fold over the graph to remove for example unwanted pointers
-toViewableGraph :: Gr Closure () -> Gr String String
-toViewableGraph cg = emap (const "") $ nmap showClosure cg
+toViewableGraph :: Gr Closure String -> Gr String String
+toViewableGraph cg = emap id $ nmap showClosure cg
 
 --parseXDot :: FilePath -> IO (DotGraph String)
 --parseXDot x = do
@@ -107,10 +110,10 @@ cyc3 = buildGr -- cycle of three nodes
               ([],2,"test2",[("",3)]),
               ([],3,"test3",[])]
 
-defaultVis :: (Graph gr) => gr String el -> DotGraph Node
+defaultVis :: (Graph gr) => gr String String -> DotGraph Node
 --defaultVis = graphToDot (defaultParams :: GraphvizParams Node nl el String nl)
 defaultVis = graphToDot params
-  where params = nonClusteredParams { fmtNode = \ (_,l) -> [toLabel l] }
+  where params = nonClusteredParams { fmtNode = \ (_,l) -> [toLabel l], fmtEdge = \ (_,_,l) -> [toLabel l] }
   -- Creates two clusters to get all initial values on a row; doesn't look very
   -- nice
   --where params = Params { isDirected = True
@@ -135,7 +138,7 @@ pr as = do
   hm <- walkHeapWithoutDummy as
   preview $ toViewableGraph $ buildGraph hm
 
-dg :: [Box] -> IO (G.DotGraph Node, [Box])
+dg :: [(Box, String)] -> IO (G.DotGraph Node, [Box])
 dg as = do
   hm <- walkHeap as
   xDotText <- graphvizWithHandle Dot (defaultVis $ toViewableGraph $ buildGraph hm) XDot hGetContents
