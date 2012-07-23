@@ -142,6 +142,8 @@ walkHeap bs = do
             return $ insert (b, (Nothing, c')) l'
 
 -- Don't inspect deep pointers in BCOClosures for now, they never end
+pointersToFollow (BCOClosure (StgInfoTable _ _ _ _) _ _ _ _ _ _) = return []
+
 pointersToFollow (MutArrClosure (StgInfoTable _ _ _ _) _ _ bPtrs) =
   do cPtrs <- mapM getBoxedClosureData bPtrs
      return $ fix $ zip bPtrs cPtrs
