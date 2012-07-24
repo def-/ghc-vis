@@ -145,7 +145,7 @@ walkHeap bs = do
             foldM (\l x -> go x l) (insert (b, (Nothing, c')) l) p
 
 -- Don't inspect deep pointers in BCOClosures for now, they never end
-pointersToFollow (BCOClosure (StgInfoTable _ _ _ _) _ _ _ _ _ _) = return []
+--pointersToFollow (BCOClosure (StgInfoTable _ _ _ _) _ _ _ _ _ _) = return []
 
 pointersToFollow (MutArrClosure (StgInfoTable _ _ _ _) _ _ bPtrs) =
   do cPtrs <- mapM getBoxedClosureData bPtrs
@@ -341,22 +341,29 @@ showClosure (ConsClosure (StgInfoTable _ _ _ _) _ [dataArg] _ modl name) =
     ("Types", "D#") -> printf "%0.5f" (unsafeCoerce dataArg :: Double)
     ("Types", "F#") -> printf "%0.5f" (unsafeCoerce dataArg :: Double)
 
-    c -> "Missing ConsClosure pattern for " ++ show c
+    -- :m +GHC.Arr
+    -- let b = array ((1,1),(3,2)) [((1,1),42),((1,2),23),((2,1),999),((2,2),1000),((3,1),1001),((3,2),1002)]
+    -- b
+    -- :view b
+    ("GHC.Arr", "Array") -> printf "Array[%d]" dataArg
+
+    c -> "Missing ConsClosure pattern for " ++ show c ++ " with dataArg = " ++ show dataArg
 
 showClosure (ConsClosure (StgInfoTable 1 3 _ 0) _ [_,0,0] _ "Data.ByteString.Internal" "PS")
-  = "ByteString[0,0]()"
+  = "ByteString[0,0]"
 
 showClosure (ConsClosure (StgInfoTable 1 3 _ 0) [bPtr] [_,start,end] _ "Data.ByteString.Internal" "PS")
-  = printf "ByteString[%d,%d](" start end
+  = printf "ByteString[%d,%d]" start end
 
 showClosure (ConsClosure (StgInfoTable 2 3 _ 1) [bPtr1,bPtr2] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
-  = printf "Chunk[%d,%d](" start end
+  = printf "Chunk[%d,%d]" start end
 
 showClosure (ConsClosure (StgInfoTable _ _ _ _) _ _ _ _ name)
   = name
 
 showClosure (ArrWordsClosure (StgInfoTable 0 0 ARR_WORDS 0) bytes arrWords)
-  = intercalate ", " $ map (\x -> printf "0x%x" x) arrWords
+  = intercalate ",\n" $ map (\x -> printf "0x%x" x) arrWords
+--  = "ArrWords"
 
 -- Probably should delete these from Graph
 showClosure (IndClosure (StgInfoTable 1 0 _ 0) b)
