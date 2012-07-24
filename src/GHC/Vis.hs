@@ -128,21 +128,22 @@ walkHeapWithoutDummy bs = do
             return $ insert (b, (Nothing, c')) l'
 
 walkHeap :: [(Box, String)] -> IO HeapMap
-walkHeap bs = do
-  -- Add a special pointer to detect number of pointers to start boxes
-  foldM (\l (b,n) -> goStart b n l) [dummy] bs
+walkHeap bs = foldM topNodes [dummy] bs >>= \s -> foldM goStart s bs
   where dummy = (asBox 1,
           (Nothing, ConsClosure (StgInfoTable 0 0 CONSTR_0_1 0) (map fst bs) [] "" "" ""))
-        goStart b n l = do
+        topNodes l (b,n) = do -- Adds the top nodes without looking at their pointers
             c' <- getBoxedClosureData b
-            p  <- pointersToFollow c'
-            foldM (\l x -> go x l) (insert (b, (Just n, c')) l) p
-        go b l = case lookup b l of
+            return $ insert (b, (Just n, c')) l
+        goStart l (b,_) = do -- Ignores that the top nodes are already in the heap map
+          c' <- getBoxedClosureData b
+          p  <- pointersToFollow c'
+          foldM go l p
+        go l b = case lookup b l of
           Just _  -> return l
           Nothing -> do
             c' <- getBoxedClosureData b
             p  <- pointersToFollow c'
-            foldM (\l x -> go x l) (insert (b, (Nothing, c')) l) p
+            foldM go (insert (b, (Nothing, c')) l) p
 
 -- Don't inspect deep pointers in BCOClosures for now, they never end
 --pointersToFollow (BCOClosure (StgInfoTable _ _ _ _) _ _ _ _ _ _) = return []
