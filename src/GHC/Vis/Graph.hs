@@ -5,7 +5,6 @@ module GHC.Vis.Graph (
   pr,
   op,
   getOperations,
-  Operation(..),
   parse,
   drawAll
 )
@@ -33,6 +32,7 @@ import qualified Data.GraphViz.Types.Generalised as G
 
 import GHC.HeapView
 import GHC.Vis
+import GHC.Vis.Types
 
 import Graphics.UI.Gtk hiding (Box, Signal, Color, Alignment, Point, Dot, toLabel)
 import Graphics.Rendering.Cairo
@@ -263,25 +263,6 @@ draw s (mn, Font size name) = do
 
 draw s (mn, Style _) = return []
 draw s (mn, Image _ _ _ _) = return []
-
-type Point = (Double, Double)
-
-data Alignment = LeftAlign
-               | CenterAlign
-               | RightAlign
-               deriving Show
-
--- http://www.graphviz.org/doc/info/output.html#d:xdot
-data Operation = Ellipse { xy :: Point, w :: Double, h :: Double, filled :: Bool }
-               | Polygon { points :: [Point], filled :: Bool }
-               | Polyline { points :: [Point] }
-               | BSpline { points :: [Point], filled :: Bool }
-               | Text { baseline :: Point, alignment :: Alignment, width :: Double, text :: String }
-               | Color { rgba :: (Double, Double, Double, Double), filled :: Bool }
-               | Font { size :: Double, name :: String }
-               | Style { style :: String }
-               | Image { xy :: Point, w :: Double, h :: Double, name :: String }
-               deriving Show
 
 str1 = B.pack "c 9 -#000000ff e 63 167 27 19 "
 str2 = B.pack "F 14.000000 11 -Times-Roman c 9 -#000000ff T 63 163 0 4 1 -: "

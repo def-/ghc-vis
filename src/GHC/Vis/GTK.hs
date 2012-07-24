@@ -1,6 +1,5 @@
 module GHC.Vis.GTK (
   visualization,
-  Signal(..),
   visSignal,
   printOne,
   printAll,
@@ -24,15 +23,12 @@ import System.Timeout
 import System.Mem
 
 import GHC.Vis
-import GHC.Vis.Graph hiding (width)
+import GHC.Vis.Graph
+import GHC.Vis.Types hiding (width)
 import GHC.HeapView
 
 fontSize = 15
 padding = 5
-
-data Signal = NewSignal Box String -- Add a new Box to be visualized
-            | UpdateSignal  -- Redraw
-            | ClearSignal   -- Remove all Boxes
 
 -- Communication channel to the visualization
 visSignal = unsafePerformIO (newEmptyMVar :: IO (MVar Signal))
@@ -40,7 +36,7 @@ visSignal = unsafePerformIO (newEmptyMVar :: IO (MVar Signal))
 -- Whether a visualization is currently running
 visRunning = unsafePerformIO (newMVar False)
 
-visState = unsafePerformIO $ newIORef $ State [] [] [] [] [] (0,0) Nothing Nothing
+visState = unsafePerformIO $ newIORef $ State [] [] [] ([], [], (0,0,1,1)) [] [] (0,0) Nothing Nothing
 
 -- All the visualized boxes
 visBoxes = unsafePerformIO (newMVar [] :: IO (MVar [(Box, String)]))
@@ -168,8 +164,10 @@ react canvas window = do
 
       boxes <- readMVar visBoxes
       performGC -- TODO: Else Blackholes appear. Do we want this?
-      objs <- parseBoxes boxes
-      modifyIORef visState (\s -> s {objects = objs})
+      --objs <- parseBoxes boxes
+      --modifyIORef visState (\s -> s {objects = objs})
+      objs2 <- op boxes -- TODO: Move this up to react
+      modifyIORef visState (\s -> s {objects2 = objs2})
 
       -- Doesn't seem to happen anymore:
       --threadDelay 10000 -- 10 ms, else sometimes redraw happens too fast
@@ -184,7 +182,8 @@ redraw canvas = do
   s <- readIORef visState
   --let objs = objects s
   --let h = hover s
-  (ops, boxes2, size@(sx,sy,sw,sh)) <- op boxes
+  --(ops, boxes2, size@(sx,sy,sw,sh)) <- op boxes -- TODO: Move this up to react
+  let (ops, boxes2, size@(sx,sy,sw,sh)) = objects2 s
   Rectangle rx ry rw rh <- widgetGetAllocation canvas
 
   boundingBoxes <- render canvas $ do

@@ -14,6 +14,7 @@ module GHC.Vis (
   )
   where
 
+import GHC.Vis.Types
 import GHC.HeapView
 
 import Control.DeepSeq
@@ -33,38 +34,6 @@ import Unsafe.Coerce
 
 import Data.Map (Map)
 import qualified Data.Map as Map
-
-data State = State
-  { boxes :: [Box]
-  , boxes2 :: [Box]
-  , objects :: [[VisObject]]
-  , bounds :: [(String, (Double, Double, Double, Double))]
-  , bounds2 :: [(Int, (Double, Double, Double, Double))]
-  , mousePos :: (Double, Double)
-  , hover :: Maybe String
-  , hover2 :: Maybe Int
-  }
-
-type HeapEntry = (Maybe String, Closure)
--- We're using a slow, eq-based list instead of a proper map because
--- StableNames' hash values aren't stable enough
-type HeapMap   = [(Box, HeapEntry)]
-type PrintState = MS.State (Integer, HeapMap)
-
-data VisObject = Unnamed String
-               | Named String [VisObject]
-               | Link String
-               | Function String
-               deriving Eq
-
-instance Show VisObject where
-  show (Unnamed x) = x
-  show (Named x ys) = x ++ "=(" ++ show ys ++ ")"
-  show (Link x) = x
-  show (Function x) = x
-
-  showList []       = showString ""
-  showList (c:cs)   = showString (show c) . showList cs
 
 parseBoxes = generalParseBoxes evalState
 
