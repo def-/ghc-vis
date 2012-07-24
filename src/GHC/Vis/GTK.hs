@@ -63,7 +63,15 @@ evaluate identifier = do (_,hm) <- printAll
                                  | otherwise = (Just n, y)
         go (_,(x,y)) = (x,y)
 
-evaluate2 (Box a) = a `seq` return ()
+evaluate2 b@(Box a) = do
+  c <- getBoxedClosureData b
+  case c of
+    -- ghc: internal error: MUT_ARR_PTRS_FROZEN object entered!
+    -- (GHC version 7.4.2 for x86_64_unknown_linux)
+    -- Please report this as a GHC bug:  http://www.haskell.org/ghc/reportabug
+    ArrWordsClosure _ _ _ -> return () -- Don't inspect ArrWords
+    MutArrClosure _ _ _ _ -> return () -- Don't inspect ArrWords
+    _ -> a `seq` return ()
 
 visualization = do
   vr <- swapMVar visRunning True
@@ -183,19 +191,15 @@ react canvas window = do
 
       s <- readIORef visState
 
-      objs <- parseBoxes boxes
-      modifyIORef visState (\s -> s {objects = objs})
-      objs2 <- op boxes
-      modifyIORef visState (\s -> s {objects2 = objs2})
+      case mode s of
+        False -> do
+          objs <- parseBoxes boxes
+          modifyIORef visState (\s -> s {objects = objs})
+        True -> do
+          objs2 <- op boxes
+          modifyIORef visState (\s -> s {objects2 = objs2})
 
-      -- This makes :view hang sometimes
-      --case mode s of
-      --  False -> do
-      --    objs <- parseBoxes boxes
-      --    modifyIORef visState (\s -> s {objects = objs})
-      --  True -> do
-      --    objs2 <- op boxes
-      --    modifyIORef visState (\s -> s {objects2 = objs2})
+      --threadDelay 10000 -- 10 ms so that :view doesn't hang
 
       widgetQueueDraw canvas
       react canvas window
