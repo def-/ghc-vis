@@ -181,10 +181,21 @@ react canvas window = do
       boxes <- readMVar visBoxes
       performGC -- TODO: Else Blackholes appear. Do we want this?
 
+      s <- readIORef visState
+
       objs <- parseBoxes boxes
       modifyIORef visState (\s -> s {objects = objs})
       objs2 <- op boxes
       modifyIORef visState (\s -> s {objects2 = objs2})
+
+      -- This makes :view hang sometimes
+      --case mode s of
+      --  False -> do
+      --    objs <- parseBoxes boxes
+      --    modifyIORef visState (\s -> s {objects = objs})
+      --  True -> do
+      --    objs2 <- op boxes
+      --    modifyIORef visState (\s -> s {objects2 = objs2})
 
       widgetQueueDraw canvas
       react canvas window

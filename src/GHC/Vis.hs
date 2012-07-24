@@ -2,6 +2,7 @@
 
 module GHC.Vis (
   walkHeap,
+  walkHeapDepth,
   walkHeapWithoutDummy,
   parseBoxes,
   parseBoxesHeap,
@@ -42,7 +43,7 @@ parseBoxesHeap = generalParseBoxes runState
 generalParseBoxes f bs = walkHeapSimply bs >>= \h -> return $ f (go bs) (0,h)
   where go ((b,n):bs) = do (_,h) <- get
                            let (Just (_,c)) = lookup b h
-                           r <- parseClosureStart b c
+                           r <- parseClosure b c
                            rs <- go bs
                            --return (r:rs)
                            return ((simplify r):rs)
@@ -56,13 +57,6 @@ simplify [a] = [a]
 simplify ((Unnamed a):(Unnamed b):xs) = simplify $ (Unnamed (a ++ b)):xs
 simplify ((Named a bs):xs) = (Named a (simplify bs)) : (simplify xs)
 simplify (a:xs) = a : (simplify xs)
-
--- Ignore that top level nodes are links
-parseClosureStart :: Box -> Closure -> PrintState [VisObject]
-parseClosureStart b c = do
-  o <- correctObject b
-  i <- parseInternal b c
-  return $ insertObjects o i
 
 parseClosure :: Box -> Closure -> PrintState [VisObject]
 parseClosure b c = do
@@ -104,6 +98,7 @@ walkHeapWithoutDummy bs = do
             l' <- foldM (\l x -> go x l) (insert (b, (Nothing, c')) l) p
             return $ insert (b, (Nothing, c')) l'
 
+-- walkHeap, but without Top level names
 walkHeapSimply :: [(Box, String)] -> IO HeapMap
 walkHeapSimply bs = foldM topNodes [dummy] bs >>= \s -> foldM goStart s bs
   where dummy = (asBox 1,
@@ -121,6 +116,27 @@ walkHeapSimply bs = foldM topNodes [dummy] bs >>= \s -> foldM goStart s bs
             c' <- getBoxedClosureData b
             p  <- pointersToFollow c'
             foldM go (insert (b, (Nothing, c')) l) p
+
+-- walkHeap, but with a maximum depth
+walkHeapDepth :: [(Box, String)] -> IO HeapMap
+walkHeapDepth bs = foldM topNodes [dummy] bs >>= \s -> foldM goStart s bs
+  where dummy = (asBox 1,
+          (Nothing, ConsClosure (StgInfoTable 0 0 CONSTR_0_1 0) (map fst bs) [] "" "" ""))
+        topNodes l (b,n) = do -- Adds the top nodes without looking at their pointers
+            c' <- getBoxedClosureData b
+            return $ insert (b, (Just n, c')) l
+        goStart l (b,_) = do -- Ignores that the top nodes are already in the heap map
+          c' <- getBoxedClosureData b
+          p  <- pointersToFollow c'
+          foldM (\l b -> go l b 30) l p
+        go l _ 0 = return l
+        go l b x = case lookup b l of
+          Just _  -> return l
+          Nothing -> do
+            c' <- getBoxedClosureData b
+            p  <- pointersToFollow c'
+            foldM (\l b -> go l b (x-1)) (insert (b, (Nothing, c')) l) p
+
 walkHeap :: [(Box, String)] -> IO HeapMap
 walkHeap bs = foldM topNodes [dummy] bs >>= \s -> foldM goStart s bs
   where dummy = (asBox 1,
@@ -147,6 +163,7 @@ pointersToFollow (MutArrClosure (StgInfoTable _ _ _ _) _ _ bPtrs) =
      return $ fix $ zip bPtrs cPtrs
   where fix ((_,(ConsClosure (StgInfoTable _ _ _ _) _ _ _ "ByteCodeInstr" "BreakInfo")):_:_:xs) = fix xs
         fix ((_,(ConsClosure (StgInfoTable _ _ _ _) _ _ _ "ByteCodeInstr" "BreakInfo")):_:xs) = fix xs
+        fix ((_,(ConsClosure (StgInfoTable _ _ _ _) _ _ _ "ByteCodeInstr" "BreakInfo")):xs) = fix xs
         fix ((x,_):xs) = x : fix xs
         fix [] = []
 
