@@ -27,6 +27,7 @@ data State = State
   , mousePos :: (Double, Double)
   , hover :: Maybe String
   , hover2 :: Maybe Int
+  , mode :: Bool
   }
 
 type HeapEntry = (Maybe String, Closure)
@@ -72,4 +73,4 @@ data Operation = Ellipse { xy :: Point, w :: Double, h :: Double, filled :: Bool
 data Signal = NewSignal Box String -- Add a new Box to be visualized
             | UpdateSignal  -- Redraw
             | ClearSignal   -- Remove all Boxes
-
+            | SwitchSignal  -- Switch to alternative view

@@ -36,7 +36,7 @@ visSignal = unsafePerformIO (newEmptyMVar :: IO (MVar Signal))
 -- Whether a visualization is currently running
 visRunning = unsafePerformIO (newMVar False)
 
-visState = unsafePerformIO $ newIORef $ State [] [] [] ([], [], (0,0,1,1)) [] [] (0,0) Nothing Nothing
+visState = unsafePerformIO $ newIORef $ State [] [] [] ([], [], (0,0,1,1)) [] [] (0,0) Nothing Nothing False
 
 -- All the visualized boxes
 visBoxes = unsafePerformIO (newMVar [] :: IO (MVar [(Box, String)]))
@@ -106,34 +106,49 @@ visMainThread = do
 
 click = do
   s <- readIORef visState
-  --case hover s of
-  --  Just t -> do
-  --    --seq a (return ())
-  --    evaluate t
-  --    putMVar visSignal UpdateSignal
-  --  _ -> return ()
-  case hover2 s of
-    Just t -> do
-      --seq a (return ())
-      evaluate2 $ (boxes2 s) !! t
-      putMVar visSignal UpdateSignal
-    _ -> return ()
+  case mode s of
+    False ->
+      case hover s of
+        Just t -> do
+          --seq a (return ())
+          evaluate t
+          putMVar visSignal UpdateSignal
+        _ -> return ()
+    True ->
+      case hover2 s of
+        Just t -> do
+          --seq a (return ())
+          evaluate2 $ (boxes2 s) !! t
+          putMVar visSignal UpdateSignal
+        _ -> return ()
 
 tick canvas = do
   s <- readIORef visState
-  --let oldHover = hover s
-  let oldHover2 = hover2 s
-  modifyIORef visState $ \s -> (
-    let (mx, my) = mousePos s
-        check (o, (x,y,w,h)) =
-          if x <= mx && mx <= x + w &&
-             y <= my && my <= y + h
-          then Just o else Nothing
-    --in s {hover = msum $ map check (bounds s)}
-    in s {hover2 = msum $ map check (bounds2 s)}
-    )
-  s <- readIORef visState
-  if oldHover2 == hover2 s then return () else widgetQueueDraw canvas
+  case mode s of
+    False -> do
+      let oldHover = hover s
+      modifyIORef visState $ \s -> (
+        let (mx, my) = mousePos s
+            check (o, (x,y,w,h)) =
+              if x <= mx && mx <= x + w &&
+                 y <= my && my <= y + h
+              then Just o else Nothing
+        in s {hover = msum $ map check (bounds s)}
+        )
+      s <- readIORef visState
+      if oldHover == hover s then return () else widgetQueueDraw canvas
+    True -> do
+      let oldHover2 = hover2 s
+      modifyIORef visState $ \s -> (
+        let (mx, my) = mousePos s
+            check (o, (x,y,w,h)) =
+              if x <= mx && mx <= x + w &&
+                 y <= my && my <= y + h
+              then Just o else Nothing
+        in s {hover2 = msum $ map check (bounds2 s)}
+        )
+      s <- readIORef visState
+      if oldHover2 == hover2 s then return () else widgetQueueDraw canvas
 
 quit reactThread = do
   swapMVar visRunning False
@@ -161,16 +176,15 @@ react canvas window = do
           \y -> if elem (x,n) y then return y else return $ y ++ [(x,n)])
         ClearSignal   -> modifyMVar_ visBoxes (\_ -> return [])
         UpdateSignal  -> return ()
+        SwitchSignal  -> modifyIORef visState (\s -> s {mode = not (mode s)})
 
       boxes <- readMVar visBoxes
       performGC -- TODO: Else Blackholes appear. Do we want this?
-      --objs <- parseBoxes boxes
-      --modifyIORef visState (\s -> s {objects = objs})
-      objs2 <- op boxes -- TODO: Move this up to react
-      modifyIORef visState (\s -> s {objects2 = objs2})
 
-      -- Doesn't seem to happen anymore:
-      --threadDelay 10000 -- 10 ms, else sometimes redraw happens too fast
+      objs <- parseBoxes boxes
+      modifyIORef visState (\s -> s {objects = objs})
+      objs2 <- op boxes
+      modifyIORef visState (\s -> s {objects2 = objs2})
 
       widgetQueueDraw canvas
       react canvas window
@@ -180,36 +194,56 @@ redraw canvas = do
   --objects <- parseBoxes boxes
 
   s <- readIORef visState
-  --let objs = objects s
-  --let h = hover s
-  --(ops, boxes2, size@(sx,sy,sw,sh)) <- op boxes -- TODO: Move this up to react
-  let (ops, boxes2, size@(sx,sy,sw,sh)) = objects2 s
-  Rectangle rx ry rw rh <- widgetGetAllocation canvas
 
-  boundingBoxes <- render canvas $ do
-    --let scalex = (fromIntegral rw)/sw
-    --    scaley = (fromIntegral rh)/sh
-    -- Proportional scaling
-    let scalex = min ((fromIntegral rw)/sw) ((fromIntegral rh)/sh)
-        scaley = scalex
-        offsetx = 0.5 * (fromIntegral rw)
-        offsety = 0.5 * (fromIntegral rh)
-    save
-    translate offsetx offsety
-    scale scalex scaley
+  case mode s of
+    False -> do
+      let objs = objects s
+      let h = hover s
 
-    --pos <- mapM height objs
-    --let rpos = scanl (\a b -> a + b + 30) 30 pos
-    result <- drawAll s size ops
-    --mapM (drawEntry s) (zip objs rpos)
+      boundingBoxes <- render canvas $ do
+        --let scalex = min ((fromIntegral rw)/sw) ((fromIntegral rh)/sh)
+        --    scaley = scalex
+        --    offsetx = 0.5 * (fromIntegral rw)
+        --    offsety = 0.5 * (fromIntegral rh)
+        save
+        --translate offsetx offsety
+        --scale scalex scaley
 
-    restore
-    --return result
-    return $ map (\(o, (x,y,w,h)) -> (o, (x*scalex+offsetx,y*scaley+offsety,w*scalex,h*scaley))) result
-  return ()
-  --modifyIORef visState (\s -> s {bounds = concat boundingBoxes})
-  modifyIORef visState (\s -> s {boxes2 = boxes2})
-  modifyIORef visState (\s -> s {bounds2 = boundingBoxes})
+        pos <- mapM height objs
+        let rpos = scanl (\a b -> a + b + 30) 30 pos
+        result <- mapM (drawEntry s) (zip objs rpos)
+
+        restore
+        return result
+        --return $ map (\(o, (x,y,w,h)) -> (o, (x*scalex+offsetx,y*scaley+offsety,w*scalex,h*scaley))) result
+      modifyIORef visState (\s -> s {bounds = concat boundingBoxes})
+    True -> do
+      let (ops, boxes2, size@(sx,sy,sw,sh)) = objects2 s
+      Rectangle rx ry rw rh <- widgetGetAllocation canvas
+
+      boundingBoxes <- render canvas $ do
+        --let scalex = (fromIntegral rw)/sw
+        --    scaley = (fromIntegral rh)/sh
+        -- Proportional scaling
+        let scalex = min ((fromIntegral rw)/sw) ((fromIntegral rh)/sh)
+            scaley = scalex
+            offsetx = 0.5 * (fromIntegral rw)
+            offsety = 0.5 * (fromIntegral rh)
+        save
+        translate offsetx offsety
+        scale scalex scaley
+
+        --pos <- mapM height objs
+        --let rpos = scanl (\a b -> a + b + 30) 30 pos
+        result <- drawAll s size ops
+        --mapM (drawEntry s) (zip objs rpos)
+
+        restore
+        --return result
+        return $ map (\(o, (x,y,w,h)) -> (o, (x*scalex+offsetx,y*scaley+offsety,w*scalex,h*scaley))) result
+
+      modifyIORef visState (\s -> s {boxes2 = boxes2})
+      modifyIORef visState (\s -> s {bounds2 = boundingBoxes})
 
 render canvas r = do
         win <- widgetGetDrawWindow canvas

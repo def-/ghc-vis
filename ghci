@@ -8,3 +8,4 @@
 
 :def view \x -> return $ "Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visSignal (GHC.Vis.Types.NewSignal (GHC.HeapView.asBox (" ++ x ++ ")) " ++ (show x) ++ ")"
 :def clear \_ -> return $ "Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visSignal GHC.Vis.Types.ClearSignal"
+:def switch \_ -> return $ "Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visSignal GHC.Vis.Types.SwitchSignal"
