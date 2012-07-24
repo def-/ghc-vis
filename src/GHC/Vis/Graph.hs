@@ -80,7 +80,7 @@ buildGraph hm = insEdges edges $ insNodes nodes empty
 
         toLEdge (0, Just t) xs = case rhm !! t of
           (_,(Just name, _)) -> (0,t,name):xs
-          _                  -> error "unexpected"
+          (_,(Nothing, _))   -> (0,t,""):xs
         toLEdge (f, Just t) xs = (f,t,""):xs
         toLEdge _ xs = xs
 

@@ -392,4 +392,3 @@ showClosure (PAPClosure (StgInfoTable 0 0 _ _) _ _ _ _)
   = "PAP"
 
 showClosure c = "Missing pattern for " ++ show c
-
