@@ -201,12 +201,9 @@ react canvas window = do
 
       --threadDelay 10000 -- 10 ms so that :view doesn't hang
 
-      putStrLn "1"
       widgetQueueDraw canvas
       --widgetQueueResize canvas
-      putStrLn "2"
       react canvas window
-      putStrLn "3"
 
 redraw canvas = do
   boxes <- readMVar visBoxes
@@ -228,9 +225,13 @@ redraw canvas = do
         --translate offsetx offsety
         --scale scalex scaley
 
+        let names = map ((++ ": ") . snd) boxes
+        nameWidths <- mapM (\x -> width $ Unnamed x) names
+        let maxWidth = maximum nameWidths
+
         pos <- mapM height objs
         let rpos = scanl (\a b -> a + b + 30) 30 pos
-        result <- mapM (drawEntry s) (zip objs rpos)
+        result <- mapM (drawEntry s maxWidth) (zip3 objs rpos names)
 
         restore
         return result
@@ -271,13 +272,18 @@ render canvas r = do
           setFontSize fontSize
           r
 
-drawEntry s (obj, pos) = do
+drawEntry s nameWidth (obj, pos, name) = do
   save
-  translate 10 pos
+  translate 0 pos
+  moveTo 0 0
+  draw s $ Unnamed name
+  --setSourceRGB 0 0 0
+  --showText name
+  translate nameWidth 0
   moveTo 0 0
   boundingBoxes <- mapM (draw s) obj
   restore
-  return $ map (\(o, (x,y,w,h)) -> (o, (x+10,y+pos,w,h))) $ concat boundingBoxes
+  return $ map (\(o, (x,y,w,h)) -> (o, (x+nameWidth,y+pos,w,h))) $ concat boundingBoxes
 
 draw _ o@(Unnamed content) = do
   (x,y) <- getCurrentPoint
