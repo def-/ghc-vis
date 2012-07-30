@@ -256,19 +256,60 @@ draw s (mn, BSpline ((x,y):xys) filled) = do
           drawBezier xys
         drawBezier _ = return ()
 
--- TODO: Should be done with Pango
 draw s (mn, Text (x,y) alignment width text) = do
-  TextExtents _ _ width2 height _ _ <- textExtents text
+  --TextExtents _ _ width2 height _ _ <- textExtents text
+  --let x2 = case alignment of
+  --           LeftAlign -> x
+  --           CenterAlign -> x - 0.5 * width2
+  --           RightAlign -> x - width2
+  --let y2 = y - height / 2 + 4 -- TODO: proper descent from font metrics
+
+  --moveTo x2 y2
+  --save
+  --scale 1 (-1)
+  --showText text
+
+  layout <- createLayout "test"
+  context <- liftIO $ layoutGetContext layout
+
+  fo <- liftIO $ cairoContextGetFontOptions context
+
+  fontOptionsSetAntialias fo AntialiasDefault
+  fontOptionsSetHintStyle fo HintStyleNone
+  fontOptionsSetHintMetrics fo HintMetricsOff
+  liftIO $ cairoContextSetFontOptions context fo
+
+  liftIO $ layoutContextChanged layout
+
+  font <- liftIO $ fontDescriptionNew
+  liftIO $ fontDescriptionSetFamily font "Times-Roman"
+  liftIO $ fontDescriptionSetSize font 14
+  liftIO $ layoutSetFontDescription layout (Just font)
+
+  liftIO $ layoutSetText layout text
+
+  (_, (PangoRectangle _ _ width2 height2)) <- liftIO $ layoutGetExtents layout
+
+  -- TODO: Font scaling
+
+  let (f, width3, height3, descent) = if width2 > width
+        then (width / width2, width,  height2 * width / width2, 2 * width / width2)
+        else (1,              width2, height2,                  2)
+
   let x2 = case alignment of
              LeftAlign -> x
-             CenterAlign -> x - 0.5 * width2
-             RightAlign -> x - width2
-  let y2 = y - height / 2 + 4 -- TODO: proper descent from font metrics
+             CenterAlign -> x - 0.5 * width3
+             RightAlign -> x - width3
+      y2 = y + height3 - descent
 
   moveTo x2 y2
   save
-  scale 1 (-1)
-  showText text
+  scale f (-f)
+
+  showLayout layout
+
+  return ()
+
   restore
   return []
 

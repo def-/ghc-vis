@@ -1,3 +1,5 @@
+- Pango text
+
 - Show types (see GHCi)
 
 - find out where a Thunk closure comes from and additional information about it
