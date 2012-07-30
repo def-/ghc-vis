@@ -34,7 +34,8 @@ type HeapEntry = (Maybe String, Closure)
 -- We're using a slow, eq-based list instead of a proper map because
 -- StableNames' hash values aren't stable enough
 type HeapMap   = [(Box, HeapEntry)]
-type PrintState = MS.State (Integer, HeapMap)
+-- The second HeapMap includes BCO pointers, needed for list visualization
+type PrintState = MS.State (Integer, HeapMap, HeapMap)
 
 data VisObject = Unnamed String
                | Named String [VisObject]

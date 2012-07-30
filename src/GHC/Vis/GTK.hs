@@ -54,7 +54,7 @@ printOne a = do
 
 printAll = do
   bs <- readMVar visBoxes
-  (t,(_,h)) <- parseBoxesHeap bs
+  (t,(_,h,_)) <- parseBoxesHeap bs
   return (show t, h)
 
 evaluate identifier = do (_,hm) <- printAll

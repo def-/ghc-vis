@@ -43,8 +43,8 @@ parseBoxes = generalParseBoxes evalState
 
 parseBoxesHeap = generalParseBoxes runState
 
-generalParseBoxes f bs = walkHeapSimply bs >>= \h -> return $ f (go bs) (0,h)
-  where go ((b,n):bs) = do (_,h) <- get
+generalParseBoxes f bs = walkHeapSimply bs >>= \h -> walkHeapWithBCO bs >>= \h2 -> return $ f (go bs) (0,h,h2)
+  where go ((b,n):bs) = do (_,h,_) <- get
                            let (Just (_,c)) = lookup b h
                            r <- parseClosure b c
                            rs <- go bs
@@ -118,6 +118,24 @@ walkHeapSimply bs = foldM topNodes [dummy] bs >>= \s -> foldM goStart s bs -- >>
           Nothing -> do
             c' <- getBoxedClosureData b
             p  <- pointersToFollow c'
+            foldM go (insert (b, (Nothing, c')) l) p
+
+walkHeapWithBCO :: [(Box, String)] -> IO HeapMap
+walkHeapWithBCO bs = foldM topNodes [dummy] bs >>= \s -> foldM goStart s bs -- >>= return . fixBCO
+  where dummy = (asBox 1,
+          (Nothing, ConsClosure (StgInfoTable 0 0 CONSTR_0_1 0) (map fst bs) [] "" "" ""))
+        topNodes l (b,n) = do -- Adds the top nodes without looking at their pointers
+            c' <- getBoxedClosureData b
+            return $ insert (b, (Nothing, c')) l
+        goStart l (b,_) = do -- Ignores that the top nodes are already in the heap map
+          c' <- getBoxedClosureData b
+          p  <- pointersToFollow2 c'
+          foldM go l p
+        go l b = case lookup b l of
+          Just _  -> return l
+          Nothing -> do
+            c' <- getBoxedClosureData b
+            p  <- pointersToFollow2 c'
             foldM go (insert (b, (Nothing, c')) l) p
 
 --fixBCO :: HeapMap -> HeapMap
@@ -216,11 +234,11 @@ adjust f b h = h1 ++ ((b,f x) : h2)
 
 setName :: Box -> PrintState ()
 setName b = modify go
-  where go (i,h) = (i + 1, adjust (set i) b h)
+  where go (i,h,h2) = (i + 1, adjust (set i) b h, h2)
         set i (Nothing, closure) = (Just ("t" ++ show i), closure)
 
 getName :: Box -> PrintState (Maybe String)
-getName b = do (_,h) <- get
+getName b = do (_,h,_) <- get
                return $ fst $ fromJust $ lookup b h
 
 getSetName :: Box -> PrintState String
@@ -232,13 +250,13 @@ getSetName b = do mn <- getName b
                     Just name -> return name
 
 getCount :: PrintState Integer
-getCount = do (i,_) <- get
+getCount = do (i,_,_) <- get
               return i
 
 -- How often is a box referenced in the entire heap map
 countReferences :: Box -> PrintState Int
 countReferences b = do
-  (_,h) <- get
+  (_,_,h) <- get
   return $ sum $ map countR h
  where countR (_,(_,c)) = length $ filter (== b) $ allPtrs c
 
@@ -362,10 +380,10 @@ parseInternal b (PAPClosure (StgInfoTable 0 0 _ _) _ _ _ _)
 
 parseInternal _ c = return [Unnamed ("Missing pattern for " ++ show c)]
 
-contParse b@(Box a) = get >>= \(_,h) -> parseClosure b (snd $ fromJust $ lookup b h)
+contParse b@(Box a) = get >>= \(_,h,_) -> parseClosure b (snd $ fromJust $ lookup b h)
 
 bcoContParse [] = return []
-bcoContParse ((b@(Box a)):bs) = get >>= \(_,h) -> case lookup b h of
+bcoContParse ((b@(Box a)):bs) = get >>= \(_,h,_) -> case lookup b h of
   Nothing    -> do let ptf = unsafePerformIO $ getBoxedClosureData b >>= pointersToFollow2
                    ps <- bcoContParse $ ptf ++ bs -- Could go into infinite loop
                    return ps
@@ -374,7 +392,7 @@ bcoContParse ((b@(Box a)):bs) = get >>= \(_,h) -> case lookup b h of
                    return $ p : ps
 
 mutArrContParse [] = return []
-mutArrContParse ((b@(Box a)):bs) = get >>= \(_,h) -> case lookup b h of
+mutArrContParse ((b@(Box a)):bs) = get >>= \(_,h,_) -> case lookup b h of
   Nothing -> mutArrContParse bs
   Just (_,c) -> do p  <- parseClosure b c
                    ps <- mutArrContParse bs
