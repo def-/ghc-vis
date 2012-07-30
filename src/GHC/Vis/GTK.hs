@@ -210,6 +210,7 @@ redraw canvas = do
   --objects <- parseBoxes boxes
 
   s <- readIORef visState
+  Rectangle rx ry rw rh <- widgetGetAllocation canvas
 
   case mode s of
     False -> do
@@ -217,29 +218,35 @@ redraw canvas = do
       let h = hover s
 
       boundingBoxes <- render canvas $ do
-        --let scalex = min ((fromIntegral rw)/sw) ((fromIntegral rh)/sh)
-        --    scaley = scalex
-        --    offsetx = 0.5 * (fromIntegral rw)
-        --    offsety = 0.5 * (fromIntegral rh)
-        save
-        --translate offsetx offsety
-        --scale scalex scaley
-
         let names = map ((++ ": ") . snd) boxes
         nameWidths <- mapM (\x -> width $ Unnamed x) names
-        let maxWidth = maximum nameWidths
+        let maxNameWidth = maximum nameWidths
 
         pos <- mapM height objs
+
+        widths <- mapM (mapM width) objs
+        let widths2 = 1 : map (\ws -> maxNameWidth + sum ws) widths
+
+        let sw = maximum widths2
+        let sh = (sum $ map (+ 30) pos) - 15
+
+        let scalex = min ((fromIntegral rw)/sw) ((fromIntegral rh)/sh)
+            scaley = scalex
+            offsetx = 0
+            offsety = 0
+        save
+        translate offsetx offsety
+        scale scalex scaley
+
         let rpos = scanl (\a b -> a + b + 30) 30 pos
-        result <- mapM (drawEntry s maxWidth) (zip3 objs rpos names)
+        result <- mapM (drawEntry s maxNameWidth) (zip3 objs rpos names)
 
         restore
-        return result
-        --return $ map (\(o, (x,y,w,h)) -> (o, (x*scalex+offsetx,y*scaley+offsety,w*scalex,h*scaley))) result
-      modifyIORef visState (\s -> s {bounds = concat boundingBoxes})
+        --return result
+        return $ map (\(o, (x,y,w,h)) -> (o, (x*scalex+offsetx,y*scaley+offsety,w*scalex,h*scaley))) $ concat result
+      modifyIORef visState (\s -> s {bounds = boundingBoxes})
     True -> do
       let (ops, boxes2, size@(sx,sy,sw,sh)) = objects2 s
-      Rectangle rx ry rw rh <- widgetGetAllocation canvas
 
       boundingBoxes <- render canvas $ do
         --let scalex = (fromIntegral rw)/sw
