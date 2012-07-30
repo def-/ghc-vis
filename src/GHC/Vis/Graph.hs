@@ -31,6 +31,8 @@ import Data.GraphViz.Parsing hiding (parse)
 import qualified Data.GraphViz.Attributes.Complete as A
 import qualified Data.GraphViz.Types.Generalised as G
 
+import System.IO.Unsafe
+
 import GHC.HeapView
 import GHC.Vis
 import GHC.Vis.Types
@@ -85,11 +87,20 @@ buildGraph hm = insEdges edges $ insNodes nodes empty
         toLEdge (f, Just t) xs = (f,t,""):xs
         toLEdge _ xs = xs
 
+        mbEdges (p,BCOClosure _ _ _ bPtr _ _ _) xs = (map (\b -> (p, Just b)) (bcoChildren [bPtr] hm)) ++ xs
         -- Using allPtrs and then filtering the closures not available in the
         -- heap map out emulates pointersToFollow without being in IO
         mbEdges (p,c) xs = (map (\b -> (p, boxPos b)) (allPtrs c)) ++ xs
 
+        boxPos :: Box -> Maybe Int
         boxPos b = lookup b $ zip (map (\(b,_) -> b) rhm) [0..]
+
+        bcoChildren :: [Box] -> HeapMap -> [Int]
+        bcoChildren [] _ = []
+        bcoChildren ((b@(Box a)):bs) h = case boxPos b of
+          Nothing  -> let ptf = unsafePerformIO $ getBoxedClosureData b >>= pointersToFollow2
+                      in bcoChildren (ptf ++ bs) h -- Could go into infinite loop
+          Just pos -> pos : bcoChildren bs h
 
 getBoxes :: HeapMap -> [Box]
 getBoxes hm = map (\(b,(_,_)) -> b) $ reverse hm

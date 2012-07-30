@@ -10,6 +10,7 @@ module GHC.Vis (
   VisObject(..),
   State(..),
   pointersToFollow,
+  pointersToFollow2,
   HeapMap,
   showClosure
   )
