@@ -10,5 +10,6 @@ main =
     t <- guessTarget "A.hs" Nothing
     setTargets [t]
     result <- load LoadAllTargets
-    if (suceeded result) then putStrLn "Yay!"
-                         else putStrLn "D'oh!"
+    session <- getSession
+    if (succeeded result) then liftIO $ putStrLn "Yay!"
+                          else liftIO $ putStrLn "D'oh!"

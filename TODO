@@ -1,6 +1,5 @@
-- Pango text
-
 - Show types (see GHCi)
+  need HscEnv, then call cvReconstructType
 
 - find out where a Thunk closure comes from and additional information about it
 
