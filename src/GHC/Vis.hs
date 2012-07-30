@@ -33,6 +33,8 @@ import GHC.Exts
 import Text.Printf
 import Unsafe.Coerce
 
+import System.IO.Unsafe
+
 import Data.Map (Map)
 import qualified Data.Map as Map
 
@@ -100,7 +102,7 @@ walkHeapWithoutDummy bs = do
 
 -- walkHeap, but without Top level names
 walkHeapSimply :: [(Box, String)] -> IO HeapMap
-walkHeapSimply bs = foldM topNodes [dummy] bs >>= \s -> foldM goStart s bs
+walkHeapSimply bs = foldM topNodes [dummy] bs >>= \s -> foldM goStart s bs -- >>= return . fixBCO
   where dummy = (asBox 1,
           (Nothing, ConsClosure (StgInfoTable 0 0 CONSTR_0_1 0) (map fst bs) [] "" "" ""))
         topNodes l (b,n) = do -- Adds the top nodes without looking at their pointers
@@ -116,6 +118,23 @@ walkHeapSimply bs = foldM topNodes [dummy] bs >>= \s -> foldM goStart s bs
             c' <- getBoxedClosureData b
             p  <- pointersToFollow c'
             foldM go (insert (b, (Nothing, c')) l) p
+
+--fixBCO :: HeapMap -> HeapMap
+--fixBCO bs hm = uselessClosures
+--  where uselessClosures = map bcoChildren bcos
+--
+--        normalChildren = 
+--
+--        bcoChildren (_,(_,closure)) = concat $ map findChild $ allPtrs closure
+--
+--        findChild b = case find (\(c,y) -> c == b) hm of
+--          Just x  -> b : bcoChildren x
+--          Nothing -> []
+--
+--        bcos = filter isBCO hm
+--
+--        isBCO (_,(_,BCOClosure _ _ _ bPtr _ _ _)) = True
+--        isBCO _ = False
 
 -- walkHeap, but with a maximum depth
 walkHeapDepth :: [(Box, String)] -> IO HeapMap
@@ -156,7 +175,10 @@ walkHeap bs = foldM topNodes [dummy] bs >>= \s -> foldM goStart s bs
             foldM go (insert (b, (Nothing, c')) l) p
 
 -- Don't inspect deep pointers in BCOClosures for now, they never end
---pointersToFollow (BCOClosure (StgInfoTable _ _ _ _) _ _ _ _ _ _) = return []
+
+-- New: We're not inspecting the BCOs and instead later looks which of its
+-- recursive children are still in the heap. Only those should be visualized.
+pointersToFollow (BCOClosure (StgInfoTable _ _ _ _) _ _ _ _ _ _) = return []
 
 pointersToFollow (MutArrClosure (StgInfoTable _ _ _ _) _ _ bPtrs) =
   do cPtrs <- mapM getBoxedClosureData bPtrs
@@ -168,6 +190,17 @@ pointersToFollow (MutArrClosure (StgInfoTable _ _ _ _) _ _ bPtrs) =
         fix [] = []
 
 pointersToFollow x = return $ allPtrs x
+
+pointersToFollow2 (MutArrClosure (StgInfoTable _ _ _ _) _ _ bPtrs) =
+  do cPtrs <- mapM getBoxedClosureData bPtrs
+     return $ fix $ zip bPtrs cPtrs
+  where fix ((_,(ConsClosure (StgInfoTable _ _ _ _) _ _ _ "ByteCodeInstr" "BreakInfo")):_:_:xs) = fix xs
+        fix ((_,(ConsClosure (StgInfoTable _ _ _ _) _ _ _ "ByteCodeInstr" "BreakInfo")):_:xs) = fix xs
+        fix ((_,(ConsClosure (StgInfoTable _ _ _ _) _ _ _ "ByteCodeInstr" "BreakInfo")):xs) = fix xs
+        fix ((x,_):xs) = x : fix xs
+        fix [] = []
+
+pointersToFollow2 x = return $ allPtrs x
 
 -- Additional map operations
 insert :: (Box, HeapEntry) -> HeapMap -> HeapMap
@@ -300,7 +333,24 @@ parseInternal _ (MutArrClosure (StgInfoTable _ _ _ _) _ _ bPtrs)
        return $ Unnamed "(" : tPtrs ++ [Unnamed ")"]
 
 parseInternal _ (BCOClosure (StgInfoTable 4 0 BCO 0) _ _ bPtr _ _ _)
-  = contParse bPtr
+  = do cPtrs <- bcoContParse [bPtr]
+       let tPtrs = intercalate [Unnamed ","] cPtrs
+       return $ Unnamed "(" : tPtrs ++ [Unnamed ")"]
+  -- = do case lookup b h of
+  --        Nothing -> c <- getBoxedClosureData bPtr
+  --        Just (_,c) -> p  <- parseClosure bPtr c
+  -- = do vs <- contParse bPtr
+  --      let ls = filter isExternal $ filter isLink vs
+
+  --          isLink (Link _) = True
+  --          isLink _ = False
+
+  --          isExternal (Link n) = all (notHasName n) vs
+
+  --          notHasName n (Named m _) = n /= m
+  --          notHasName n (Function m) = n /= m
+  --          notHasName _ _ = True
+  --      return vs
 
 parseInternal b (APClosure (StgInfoTable 0 0 _ _) _ _ fun _)
   = do cPtr <- contParse fun
@@ -312,6 +362,15 @@ parseInternal b (PAPClosure (StgInfoTable 0 0 _ _) _ _ _ _)
 parseInternal _ c = return [Unnamed ("Missing pattern for " ++ show c)]
 
 contParse b@(Box a) = get >>= \(_,h) -> parseClosure b (snd $ fromJust $ lookup b h)
+
+bcoContParse [] = return []
+bcoContParse ((b@(Box a)):bs) = get >>= \(_,h) -> case lookup b h of
+  Nothing    -> do let ptf = unsafePerformIO $ getBoxedClosureData b >>= pointersToFollow2
+                   ps <- bcoContParse $ ptf ++ bs -- Could go into infinite loop
+                   return ps
+  Just (_,c) -> do p  <- parseClosure b c
+                   ps <- bcoContParse bs
+                   return $ p : ps
 
 mutArrContParse [] = return []
 mutArrContParse ((b@(Box a)):bs) = get >>= \(_,h) -> case lookup b h of

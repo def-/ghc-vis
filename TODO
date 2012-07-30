@@ -1,3 +1,15 @@
+- Ich glaube man muss BCOs abstrakter behandeln, etwa in dem man zwar
+  reinschaut, was referenziert wird, aber nur Kanten zu Kästchen zieht, die eh
+  schon sichtbar sind. Dadurch würde in meinem Beispiel von dem BCO von m aus
+  eine Kante zu n gehen, aber sonst keine Internas sichtbar sein. Denk dran
+  dass die (bzw. eine) Ausgabe auch für Haskell-Anfänger geeignet sein sollte.
+
+  Möglichkeiten:
+  - Nach walkHeap HeapMap aussortieren
+    Beide Visualisierungen müssen dann bei BCOs in die Tiefe gehen und schauen ob vorkommt.
+
+- Sometimes :switch, :view, :clear hang
+
 - Show types (see GHCi)
 
 - find out where a Thunk closure comes from and additional information about it
@@ -9,49 +21,3 @@
   übernehmen können).
 
 - Generalize interactive xdot viewer into a seperate library
-
-DONE:
-
-- Can't click on Mutable Array:
-  ghc: internal error: MUT_ARR_PTRS_FROZEN object entered!
-  (GHC version 7.4.2 for x86_64_unknown_linux)
-  Please report this as a GHC bug:  http://www.haskell.org/ghc/reportabug
-
-- Sometimes fromJust still fails (Probably garbage collector starts running
-  while we look at heap data or expression is evaluated)
-  Possible solutions:
-  - Perform GC before
-  - Rerun on fail
-
-- xdot and list view at the same time, either deactivatable
-
-- Add top level identifiers to xdot
-
-- Scale and position xdot and list views automatically
-
-- Clickable xdot
-
-- Bei großen Datenstrukturen ist diese (lineare) Art der Visualisierung
-  unbrauchbar. Ich würde Graphen bevorzugen. Mit Graphviz gezeichnete Graphen
-  lassen sich jedoch in Cairo nur schwer interaktiv machen. Ich halte es für zu
-  viel Aufwand Graphenvisualisierung a la graphviz neu zu schreiben. Dot kann
-  Graphen im XDot-Format[1] ausgeben, das schon z.B. Koordinaten und Punkte für
-  Bezier-Kurven enthält. Deshalb würde ich einen interaktiven XDot-Viewer für
-  Cairo ähnlich wie xdot.py[2] schreiben, so dass man in den Graphen auch
-  Objekte hervoheben und auswählen kann.
-
-- Die Links hoverable und clickable machen.
-
-- Der Code sieht gerade schrecklich aus, weil ich viel rumprobiert habe und
-  jetzt erst merke was gut klappt und was nicht. Aufräumen.
-
-- :r Problems with multiple windows:
-
-  :vis
-  :view [1..]
-  :r
-  :vis
-  :view [1..]
-  :r
-  :vis
-  [hangs at some point]

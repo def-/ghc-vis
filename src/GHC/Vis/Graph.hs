@@ -6,6 +6,7 @@ module GHC.Vis.Graph (
   op,
   getOperations,
   parse,
+  buildGraph,
   drawAll
 )
 where
@@ -138,11 +139,20 @@ pr as = do
   hm <- walkHeapWithoutDummy as
   preview $ toViewableGraph $ buildGraph hm
 
+bcoFix2 gr = go gr $ filter isBCO $ labNodes gr
+  where go g [] = g
+        go g ((n,c):xs) = go (delNodes (map (\(_,a,_) -> a) $ out g n) g) xs
+
+        isBCO (_,BCOClosure _ _ _ _ _ _ _) = True
+        isBCO _ = False
+
+bcoFix = id
+
 dg :: [(Box, String)] -> IO (G.DotGraph Node, [Box])
 dg as = do
   hm <- walkHeap as
   --hm <- walkHeapDepth as
-  xDotText <- graphvizWithHandle Dot (defaultVis $ toViewableGraph $ buildGraph hm) XDot hGetContents
+  xDotText <- graphvizWithHandle Dot (defaultVis $ toViewableGraph $ bcoFix $ buildGraph hm) XDot hGetContents
   return (parseDotGraph $ B.fromChunks [xDotText], getBoxes hm)
 
 --drawGraph bs (G.DotGraph _ _ _ graphStatements) = do

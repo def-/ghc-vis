@@ -201,8 +201,12 @@ react canvas window = do
 
       --threadDelay 10000 -- 10 ms so that :view doesn't hang
 
+      putStrLn "1"
       widgetQueueDraw canvas
+      --widgetQueueResize canvas
+      putStrLn "2"
       react canvas window
+      putStrLn "3"
 
 redraw canvas = do
   boxes <- readMVar visBoxes
