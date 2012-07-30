@@ -199,10 +199,7 @@ react canvas window = do
           objs2 <- op boxes
           modifyIORef visState (\s -> s {objects2 = objs2})
 
-      --threadDelay 10000 -- 10 ms so that :view doesn't hang
-
-      widgetQueueDraw canvas
-      --widgetQueueResize canvas
+      postGUISync $ widgetQueueDraw canvas
       react canvas window
 
 redraw canvas = do
