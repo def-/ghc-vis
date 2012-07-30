@@ -230,6 +230,7 @@ draw s (mn, Ellipse (x,y) w h filled) = do
     Just name -> case hover2 s of
       Just name2 -> if name == name2 then setSourceRGB 1 0 0 else setSourceRGB 0 0 0
       _ -> setSourceRGB 0 0 0
+  setLineWidth 1
   if filled then fill else stroke
   setSourceRGB 0 0 0
   return $ case mn of
@@ -240,6 +241,7 @@ draw s (mn, Polygon ((x,y):xys) filled) = do
   moveTo x y
   mapM (\(x,y) -> lineTo x y) xys
   closePath
+  setLineWidth 1
   if filled then fillPreserve >> fill else stroke
   return []
 
@@ -248,6 +250,7 @@ draw s (mn, Polyline _) = return []
 draw s (mn, BSpline ((x,y):xys) filled) = do
   moveTo x y
   drawBezier xys
+  setLineWidth 1
   if filled then fillPreserve >> fill else stroke
   return []
 
@@ -315,13 +318,8 @@ draw s (mn, Color (r,g,b,a) filled) = do
   setSourceRGBA r g b a
   return []
 
--- TODO: Should be done with Pango
-draw s (mn, Font size name) = do
-  selectFontFace name FontSlantNormal FontWeightNormal
-  setFontSize size
-  --layout <- createLayout "test"
-  return []
-
+-- TODO: Implement Font, Style, Image
+draw s (mn, Font size name) = return []
 draw s (mn, Style _) = return []
 draw s (mn, Image _ _ _ _) = return []
 
