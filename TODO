@@ -1,13 +1,3 @@
-- Ich glaube man muss BCOs abstrakter behandeln, etwa in dem man zwar
-  reinschaut, was referenziert wird, aber nur Kanten zu Kästchen zieht, die eh
-  schon sichtbar sind. Dadurch würde in meinem Beispiel von dem BCO von m aus
-  eine Kante zu n gehen, aber sonst keine Internas sichtbar sein. Denk dran
-  dass die (bzw. eine) Ausgabe auch für Haskell-Anfänger geeignet sein sollte.
-
-  Möglichkeiten:
-  - Nach walkHeap HeapMap aussortieren
-    Beide Visualisierungen müssen dann bei BCOs in die Tiefe gehen und schauen ob vorkommt.
-
 - Sometimes :switch, :view, :clear hang
 
 - Show types (see GHCi)
