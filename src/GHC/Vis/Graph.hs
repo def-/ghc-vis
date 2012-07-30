@@ -288,21 +288,19 @@ draw s (mn, Text (x,y) alignment width text) = do
 
   liftIO $ layoutSetText layout text
 
-  (_, (PangoRectangle _ _ width2 height2)) <- liftIO $ layoutGetExtents layout
-
-  -- TODO: Font scaling
+  (_, (PangoRectangle x2 y2 width2 height2)) <- liftIO $ layoutGetExtents layout
 
   let (f, width3, height3, descent) = if width2 > width
         then (width / width2, width,  height2 * width / width2, 2 * width / width2)
         else (1,              width2, height2,                  2)
 
-  let x2 = case alignment of
+  let x3 = case alignment of
              LeftAlign -> x
              CenterAlign -> x - 0.5 * width3
              RightAlign -> x - width3
-      y2 = y + height3 - descent
+      y3 = y + height3 - descent
 
-  moveTo x2 y2
+  moveTo x3 y3
   save
   scale f (-f)
 
