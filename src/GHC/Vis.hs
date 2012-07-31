@@ -199,6 +199,8 @@ walkHeap bs = foldM topNodes [dummy] bs >>= \s -> foldM goStart s bs
 -- recursive children are still in the heap. Only those should be visualized.
 pointersToFollow (BCOClosure (StgInfoTable _ _ _ _) _ _ _ _ _ _) = return []
 
+--pointersToFollow (MVarClosure (StgInfoTable _ _ _ _) _ _ value) = return [value]
+
 pointersToFollow (MutArrClosure (StgInfoTable _ _ _ _) _ _ bPtrs) =
   do cPtrs <- mapM getBoxedClosureData bPtrs
      return $ fix $ zip bPtrs cPtrs
@@ -209,6 +211,8 @@ pointersToFollow (MutArrClosure (StgInfoTable _ _ _ _) _ _ bPtrs) =
         fix [] = []
 
 pointersToFollow x = return $ allPtrs x
+
+--pointersToFollow2 (MVarClosure (StgInfoTable _ _ _ _) _ _ value) = return [value]
 
 pointersToFollow2 (MutArrClosure (StgInfoTable _ _ _ _) _ _ bPtrs) =
   do cPtrs <- mapM getBoxedClosureData bPtrs
@@ -260,7 +264,7 @@ countReferences b = do
   return $ sum $ map countR h
  where countR (_,(_,c)) = length $ filter (== b) $ allPtrs c
 
-parseInternal _ (ConsClosure (StgInfoTable _ _ _ _) _ [dataArg] _ modl name) =
+parseInternal _ (ConsClosure (StgInfoTable _ _ _ _) _ [dataArg] pkg modl name) =
  return [Unnamed $ case (modl, name) of
     k | k `elem` [ ("GHC.Word", "W#")
                  , ("GHC.Word", "W8#")
@@ -282,7 +286,7 @@ parseInternal _ (ConsClosure (StgInfoTable _ _ _ _) _ [dataArg] _ modl name) =
     ("Types", "D#") -> printf "%0.5f" (unsafeCoerce dataArg :: Double)
     ("Types", "F#") -> printf "%0.5f" (unsafeCoerce dataArg :: Double)
 
-    c -> "Missing ConsClosure pattern for " ++ show c
+    (_,name) -> printf "%s[%d]" name dataArg
   ]
 
 -- Empty ByteStrings point to a nullForeignPtr, evaluating it leads to an
@@ -378,6 +382,12 @@ parseInternal b (APClosure (StgInfoTable 0 0 _ _) _ _ fun _)
 parseInternal b (PAPClosure (StgInfoTable 0 0 _ _) _ _ _ _)
   = getSetName b >>= \x -> return [Function x]
 
+parseInternal b (MVarClosure (StgInfoTable _ _ _ _) qHead qTail qValue)
+   = do cHead <- liftM mbParens $ contParse qHead
+        cTail <- liftM mbParens $ contParse qTail
+        cValue <- liftM mbParens $ contParse qValue
+        return $ (Unnamed "MVar#(") : cHead ++ [Unnamed ","] ++ cTail ++ [Unnamed ","] ++ cValue ++ [Unnamed ")"]
+
 parseInternal _ c = return [Unnamed ("Missing pattern for " ++ show c)]
 
 contParse b@(Box a) = get >>= \(_,h,_) -> parseClosure b (snd $ fromJust $ lookup b h)
@@ -437,7 +447,7 @@ showClosure (ConsClosure (StgInfoTable _ _ _ _) _ [dataArg] _ modl name) =
     -- :view b
     ("GHC.Arr", "Array") -> printf "Array[%d]" dataArg
 
-    c -> "Missing ConsClosure pattern for " ++ show c ++ " with dataArg = " ++ show dataArg
+    (_,name) -> printf "%s[%d]" name dataArg
 
 showClosure (ConsClosure (StgInfoTable 1 3 _ 0) _ [_,0,0] _ "Data.ByteString.Internal" "PS")
   = "ByteString[0,0]"
@@ -480,5 +490,8 @@ showClosure (APClosure (StgInfoTable 0 0 _ _) _ _ fun _)
 
 showClosure (PAPClosure (StgInfoTable 0 0 _ _) _ _ _ _)
   = "PAP"
+
+showClosure (MVarClosure (StgInfoTable _ _ _ _) qHead qTail qValue)
+  = "MVar#"
 
 showClosure c = "Missing pattern for " ++ show c

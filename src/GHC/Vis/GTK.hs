@@ -69,9 +69,17 @@ evaluate2 b@(Box a) = do
     -- ghc: internal error: MUT_ARR_PTRS_FROZEN object entered!
     -- (GHC version 7.4.2 for x86_64_unknown_linux)
     -- Please report this as a GHC bug:  http://www.haskell.org/ghc/reportabug
-    ArrWordsClosure _ _ _ -> return () -- Don't inspect ArrWords
-    MutArrClosure _ _ _ _ -> return () -- Don't inspect ArrWords
-    _ -> a `seq` return ()
+    --ArrWordsClosure _ _ _ -> return () -- Don't inspect ArrWords
+    --MutArrClosure _ _ _ _ -> return ()
+    --MVarClosure _ _ _ _ -> return ()
+    --_ -> a `seq` return ()
+    IndClosure _ _ -> a `seq` return ()
+    BlackholeClosure _ _ -> a `seq` return ()
+    FunClosure _ _ _ -> a `seq` return ()
+    ThunkClosure _ _ _ -> a `seq` return ()
+    APClosure _ _ _ _ _ -> a `seq` return ()
+    PAPClosure _ _ _ _ _ -> a `seq` return ()
+    _ -> return ()
 
 visualization = do
   vr <- swapMVar visRunning True
