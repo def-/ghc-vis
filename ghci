@@ -1,11 +1,14 @@
 -- Add to your ~/.ghci:
 -- :script $VIS_DIR/ghci
 
+let putSignal s = "System.Timeout.timeout 1000000 (Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visSignal $ GHC.Vis.Types." ++ s ++ ") >> return ()"
+
 :def vis \x -> return $ "GHC.Vis.GTK.visualization"
+:def view \x -> return $ putSignal $ "NewSignal (GHC.HeapView.asBox (" ++ x ++ ")) " ++ show x
+:def eval \x -> return $ "GHC.Vis.GTK.evaluate \"" ++ x ++ "\"\n" ++ putSignal "UpdateSignal"
+:def switch \_ -> return $ putSignal "SwitchSignal"
+:def update \_ -> return $ putSignal "UpdateSignal"
+:def clear  \_ -> return $ putSignal "ClearSignal"
 
-:def eval \x -> return $ "GHC.Vis.GTK.evaluate \"" ++ x ++ "\" >> Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visSignal GHC.Vis.Types.UpdateSignal"
-:def update \_ -> return $ "Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visSignal GHC.Vis.Types.UpdateSignal"
-
-:def view \x -> return $ "Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visSignal (GHC.Vis.Types.NewSignal (GHC.HeapView.asBox (" ++ x ++ ")) " ++ (show x) ++ ")"
-:def clear \_ -> return $ "Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visSignal GHC.Vis.Types.ClearSignal"
-:def switch \_ -> return $ "Control.Concurrent.MVar.putMVar GHC.Vis.GTK.visSignal GHC.Vis.Types.SwitchSignal"
+-- Remove our temporary bindings
+:r
