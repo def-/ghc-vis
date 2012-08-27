@@ -272,7 +272,7 @@ redraw canvas = do
 
         restore
         --return result
-        return $ map (\(o, (x,y,w,h)) -> (o, (x*scalex+offsetx,y*scaley+offsety,w*scalex,h*scaley))) result
+        return $ map (\(o, (x,y,w,h)) -> (o, ((x+30)*scalex+offsetx,y*scaley+offsety,w*scalex,h*scaley))) result
 
       modifyIORef visState (\s -> s {boxes2 = boxes2})
       modifyIORef visState (\s -> s {bounds2 = boundingBoxes})
