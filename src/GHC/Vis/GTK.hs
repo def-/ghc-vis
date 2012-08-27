@@ -284,6 +284,9 @@ render canvas r = do
           setFontSize fontSize
           r
 
+        --Rectangle _ _ rw rh <- widgetGetAllocation canvas
+        --withSVGSurface "export.svg" (fromIntegral rw) (fromIntegral rh) (\s -> renderWith s r)
+
 drawEntry s nameWidth (obj, pos, name) = do
   save
   translate 0 pos
