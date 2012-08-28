@@ -6,7 +6,6 @@ let put s = "System.Timeout.timeout 1000000 (Control.Concurrent.MVar.putMVar GHC
 :def switch \_ -> return $ put "SwitchSignal"
 :def update \_ -> return $ put "UpdateSignal"
 :def clear  \_ -> return $ put "ClearSignal"
-:def ubinds \x -> return $ put $ "UBindsSignal (GHC.HeapView.asBox (" ++ x ++ ")) " ++ show x
 
 -- Remove our temporary bindings
 :r

@@ -1,16 +1,20 @@
 {-# LANGUAGE MagicHash #-}
 
+{- |
+   Module      : GHC.Vis.Internal
+   Copyright   : (c) Dennis Felsing
+   License     : 3-Clause BSD-style
+   Maintainer  : dennis@felsin9.de
+
+ -}
 module GHC.Vis.Internal (
   walkHeap,
   --walkHeapDepth,
   parseBoxes,
   parseBoxesHeap,
-  parseClosure,
-  VisObject(..),
-  State(..),
-  pointersToFollow,
+  --parseClosure,
+  --pointersToFollow,
   pointersToFollow2,
-  HeapMap,
   showClosure
   )
   where
@@ -29,9 +33,14 @@ import Unsafe.Coerce
 
 import System.IO.Unsafe
 
+-- | Walk the heap for a list of objects to be visualized and their
+--   corresponding names.
 parseBoxes :: [(Box, String)] -> IO [[VisObject]]
 parseBoxes = generalParseBoxes evalState
 
+-- | Walk the heap for a list of objects to be visualized and their
+--   corresponding names. Also return the resulting 'HeapMap' and another
+--   'HeapMap' that does not contain BCO pointers.
 parseBoxesHeap :: [(Box, String)] -> IO ([[VisObject]], (Integer, HeapMap, HeapMap))
 parseBoxesHeap = generalParseBoxes runState
 
@@ -84,6 +93,9 @@ insertObjects (Named name _) xs = [Named name xs]
 insertObjects (Unnamed _) xs = xs
 insertObjects _ _ = error "unexpected arguments"
 
+-- | Recursively walk down the heap objects and return the resulting map. This
+--   function recognizes loops and avoids them. Big data structures might still
+--   be very slow.
 walkHeap :: [(Box, String)] -> IO HeapMap
 walkHeap = walkHeapGeneral Just pointersToFollow
 
@@ -130,6 +142,8 @@ pointersToFollow (MutArrClosure StgInfoTable{} _ _ bPtrs) =
 
 pointersToFollow x = return $ allPtrs x
 
+-- | Follows 'GHC.HeapView.BCOClosure's, but not the debugging data structures
+--   (ByteCodeInstr.BreakInfo) of GHC.
 pointersToFollow2 :: Closure -> IO [Box]
 pointersToFollow2 (MutArrClosure StgInfoTable{} _ _ bPtrs) =
   do cPtrs <- mapM getBoxedClosureData bPtrs
@@ -353,6 +367,7 @@ mbParens t | ' ' `objElem` t = Unnamed "(" : t ++ [Unnamed ")"]
                 go (Named _ os) = any go os
                 go _ = False
 
+-- | Textual representation of Heap objects, used in the graph visualization.
 showClosure :: Closure -> String
 showClosure (ConsClosure StgInfoTable{} _ [dataArg] _ modl name) =
  case (modl, name) of

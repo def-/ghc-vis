@@ -1,7 +1,14 @@
+{- |
+   Module      : GHC.Vis.GTK.List
+   Copyright   : (c) Dennis Felsing
+   License     : 3-Clause BSD-style
+   Maintainer  : dennis@felsin9.de
+
+ -}
 module GHC.Vis.GTK.List (
   redraw,
   click,
-  tick,
+  move,
   updateObjects
   )
   where
@@ -12,12 +19,22 @@ import Control.Concurrent
 import Control.Monad
 
 import Data.IORef
+import System.IO.Unsafe
 
-import GHC.Vis.Internal hiding (boxes)
-import GHC.Vis.Types hiding (boxes)
+import GHC.Vis.Internal
+import GHC.Vis.Types hiding (State)
 import GHC.Vis.GTK.Common
 
 import GHC.HeapView (Box)
+
+data State = State
+  { objects :: [[VisObject]]
+  , bounds :: [(String, (Double, Double, Double, Double))]
+  , hover :: Maybe String
+  }
+
+state :: IORef State
+state = unsafePerformIO $ newIORef $ State [] [] Nothing
 
 padding :: Double
 padding = 5
@@ -25,11 +42,13 @@ padding = 5
 fontSize :: Double
 fontSize = 15
 
+-- | Draw visualization to screen, called on every update or when it's
+--   requested from outside the program.
 redraw :: WidgetClass w => w -> IO ()
 redraw canvas = do
   boxes <- readMVar visBoxes
 
-  s <- readIORef visState
+  s <- readIORef state
   Rectangle _ _ rw rh <- widgetGetAllocation canvas
 
   let objs = objects s
@@ -61,7 +80,7 @@ redraw canvas = do
     restore
     --return result
     return $ map (\(o, (x,y,w,h)) -> (o, (x*scalex+offsetx,y*scaley+offsety,w*scalex,h*scaley))) $ concat result
-  modifyIORef visState (\s' -> s' {bounds = boundingBoxes})
+  modifyIORef state (\s' -> s' {bounds = boundingBoxes})
 
 render :: WidgetClass w => w -> Render b -> IO b
 render canvas r = do
@@ -74,9 +93,11 @@ render canvas r = do
   --Rectangle _ _ rw rh <- widgetGetAllocation canvas
   --withSVGSurface "export.svg" (fromIntegral rw) (fromIntegral rh) (\s -> renderWith s r)
 
+-- | Handle a mouse click. If an object was clicked an 'UpdateSignal' is sent
+--   that causes the object to be evaluated and the screen to be updated.
 click :: IO ()
 click = do
-  s <- readIORef visState
+  s <- readIORef state
 
   case hover s of
      Just t -> do
@@ -84,26 +105,31 @@ click = do
        putMVar visSignal UpdateSignal
      _ -> return ()
 
-tick :: WidgetClass w => w -> IO ()
-tick canvas = do
-  oldS <- readIORef visState
+-- | Handle a mouse move. Causes an 'UpdateSignal' if the mouse is hovering a
+--   different object now, so the object gets highlighted and the screen
+--   updated.
+move :: WidgetClass w => w -> IO ()
+move canvas = do
+  vS <- readIORef visState
+  oldS <- readIORef state
   let oldHover = hover oldS
 
-  modifyIORef visState $ \s' -> (
-    let (mx, my) = mousePos s'
+  modifyIORef state $ \s' -> (
+    let (mx, my) = mousePos vS
         check (o, (x,y,w,h)) =
           if x <= mx && mx <= x + w &&
              y <= my && my <= y + h
           then Just o else Nothing
     in s' {hover = msum $ map check (bounds s')}
     )
-  s <- readIORef visState
+  s <- readIORef state
   unless (oldHover == hover s) $ widgetQueueDraw canvas
 
+-- | Something might have changed on the heap, update the view.
 updateObjects :: [(Box, String)] -> IO ()
 updateObjects boxes = do
   objs <- parseBoxes boxes
-  modifyIORef visState (\s -> s {objects = objs})
+  modifyIORef state (\s -> s {objects = objs})
 
 drawEntry :: State -> Double -> ([VisObject], Double, String) -> Render [(String, (Double, Double, Double, Double))]
 drawEntry s nameWidth (obj, pos, name) = do

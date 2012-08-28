@@ -1,18 +1,24 @@
+{- |
+   Module      : GHC.Vis.GTK.Common
+   Copyright   : (c) Dennis Felsing
+   License     : 3-Clause BSD-style
+   Maintainer  : dennis@felsin9.de
+
+ -}
 module GHC.Vis.GTK.Common (
   visSignal,
   visRunning,
   visState,
   visBoxes,
   evaluate,
-  printOne,
-  printAll
+  --printOne,
+  --printAll
   )
   where
 
 import Control.Concurrent
 import Control.DeepSeq
 
-import Data.List
 import Data.IORef
 
 import System.IO.Unsafe
@@ -29,13 +35,15 @@ visSignal = unsafePerformIO (newEmptyMVar :: IO (MVar Signal))
 visRunning :: MVar Bool
 visRunning = unsafePerformIO (newMVar False)
 
+-- | Internal state of the visualization
 visState :: IORef State
-visState = unsafePerformIO $ newIORef $ State [] [] [] ([], [], (0,0,1,1)) [] [] (0,0) Nothing Nothing False
+visState = unsafePerformIO $ newIORef $ State (0, 0) ListView
 
 -- | All the visualized boxes
 visBoxes :: MVar [(Box, String)]
 visBoxes = unsafePerformIO (newMVar [] :: IO (MVar [(Box, String)]))
 
+-- | Evaluate an object identified by a String.
 evaluate :: String -> IO ()
 evaluate identifier = do (_,hm) <- printAll
                          show (map go hm) `deepseq` return ()
@@ -43,14 +51,14 @@ evaluate identifier = do (_,hm) <- printAll
                                  | otherwise = (Just n, y)
         go (_,(x,y)) = (x,y)
 
-printOne :: a -> IO String
-printOne a = do
-  bs <- readMVar visBoxes
-  case findIndex (\(b,_) -> asBox a == b) bs of
-    Just pos -> do
-      t  <- parseBoxes bs
-      return $ show (t !! pos)
-    Nothing -> return "Add entry first"
+--printOne :: a -> IO String
+--printOne a = do
+--  bs <- readMVar visBoxes
+--  case findIndex (\(b,_) -> asBox a == b) bs of
+--    Just pos -> do
+--      t  <- parseBoxes bs
+--      return $ show (t !! pos)
+--    Nothing -> return "Add entry first"
 
 printAll :: IO (String, HeapMap)
 printAll = do

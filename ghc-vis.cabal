@@ -9,9 +9,7 @@ author:             Dennis Felsing <dennis@felsin9.de>
 maintainer:         Dennis Felsing <dennis@felsin9.de>
 copyright:          Dennis Felsing 2012
 synopsis:           Live visualization of data structures in GHC
-description: {
-Live visualisation of data structures in GHC
-}
+description:        Live visualisation of data structures in GHC
 
 Extra-source-files: example.hs
 Library

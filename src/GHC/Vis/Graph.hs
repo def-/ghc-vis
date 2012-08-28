@@ -1,8 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+   Module      : GHC.Vis.Graph
+   Copyright   : (c) Dennis Felsing
+   License     : 3-Clause BSD-style
+   Maintainer  : dennis@felsin9.de
+
+ -}
 module GHC.Vis.Graph (
-  dg,
-  op
+  xDotParse
 )
 where
 
@@ -17,10 +23,19 @@ import Data.GraphViz hiding (Ellipse, Polygon, parse)
 import qualified Data.GraphViz.Types.Generalised as G
 
 import GHC.HeapView hiding (name)
-import GHC.Vis.Internal hiding (boxes)
+import GHC.Vis.Internal
+import GHC.Vis.Types
 
 import Graphics.XDot.Types hiding (name, h)
 import Graphics.XDot.Parser
+
+-- | Take the objects to be visualized and run them through @dot@ and extract
+--   the drawing operations that have to be exectued to show the graph of the
+--   heap map.
+xDotParse :: [(Box, String)] -> IO ([(Maybe Node, Operation)], [Box], Rectangle)
+xDotParse as = do
+  (dotGraph, boxes) <- dg as
+  return (getOperations dotGraph, boxes, getSize dotGraph)
 
 dg :: [(Box, String)] -> IO (G.DotGraph Node, [Box])
 dg as = do
@@ -28,11 +43,6 @@ dg as = do
   --hm <- walkHeapDepth as
   xDotText <- graphvizWithHandle Dot (defaultVis $ toViewableGraph $ buildGraph hm) XDot hGetContents
   return (parseDotGraph $ B.fromChunks [xDotText], getBoxes hm)
-
-op :: [(Box, String)] -> IO ([(Maybe Node, Operation)], [Box], Rectangle)
-op as = do
-  (dotGraph, boxes) <- dg as
-  return (getOperations dotGraph, boxes, getSize dotGraph)
 
 buildGraph :: HeapMap -> Gr Closure String
 buildGraph hm = insEdges edges $ insNodes nodes empty

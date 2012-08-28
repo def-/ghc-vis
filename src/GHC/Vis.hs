@@ -1,3 +1,52 @@
+{- |
+   Module      : GHC.Vis
+   Description : Live visualization of data structures in GHC
+   Copyright   : (c) Dennis Felsing
+   License     : 3-Clause BSD-style
+   Maintainer  : dennis@felsin9.de
+
+   Live visualisation of data structures in GHC
+
+   To use this package add the accompanying @ghci@ file to your @.ghci@ like this:
+
+   > :script $PATH_TO_GHC-VIS/ghci
+
+   Now you can run ghci and experiment with @ghc-vis@. Start the visualization:
+
+   > $ ghci
+   > GHCi, version 7.4.2: http://www.haskell.org/ghc/  :? for help
+   > Ok, modules loaded: none.
+   > > :vis
+
+   A blank window should appear now. This is the visualization window. Add an
+   expression to the visualization:
+
+   > > let a = [1..5]
+   > > :view a
+   > > :view "foo"
+
+   Evaluate an object that is shown in the visualization. You can also click on
+   the object to evaluate it.
+
+   > > :eval t0
+
+   Switch between the list view and the graph view:
+
+   > > :switch
+
+   When an object is updated by using its values, you have to call @:update@ to
+   refresh the visualization window. You can also click on an object to force an
+   update:
+
+   > > a !! 2
+   > 3
+   > > :update
+
+   Clear the visualization window, this also happens when you @:load@ or
+   @:reload@ a source file:
+
+   > > :clear
+ -}
 module GHC.Vis (
   visualization,
   visSignal,
@@ -16,12 +65,13 @@ import Data.IORef
 import System.Timeout
 import System.Mem
 
-import GHC.Vis.Internal hiding (boxes)
-import GHC.Vis.Types hiding (boxes)
+import GHC.Vis.Types
 import GHC.Vis.GTK.Common
 import qualified GHC.Vis.GTK.Graph as Graph
 import qualified GHC.Vis.GTK.List as List
 
+-- | This is the main function. It's to be called from GHCi and launches a
+--   graphical window in a new thread.
 visualization :: IO ()
 visualization = do
   vr <- swapMVar visRunning True
@@ -40,12 +90,12 @@ visMainThread = do
 
   onExpose canvas $ const $ do
     runCorrect Graph.redraw List.redraw >>= \f -> f canvas
-    runCorrect Graph.tick List.tick >>= \f -> f canvas
+    runCorrect Graph.move List.move >>= \f -> f canvas
     return True
 
   onMotionNotify canvas False $ \e -> do
     modifyIORef visState (\s -> s {mousePos = (E.eventX e, E.eventY e)})
-    runCorrect Graph.tick List.tick >>= \f -> f canvas
+    runCorrect Graph.move List.move >>= \f -> f canvas
     return True
 
   onButtonPress canvas $ \e -> do
@@ -88,7 +138,7 @@ react canvas window = do
           \y -> if (x,n) `elem` y then return y else return $ y ++ [(x,n)])
         ClearSignal   -> modifyMVar_ visBoxes (\_ -> return [])
         UpdateSignal  -> return ()
-        SwitchSignal  -> modifyIORef visState (\s -> s {mode = not (mode s)})
+        SwitchSignal  -> modifyIORef visState (\s -> s {view = succN (view s)})
 
       boxes <- readMVar visBoxes
       performGC -- TODO: Else Blackholes appear. Do we want this?
@@ -98,7 +148,11 @@ react canvas window = do
       postGUISync $ widgetQueueDraw canvas
       react canvas window
 
+  where succN v = if v == maxBound then minBound else succ v
+
 runCorrect :: f -> f -> IO f
 runCorrect f1 f2 = do
   s <- readIORef visState
-  return $ if mode s then f1 else f2
+  return $ case view s of
+             GraphView -> f1
+             ListView  -> f2
