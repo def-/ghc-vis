@@ -2,70 +2,38 @@
 
 module GHC.Vis.Graph (
   dg,
-  pr,
-  op,
-  getOperations,
-  parse,
-  buildGraph,
-  drawAll
+  op
 )
 where
 
-import Control.Monad
-import Data.Tuple
-import Data.Maybe
-import Data.Char
-import Data.Ratio
-import Data.Text.IO
-import qualified Data.Foldable as F
-import qualified Data.Text.Lazy as B
-import qualified Data.Text.Lazy.Read as B
-
-import qualified Text.ParserCombinators.Poly.StateText as P
-
-import Data.Graph.Inductive
-
-import Data.GraphViz hiding (Ellipse, Polygon, parse)
-import Data.GraphViz.Types hiding (parse)
-import Data.GraphViz.Parsing hiding (parse)
-import qualified Data.GraphViz.Attributes.Complete as A
-import qualified Data.GraphViz.Types.Generalised as G
-
 import System.IO.Unsafe
 
-import GHC.HeapView
-import GHC.Vis
-import GHC.Vis.Types
+import Data.Text.IO
+import qualified Data.Text.Lazy as B
 
-import Graphics.UI.Gtk hiding (Box, Signal, Color, Alignment, Point, Dot, toLabel)
-import Graphics.Rendering.Cairo
-import Graphics.UI.Gtk.Gdk.Events as E
+import Data.Graph.Inductive hiding (nodes, edges)
 
---buildGraph :: [Box] -> IO (Gr Closure ())
---buildGraph boxes = foldM go empty boxes
---  where go graph box@(Box content) = do
---          closure  <- getBoxedClosureData box
---          nodename <- getID content
---          edges <- mapM (\(Box x) -> getID x >>= \target -> return (nodename, target, ())) (pointersToFollow closure)
---          if nodename `gelem` graph
---            then return graph
---            else do
---                  graph' <- foldM go (insNode (nodename, closure) graph) $ pointersToFollow closure 
---                  return $ insEdges edges graph'
+import Data.GraphViz hiding (Ellipse, Polygon, parse)
+import qualified Data.GraphViz.Types.Generalised as G
 
---graphToVisObjectList :: Gr Closure () -> [Box] -> [[VisObject]]
---graphToVisObjectList graph startnodes = mapM go startnodes
---  where go node = if indeg graph node <= 1
---                  then
---                  else NamedObject node (packVisObjects
+import GHC.HeapView hiding (name)
+import GHC.Vis.Internal hiding (boxes)
 
---bg :: Gr String String
---bg = buildGr [([],1,"test1",[("",1)])
---             ,([],2,"test2",[("",3)])
---             ,([],3,"test3",[("",2)])
---             ]
+import Graphics.XDot.Types hiding (name, h)
+import Graphics.XDot.Parser
 
--- Maybe add edge labels as type of link (params, pointer, ...)
+dg :: [(Box, String)] -> IO (G.DotGraph Node, [Box])
+dg as = do
+  hm <- walkHeap as
+  --hm <- walkHeapDepth as
+  xDotText <- graphvizWithHandle Dot (defaultVis $ toViewableGraph $ buildGraph hm) XDot hGetContents
+  return (parseDotGraph $ B.fromChunks [xDotText], getBoxes hm)
+
+op :: [(Box, String)] -> IO ([(Maybe Node, Operation)], [Box], Rectangle)
+op as = do
+  (dotGraph, boxes) <- dg as
+  return (getOperations dotGraph, boxes, getSize dotGraph)
+
 buildGraph :: HeapMap -> Gr Closure String
 buildGraph hm = insEdges edges $ insNodes nodes empty
   where nodes = zip [0..] $ map (\(_,(_,c)) -> c) rhm
@@ -87,17 +55,17 @@ buildGraph hm = insEdges edges $ insNodes nodes empty
         toLEdge (f, Just t) xs = (f,t,""):xs
         toLEdge _ xs = xs
 
-        mbEdges (p,BCOClosure _ _ _ bPtr _ _ _) xs = (map (\b -> (p, Just b)) (bcoChildren [bPtr] hm)) ++ xs
+        mbEdges (p,BCOClosure _ _ _ bPtr _ _ _) xs = map (\b -> (p, Just b)) (bcoChildren [bPtr] hm) ++ xs
         -- Using allPtrs and then filtering the closures not available in the
         -- heap map out emulates pointersToFollow without being in IO
-        mbEdges (p,c) xs = (map (\b -> (p, boxPos b)) (allPtrs c)) ++ xs
+        mbEdges (p,c) xs = map (\b -> (p, boxPos b)) (allPtrs c) ++ xs
 
         boxPos :: Box -> Maybe Int
-        boxPos b = lookup b $ zip (map (\(b,_) -> b) rhm) [0..]
+        boxPos b = lookup b $ zip (map fst rhm) [0..]
 
         bcoChildren :: [Box] -> HeapMap -> [Int]
         bcoChildren [] _ = []
-        bcoChildren ((b@(Box a)):bs) h = case boxPos b of
+        bcoChildren (b:bs) h = case boxPos b of
           Nothing  -> let ptf = unsafePerformIO $ getBoxedClosureData b >>= pointersToFollow2
                       in bcoChildren (ptf ++ bs) h -- Could go into infinite loop
           Just pos -> pos : bcoChildren bs h
@@ -105,363 +73,11 @@ buildGraph hm = insEdges edges $ insNodes nodes empty
 getBoxes :: HeapMap -> [Box]
 getBoxes hm = map (\(b,(_,_)) -> b) $ reverse hm
 
--- Probably have to do some kind of fold over the graph to remove for example unwanted pointers
+-- Probably have to do some kind of fold over the graph to remove for example
+-- unwanted pointers
 toViewableGraph :: Gr Closure String -> Gr String String
 toViewableGraph cg = emap id $ nmap showClosure cg
 
---parseXDot :: FilePath -> IO (DotGraph String)
---parseXDot x = do
---  f <- readFile x
---  let fs = TL.pack f
---
---  return $ parseDotGraph fs
-
-cyc3 :: Gr String String
-cyc3 = buildGr -- cycle of three nodes
-       [([("",3)],1,"test1",[("",2)]),
-              ([],2,"test2",[("",3)]),
-              ([],3,"test3",[])]
-
 defaultVis :: (Graph gr) => gr String String -> DotGraph Node
---defaultVis = graphToDot (defaultParams :: GraphvizParams Node nl el String nl)
 defaultVis = graphToDot params
   where params = nonClusteredParams { fmtNode = \ (_,l) -> [toLabel l], fmtEdge = \ (_,_,l) -> [toLabel l] }
-  -- Creates two clusters to get all initial values on a row; doesn't look very
-  -- nice
-  --where params = Params { isDirected = True
-  --                      , globalAttributes = []
-  --                      , clusterBy        = clustBy
-  --                      , clusterID        = Int
-  --                      , fmtCluster       = clFmt
-  --                      , fmtNode = \(_,l) -> [toLabel l]
-  --                      , fmtEdge = const []
-  --                      }
-  --      clustBy (n,l) = C (if l == "Blackhole" then 1 else 0) $ N (n,l)
-  --      --clustBy (n,l) = C (n `mod` 2) $ N (n,l)
-  --      clFmt 1 = [GraphAttrs [rank SameRank]]
-  --      clFmt 0 = []
-
-main = do
-  --putStrLn $ show $ printDotGraph $ defaultVis cyc3
-  hm <- walkHeapWithoutDummy [asBox 1]
-  preview $ toViewableGraph $ buildGraph hm
-
-pr as = do
-  hm <- walkHeapWithoutDummy as
-  preview $ toViewableGraph $ buildGraph hm
-
-bcoFix2 gr = go gr $ filter isBCO $ labNodes gr
-  where go g [] = g
-        go g ((n,c):xs) = go (delNodes (map (\(_,a,_) -> a) $ out g n) g) xs
-
-        isBCO (_,BCOClosure _ _ _ _ _ _ _) = True
-        isBCO _ = False
-
-bcoFix = id
-
-dg :: [(Box, String)] -> IO (G.DotGraph Node, [Box])
-dg as = do
-  hm <- walkHeap as
-  --hm <- walkHeapDepth as
-  xDotText <- graphvizWithHandle Dot (defaultVis $ toViewableGraph $ bcoFix $ buildGraph hm) XDot hGetContents
-  return (parseDotGraph $ B.fromChunks [xDotText], getBoxes hm)
-
---drawGraph bs (G.DotGraph _ _ _ graphStatements) = do
---  mapM (drawGS bs) graphStatements
---
---drawGS bs (G.GA (GraphAttrs attrs)) = do
---  foldr parseDraw [] attrs
---
---drawGS bs (G.DN (DotNode id attrs)) = do
---  foldr parseDraw [] attrs
---
---drawGS bs (G.DE (DotEdge _ _ attrs)) = do
---  foldr parseDraw [] attrs
-
-op as = do
-  (dotGraph, boxes) <- dg as
-  return (getOperations dotGraph, boxes, getSize dotGraph)
-
-getSize :: (G.DotGraph Node) -> (Double, Double, Double, Double)
-getSize (G.DotGraph _ _ _ graphStatements) = F.foldr handle (0,0,0,0) graphStatements
-  where handle (G.GA (GraphAttrs attrs)) l = foldr handleInternal (0,0,0,0) attrs
-        handle _ l = l
-
-        handleInternal (A.BoundingBox (A.Rect (A.Point x y _ _) (A.Point w h _ _))) l = (x,y,w,h)
-        handleInternal _ l = l
-
-getOperations :: (G.DotGraph Node) -> [(Maybe Node, Operation)]
-getOperations (G.DotGraph _ _ _ graphStatements) = F.foldr handle [] graphStatements
-  where handle (G.GA (GraphAttrs attrs)) l = (zip (repeat Nothing) (foldr handleInternal [] attrs)) ++ l
-        handle (G.DN (DotNode id attrs)) l = (zip (repeat $ Just id) (foldr handleInternal [] attrs)) ++ l
-        handle (G.DE (DotEdge _ _ attrs)) l = (zip (repeat Nothing) (foldr handleInternal [] attrs)) ++ l
-        handle _ l = l
-
-        handleInternal (A.UnknownAttribute "_draw_" r) l = (parse r) ++ l
-        handleInternal (A.UnknownAttribute "_ldraw_" r) l = (parse r) ++ l
-        handleInternal (A.UnknownAttribute "_hdraw_" r) l = (parse r) ++ l
-        handleInternal (A.UnknownAttribute "_tdraw_" r) l = (parse r) ++ l
-        handleInternal (A.UnknownAttribute "_hldraw_" r) l = (parse r) ++ l
-        handleInternal (A.UnknownAttribute "_tlldraw_" r) l = (parse r) ++ l
-        handleInternal _ l = l
-
-drawAll s (sx,sy,sw,sh) ops = do
-  let scalex = 1
-      scaley = -1
-      offsetx = -0.5 * sw
-      offsety = 0.5 * sh
-  save
-  translate offsetx offsety
-  scale scalex scaley
-  boundingBoxes <- mapM (draw s) ops
-  restore
-  --return $ concat boundingBoxes
-  return $ map (\(o, (x,y,w,h)) -> (o, (x*scalex+offsetx,y*scaley+offsety,w,h))) $ concat boundingBoxes
-
-draw s (mn, Ellipse (x,y) w h filled) = do
-  save
-  translate x y
-  scale w h
-  moveTo 1 0
-  arc 0 0 1 0 (2 * pi)
-  restore
-  case mn of
-    Nothing -> setSourceRGB 0 0 0
-    Just name -> case hover2 s of
-      Just name2 -> if name == name2 then setSourceRGB 1 0 0 else setSourceRGB 0 0 0
-      _ -> setSourceRGB 0 0 0
-  setLineWidth 1
-  if filled then fill else stroke
-  setSourceRGB 0 0 0
-  return $ case mn of
-    Just node -> [(node, (x-w,y+h,2*w,2*h))]
-    Nothing   -> []
-
-draw s (mn, Polygon ((x,y):xys) filled) = do
-  moveTo x y
-  mapM (\(x,y) -> lineTo x y) xys
-  closePath
-  setLineWidth 1
-  if filled then fillPreserve >> fill else stroke
-  return []
-
-draw s (mn, Polyline _) = return []
-
-draw s (mn, BSpline ((x,y):xys) filled) = do
-  moveTo x y
-  drawBezier xys
-  setLineWidth 1
-  if filled then fillPreserve >> fill else stroke
-  return []
-
-  where drawBezier ((x1,y1):(x2,y2):(x3,y3):xys) = do
-          curveTo x1 y1 x2 y2 x3 y3
-          drawBezier xys
-        drawBezier _ = return ()
-
-draw s (mn, Text (x,y) alignment width text) = do
-  --TextExtents _ _ width2 height _ _ <- textExtents text
-  --let x2 = case alignment of
-  --           LeftAlign -> x
-  --           CenterAlign -> x - 0.5 * width2
-  --           RightAlign -> x - width2
-  --let y2 = y - height / 2 + 4 -- TODO: proper descent from font metrics
-
-  --moveTo x2 y2
-  --save
-  --scale 1 (-1)
-  --showText text
-
-  layout <- createLayout "test"
-  context <- liftIO $ layoutGetContext layout
-
-  fo <- liftIO $ cairoContextGetFontOptions context
-
-  fontOptionsSetAntialias fo AntialiasDefault
-  fontOptionsSetHintStyle fo HintStyleNone
-  fontOptionsSetHintMetrics fo HintMetricsOff
-  liftIO $ cairoContextSetFontOptions context fo
-
-  liftIO $ layoutContextChanged layout
-
-  font <- liftIO $ fontDescriptionNew
-  liftIO $ fontDescriptionSetFamily font "Times-Roman"
-  liftIO $ fontDescriptionSetSize font 14
-  liftIO $ layoutSetFontDescription layout (Just font)
-
-  liftIO $ layoutSetText layout text
-
-  (_, (PangoRectangle x2 y2 width2 height2)) <- liftIO $ layoutGetExtents layout
-
-  let (f, width3, height3, descent) = if width2 > width
-        then (width / width2, width,  height2 * width / width2, 2 * width / width2)
-        else (1,              width2, height2,                  2)
-
-  let x3 = case alignment of
-             LeftAlign -> x
-             CenterAlign -> x - 0.5 * width3
-             RightAlign -> x - width3
-      y3 = y + height3 - descent
-
-  moveTo x3 y3
-  save
-  scale f (-f)
-
-  showLayout layout
-
-  return ()
-
-  restore
-  return []
-
-draw s (mn, Color (r,g,b,a) filled) = do
-  setSourceRGBA r g b a
-  return []
-
--- TODO: Implement Font, Style, Image
-draw s (mn, Font size name) = return []
-draw s (mn, Style _) = return []
-draw s (mn, Image _ _ _ _) = return []
-
-str1 = B.pack "c 9 -#000000ff e 63 167 27 19 "
-str2 = B.pack "F 14.000000 11 -Times-Roman c 9 -#000000ff T 63 163 0 4 1 -: "
-str3 = B.pack "e 1.00000 2.3 2 4 "
-
-parse = Data.GraphViz.Parsing.runParser' $ P.many $ do
-  t <- P.next
-  character ' '
-
-  case t of
-    'E' -> parseEllipse True
-    'e' -> parseEllipse False
-    'P' -> parsePolygon True
-    'p' -> parsePolygon False
-    'L' -> parsePolyline
-    'B' -> parseBSpline False
-    'b' -> parseBSpline True
-    'T' -> parseText
-    'C' -> parseColor True
-    'c' -> parseColor False
-    'F' -> parseFont
-    'S' -> parseStyle
-    'I' -> parseImage
-    _   -> fail "Unknown Operation"
-
-parseEllipse filled = do
-  p <- parsePoint
-  (w,h) <- parsePoint
-  return $ Ellipse p w h filled
-
-parsePolygon filled = do
-  xs <- parsePoints
-  return $ Polygon xs filled
-
-parsePolyline = parsePoints >>= return . Polyline
-
-parseBSpline filled = do
-  xs <- parsePoints
-  return $ BSpline xs filled
-
-parseText = do
-  baseline <- parsePoint
-  j <- parseInt'
-  let alignment = case j of
-                    -1 -> LeftAlign
-                    0  -> CenterAlign
-                    1  -> RightAlign
-  character ' '
-  width <- parseFloat'
-  character ' '
-  text <- parseString
-  return $ Text baseline alignment width text
-
-parseFont = do
-  size <- parseFloat'
-  character ' '
-  name <- parseString
-  return $ Font size name
-
-parseStyle = parseString >>= return . Style
-
-parseImage = do
-  xy <- parsePoint
-  (w,h) <- parsePoint
-  name <- parseString
-  return $ Image xy w h name
-
-parseString = do
-  n <- parseInt
-  character ' '
-  character '-'
-  text <- sequence . replicate (fromInteger n) $ P.next
-  character ' '
-  return text
-
-parsePoints = do
-  n <- parseInt
-  character ' '
-  sequence . replicate (fromInteger n) $ parsePoint
-
-parsePoint = do
-  x <- parseFloat'
-  character ' '
-  y <- parseFloat'
-  character ' '
-  return (x,y)
-
-parseColor filled = do -- Not complete
-  n <- parseInt
-  character ' '
-  character '-'
-  character '#'
-  r <- parseHex
-  g <- parseHex
-  b <- parseHex
-  a <- parseHex
-  character ' '
-  return $ Color (r,g,b,a) filled
- where parseHex = ((sequence . replicate 2) P.next) >>= return . hexToFloat
-       hexToFloat s = (foldl (\x y -> 16 * x + fromIntegral (digitToInt y)) 0 s) / 255
-
-parseSigned p = (character '-' >> liftM negate p)
-                `P.onFail`
-                p
-
-parseInt = do cs <- P.many1Satisfy isDigit
-              case B.decimal cs of
-                Right (n,"")  -> return n
-                Right (_,txt) -> fail $ "Trailing digits not parsed as Integral: " ++ B.unpack txt
-                Left err      -> fail $ "Could not read Integral: " ++ err
-           `P.adjustErr` ("Expected one or more digits\n\t"++)
-
-parseInt' = parseSigned parseInt
-
-parseFloat = do ds   <- P.manySatisfy isDigit
-                frac <- P.optional
-                        $ do character '.'
-                             P.manySatisfy isDigit
-                when (B.null ds && noDec frac)
-                  (fail "No actual digits in floating point number!")
-                expn  <- P.optional parseExp
-                when (isNothing frac && isNothing expn)
-                  (fail "This is an integer, not a floating point number!")
-                let frac' = fromMaybe "" frac
-                    expn' = fromMaybe 0 expn
-                ( return . fromRational . (* (10^^(expn' - fromIntegral (B.length frac'))))
-                  . (%1) . Data.GraphViz.Parsing.runParser' parseInt) (ds `B.append` frac')
-             `P.onFail`
-             fail "Expected a floating point number"
-  where
-    parseExp = do character 'e'
-                  ((character '+' >> parseInt)
-                   `P.onFail`
-                   parseInt')
-    noDec = maybe True B.null
-
-parseFloat' = parseSigned ( parseFloat
-                            `onFail`
-                            liftM fI parseInt
-                          )
-  where
-    fI :: Integer -> Double
-    fI = fromIntegral

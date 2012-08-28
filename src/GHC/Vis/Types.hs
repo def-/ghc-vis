@@ -4,14 +4,13 @@ module GHC.Vis.Types (
   HeapEntry,
   HeapMap,
   PrintState,
-  Point,
-  Alignment(..),
-  Operation(..),
   Signal(..)
   )
   where
 
 import GHC.HeapView
+
+import Graphics.XDot.Types
 
 import Data.Graph.Inductive.Graph
 
@@ -49,27 +48,7 @@ instance Show VisObject where
   show (Link x) = x
   show (Function x) = x
 
-  showList []       = showString ""
-  showList (c:cs)   = showString (show c) . showList cs
-
-type Point = (Double, Double)
-
-data Alignment = LeftAlign
-               | CenterAlign
-               | RightAlign
-               deriving Show
-
--- http://www.graphviz.org/doc/info/output.html#d:xdot
-data Operation = Ellipse { xy :: Point, w :: Double, h :: Double, filled :: Bool }
-               | Polygon { points :: [Point], filled :: Bool }
-               | Polyline { points :: [Point] }
-               | BSpline { points :: [Point], filled :: Bool }
-               | Text { baseline :: Point, alignment :: Alignment, width :: Double, text :: String }
-               | Color { rgba :: (Double, Double, Double, Double), filled :: Bool }
-               | Font { size :: Double, name :: String }
-               | Style { style :: String }
-               | Image { xy :: Point, w :: Double, h :: Double, name :: String }
-               deriving Show
+  showList = foldr ((.) . showString . show) (showString "")
 
 data Signal = NewSignal Box String -- Add a new Box to be visualized
             | UpdateSignal  -- Redraw
