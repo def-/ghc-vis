@@ -11,25 +11,19 @@ copyright:          Dennis Felsing 2012
 synopsis:           Live visualization of data structures in GHC
 description:        Live visualisation of data structures in GHC
 
-Extra-source-files: example.hs
 Library
   Exposed-modules: GHC.Vis GHC.Vis.Internal GHC.Vis.Graph GHC.Vis.Types GHC.Vis.GTK.Graph GHC.Vis.GTK.List GHC.Vis.GTK.Common
   Default-Language: Haskell2010
-  Build-depends:
-    base == 4.5.*,
-    containers,
-    fgl,
-    mtl,
-    deepseq,
-    ghc-heap-view,
-    cairo,
-    pango,
-    gtk,
-    ghc-prim,
-    ghc,
-    graphviz,
-    text,
-    xdot
+  Build-depends: base,
+                 fgl,
+                 mtl,
+                 deepseq,
+                 ghc-heap-view,
+                 cairo,
+                 gtk,
+                 graphviz,
+                 text,
+                 xdot
   Hs-source-dirs: src/
   Ghc-options: -Wall -fno-warn-unused-do-bind
 
