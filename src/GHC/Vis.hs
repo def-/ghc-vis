@@ -40,6 +40,7 @@ visMainThread = do
 
   onExpose canvas $ const $ do
     runCorrect Graph.redraw List.redraw >>= \f -> f canvas
+    runCorrect Graph.tick List.tick >>= \f -> f canvas
     return True
 
   onMotionNotify canvas False $ \e -> do
