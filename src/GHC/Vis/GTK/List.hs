@@ -72,8 +72,8 @@ redraw canvas = do
   Rectangle _ _ rw2 rh2 <- widgetGetAllocation canvas
 
   -- Text sizes aren't always perfect, assume that texts may be a bit too big
-  let rw = 0.97 * (fromIntegral rw2)
-  let rh = 0.99 * (fromIntegral rh2)
+  let rw = 0.97 * fromIntegral rw2
+  let rh = 0.99 * fromIntegral rh2
 
   let objs = objects s
 

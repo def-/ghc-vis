@@ -70,6 +70,18 @@ import GHC.Vis.GTK.Common
 import qualified GHC.Vis.GTK.Graph as Graph
 import qualified GHC.Vis.GTK.List as List
 
+title :: String
+title = "ghc-vis"
+
+backgroundColor :: Color
+backgroundColor = Color 0xffff 0xffff 0xffff
+
+defaultSize :: (Int, Int)
+defaultSize = (640, 480)
+
+signalTimeout :: Int
+signalTimeout = 1000000
+
 -- | This is the main function. It's to be called from GHCi and launches a
 --   graphical window in a new thread.
 visualization :: IO ()
@@ -84,11 +96,12 @@ visMainThread = do
 
   canvas <- drawingAreaNew
 
-  widgetModifyBg canvas StateNormal (Color 0xffff 0xffff 0xffff)
+  widgetModifyBg canvas StateNormal backgroundColor
 
-  set window [ windowTitle := "Vis"
+  set window [ windowTitle := title
              , containerChild := canvas
              ]
+  (uncurry $ windowSetDefaultSize window) defaultSize
 
   onExpose canvas $ const $ do
     runCorrect Graph.redraw List.redraw >>= \f -> f canvas
@@ -125,7 +138,7 @@ react canvas window = do
   -- Reloads cause the visSignal to be reinitialized, but takeMVar is still
   -- waiting for the old one.  This solution is not perfect, but it works for
   -- now.
-  mbSignal <- timeout 1000000 (takeMVar visSignal)
+  mbSignal <- timeout signalTimeout (takeMVar visSignal)
   case mbSignal of
     Nothing -> do
       running <- readMVar visRunning

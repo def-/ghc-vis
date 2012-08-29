@@ -58,8 +58,8 @@ redraw canvas = do
     -- Proportional scaling
     let scalex = min (rw / sw) (rh / sh)
         scaley = scalex
-        offsetx = 0.5 * (fromIntegral rw2)
-        offsety = 0.5 * (fromIntegral rh2)
+        offsetx = 0.5 * fromIntegral rw2
+        offsety = 0.5 * fromIntegral rh2
     save
     translate offsetx offsety
     scale scalex scaley
