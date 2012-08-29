@@ -33,6 +33,8 @@ data State = State
   , hover :: Maybe String
   }
 
+type RGB = (Double, Double, Double)
+
 state :: IORef State
 state = unsafePerformIO $ newIORef $ State [] [] Nothing
 
@@ -42,6 +44,24 @@ padding = 5
 fontSize :: Double
 fontSize = 15
 
+colorName :: RGB
+colorName = (0.5,1,0.5)
+
+colorNameHighlighted :: RGB
+colorNameHighlighted = (0,1,0)
+
+colorLink :: RGB
+colorLink = (0.5,0.5,1)
+
+colorLinkHighlighted :: RGB
+colorLinkHighlighted = (0.25,0.25,1)
+
+colorFunction :: RGB
+colorFunction = (1,0.5,0.5)
+
+colorFunctionHighlighted :: RGB
+colorFunctionHighlighted = (1,0,0)
+
 -- | Draw visualization to screen, called on every update or when it's
 --   requested from outside the program.
 redraw :: WidgetClass w => w -> IO ()
@@ -49,7 +69,11 @@ redraw canvas = do
   boxes <- readMVar visBoxes
 
   s <- readIORef state
-  Rectangle _ _ rw rh <- widgetGetAllocation canvas
+  Rectangle _ _ rw2 rh2 <- widgetGetAllocation canvas
+
+  -- Text sizes aren't always perfect, assume that texts may be a bit too big
+  let rw = 0.97 * (fromIntegral rw2)
+  let rh = 0.99 * (fromIntegral rh2)
 
   let objs = objects s
 
@@ -66,7 +90,7 @@ redraw canvas = do
     let sw = maximum widths2
     let sh = sum (map (+ 30) pos) - 15
 
-    let scalex = min (fromIntegral rw / sw) (fromIntegral rh / sh)
+    let scalex = min (rw / sw) (rh / sh)
         scaley = scalex
         offsetx = 0
         offsety = 0
@@ -158,10 +182,10 @@ draw _ o@(Unnamed content) = do
   return []
 
 draw s o@(Function target) =
-  drawFunctionLink s o target (1,0,0) (1,0.5,0.5)
+  drawFunctionLink s o target colorFunction colorFunctionHighlighted
 
 draw s o@(Link target) =
-  drawFunctionLink s o target (0,0,1) (0.5,0.5,1)
+  drawFunctionLink s o target colorLink colorLinkHighlighted
 
 draw s o@(Named name content) = do
   (x,_) <- getCurrentPoint
@@ -180,9 +204,7 @@ draw s o@(Named name content) = do
   setLineCap LineCapRound
   roundedRect ux uy uw uh
 
-  case hover s of
-    Just t -> if t == name then setSourceRGB 0 1 0 else setSourceRGB 0.5 1 0.5
-    _ -> setSourceRGB 0.5 1 0.5
+  setColor s name colorName colorNameHighlighted
 
   fillAndSurround
 
@@ -202,7 +224,7 @@ draw s o@(Named name content) = do
   return $ concat bb ++ [(name, (ux, uy, uw, uh))]
 
 drawFunctionLink :: State -> VisObject -> String -> (Double, Double, Double) -> (Double, Double, Double) -> Render [(String, (Double, Double, Double, Double))]
-drawFunctionLink s o target (r1,g1,b1) (r2,g2,b2) = do
+drawFunctionLink s o target color1 color2 = do
   (x,_) <- getCurrentPoint
   FontExtents fa _ fh _ _ <- fontExtents
   wc <- width o
@@ -217,9 +239,7 @@ drawFunctionLink s o target (r1,g1,b1) (r2,g2,b2) = do
   setLineCap LineCapRound
   roundedRect ux uy uw uh
 
-  case hover s of
-    Just t -> if t == target then setSourceRGB r1 g1 b1 else setSourceRGB r2 g2 b2
-    _ -> setSourceRGB r2 g2 b2
+  setColor s target color1 color2
 
   fillAndSurround
 
@@ -228,6 +248,12 @@ drawFunctionLink s o target (r1,g1,b1) (r2,g2,b2) = do
   moveTo (x + wc) 0
 
   return [(target, (ux, uy, uw, uh))]
+
+setColor :: State -> String -> RGB -> RGB -> Render ()
+setColor s name (r,g,b) (r',g',b') = case hover s of
+  Just t -> if t == name then setSourceRGB r' g' b'
+                         else setSourceRGB r  g  b
+  _ -> setSourceRGB r g b
 
 fillAndSurround :: Render ()
 fillAndSurround = do

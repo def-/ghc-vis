@@ -84,6 +84,8 @@ visMainThread = do
 
   canvas <- drawingAreaNew
 
+  widgetModifyBg canvas StateNormal (Color 0xffff 0xffff 0xffff)
+
   set window [ windowTitle := "Vis"
              , containerChild := canvas
              ]

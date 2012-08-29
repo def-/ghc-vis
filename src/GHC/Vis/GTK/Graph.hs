@@ -46,16 +46,20 @@ state = unsafePerformIO $ newIORef $ State [] ([], [], (0, 0, 1, 1)) [] Nothing
 redraw :: WidgetClass w => w -> IO ()
 redraw canvas = do
   s <- readIORef state
-  Rectangle _ _ rw rh <- widgetGetAllocation canvas
+  Rectangle _ _ rw2 rh2 <- widgetGetAllocation canvas
+
+  -- Line widths don't count to size, let's add a bit
+  let rw = 0.97 * fromIntegral rw2
+      rh = 0.97 * fromIntegral rh2
 
   let (ops, boxes', size@(_,_,sw,sh)) = objects s
 
   boundingBoxes <- render canvas $ do
     -- Proportional scaling
-    let scalex = min (fromIntegral rw / sw) (fromIntegral rh / sh)
+    let scalex = min (rw / sw) (rh / sh)
         scaley = scalex
-        offsetx = 0.5 * fromIntegral rw
-        offsety = 0.5 * fromIntegral rh
+        offsetx = 0.5 * (fromIntegral rw2)
+        offsety = 0.5 * (fromIntegral rh2)
     save
     translate offsetx offsety
     scale scalex scaley
