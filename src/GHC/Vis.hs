@@ -149,11 +149,12 @@ react canvas window = do
             react canvas window)
     Just signal -> do
       case signal of
-        NewSignal x n -> modifyMVar_ visBoxes (
+        NewSignal x n  -> modifyMVar_ visBoxes (
           \y -> if (x,n) `elem` y then return y else return $ y ++ [(x,n)])
-        ClearSignal   -> modifyMVar_ visBoxes (\_ -> return [])
-        UpdateSignal  -> return ()
-        SwitchSignal  -> modifyIORef visState (\s -> s {view = succN (view s)})
+        ClearSignal    -> modifyMVar_ visBoxes (\_ -> return [])
+        UpdateSignal   -> return ()
+        SwitchSignal   -> modifyIORef visState (\s -> s {view = succN (view s)})
+        ExportSignal f -> runCorrect Graph.export List.export >>= \e -> e f
 
       boxes <- readMVar visBoxes
       performGC -- TODO: Else Blackholes appear. Do we want this?

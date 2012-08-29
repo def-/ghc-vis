@@ -6,6 +6,7 @@
 
  -}
 module GHC.Vis.GTK.Graph (
+  export,
   redraw,
   click,
   move,
@@ -13,7 +14,8 @@ module GHC.Vis.GTK.Graph (
   )
   where
 
-import Graphics.UI.Gtk hiding (Box, Signal)
+import Graphics.UI.Gtk hiding (Box, Signal, Rectangle)
+import qualified Graphics.UI.Gtk as Gtk
 import Graphics.Rendering.Cairo
 
 import Control.Concurrent
@@ -32,53 +34,70 @@ import Graphics.XDot.Viewer
 import Graphics.XDot.Types hiding (size, w, h)
 
 data State = State
-  { boxes :: [Box]
-  , objects :: ([(Maybe Int, Operation)], [Box], (Double, Double, Double, Double))
-  , bounds :: [(Int, (Double, Double, Double, Double))]
-  , hover :: Maybe Int
+  { boxes      :: [Box]
+  , operations :: [(Maybe Int, Operation)]
+  , totalSize  :: (Double, Double, Double, Double)
+  , bounds     :: [(Int, (Double, Double, Double, Double))]
+  , hover      :: Maybe Int
   }
 
 state :: IORef State
-state = unsafePerformIO $ newIORef $ State [] ([], [], (0, 0, 1, 1)) [] Nothing
+state = unsafePerformIO $ newIORef $ State [] [] (0, 0, 1, 1) [] Nothing
 
 -- | Draw visualization to screen, called on every update or when it's
 --   requested from outside the program.
 redraw :: WidgetClass w => w -> IO ()
 redraw canvas = do
   s <- readIORef state
-  Rectangle _ _ rw2 rh2 <- widgetGetAllocation canvas
+  Gtk.Rectangle _ _ rw2 rh2 <- widgetGetAllocation canvas
 
+  boundingBoxes <- render canvas (draw s rw2 rh2)
+
+  modifyIORef state (\s' -> s' {bounds = boundingBoxes})
+
+-- | Export the visualization to an SVG file
+export :: String -> IO ()
+export file = do
+  s <- readIORef state
+
+  let (_, _, xSize, ySize) = totalSize s
+
+  withSVGSurface file xSize ySize
+    (\surface -> renderWith surface (draw s (round xSize) (round ySize)))
+
+  return ()
+
+draw :: State -> Int -> Int -> Render [(Int, Rectangle)]
+draw s rw2 rh2 = do
   -- Line widths don't count to size, let's add a bit
   let rw = 0.97 * fromIntegral rw2
       rh = 0.97 * fromIntegral rh2
 
-  let (ops, boxes', size@(_,_,sw,sh)) = objects s
+      ops = operations s
+      size@(_,_,sw,sh) = totalSize s
 
-  boundingBoxes <- render canvas $ do
-    -- Proportional scaling
-    let scalex = min (rw / sw) (rh / sh)
-        scaley = scalex
-        offsetx = 0.5 * fromIntegral rw2
-        offsety = 0.5 * fromIntegral rh2
-    save
-    translate offsetx offsety
-    scale scalex scaley
+  -- Proportional scaling
+      sx = min (rw / sw) (rh / sh)
+      sy = sx
+      ox = 0.5 * fromIntegral rw2
+      oy = 0.5 * fromIntegral rh2
 
-    result <- drawAll (hover s) size ops
+  translate ox oy
+  scale sx sy
 
-    restore
-    return $ map (\(o, (x,y,w,h)) -> (o, (x*scalex+offsetx,y*scaley+offsety,w*scalex,h*scaley))) result
+  result <- drawAll (hover s) size ops
 
-  modifyIORef state (\s' -> s' {boxes = boxes'})
-  modifyIORef state (\s' -> s' {bounds = boundingBoxes})
+  return $ map (\(o, (x,y,w,h)) -> (o,
+    ( x * sx + ox -- Transformations to correct scaling and offset
+    , y * sy + oy
+    , w * sx
+    , h * sy
+    ))) result
 
 render :: WidgetClass w => w -> Render b -> IO b
 render canvas r = do
   win <- widgetGetDrawWindow canvas
   renderWithDrawable win r
-
-  --Rectangle _ _ rw rh <- widgetGetAllocation canvas
-  --withSVGSurface "export.svg" (fromIntegral rw) (fromIntegral rh) (\s -> renderWith s r)
 
 -- | Handle a mouse click. If an object was clicked an 'UpdateSignal' is sent
 --   that causes the object to be evaluated and the screen to be updated.
@@ -134,5 +153,5 @@ move canvas = do
 -- | Something might have changed on the heap, update the view.
 updateObjects :: [(Box, String)] -> IO ()
 updateObjects bs = do
-  objs2 <- xDotParse bs
-  modifyIORef state (\s -> s {objects = objs2})
+  (ops, bs', size) <- xDotParse bs
+  modifyIORef state (\s -> s {operations = ops, boxes = bs', totalSize = size})

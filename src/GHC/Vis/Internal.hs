@@ -27,7 +27,6 @@ import Control.Monad.State hiding (State, fix)
 import Data.Word
 import Data.Char
 import Data.List hiding (insert)
-import Data.Maybe
 import Text.Printf
 import Unsafe.Coerce
 
@@ -73,8 +72,9 @@ parseClosure b c = do
     _      -> do i <- parseInternal b c
                  return $ insertObjects o i
 
-fromJust1 x (Just n) = n
-fromJust1 x _ = error $ "Invalid fromJust " ++ show x
+fromJust1 :: String -> Maybe t -> t
+fromJust1 _ (Just n) = n
+fromJust1 x _ = error $ "Invalid fromJust " ++ x
 
 correctObject :: Box -> PrintState VisObject
 correctObject box = do
@@ -85,7 +85,7 @@ correctObject box = do
     Just name -> return $ Link name
     Nothing -> if r > 1 then
                  (do setName box
-                     name <- liftM (fromJust1 1) $ getName box
+                     name <- liftM (fromJust1 "1") $ getName box
                      return $ Named name [])
                  else return $ Unnamed ""
 
@@ -185,7 +185,7 @@ insert (b,x) xs = case find (\(c,_) -> c == b) xs of
 
 adjust :: (HeapEntry -> HeapEntry) -> Box -> HeapMap -> HeapMap
 adjust f b h = h1 ++ ((b,f x) : h2)
-  where i = fromJust1 2 $ findIndex (\(y,_) -> y == b) h
+  where i = fromJust1 "2" $ findIndex (\(y,_) -> y == b) h
         (h1,(_,x):h2) = splitAt i h
 
 setName :: Box -> PrintState ()
@@ -196,14 +196,14 @@ setName b = modify go
 
 getName :: Box -> PrintState (Maybe String)
 getName b = do (_,h,_) <- get
-               return $ fst $ fromJust1 3 $ lookup b h
+               return $ fst $ fromJust1 "3" $ lookup b h
 
 getSetName :: Box -> PrintState String
 getSetName b = do mn <- getName b
                   case mn of
                     Nothing   -> do setName b
                                     n <- getName b
-                                    return $ fromJust1 4 n
+                                    return $ fromJust1 "4" n
                     Just name -> return name
 
 -- How often is a box referenced in the entire heap map
@@ -340,7 +340,7 @@ parseThunkFun b bPtrs args = do
     Function name : (Unnamed $ show args ++ "(") : tPtrs ++ [Unnamed ")"]
 
 contParse :: Box -> PrintState [VisObject]
-contParse b = get >>= \(_,h,_) -> parseClosure b (snd $ fromJust1 5 $ lookup b h)
+contParse b = get >>= \(_,h,_) -> parseClosure b (snd $ fromJust1 "5" $ lookup b h)
 
 bcoContParse :: [Box] -> PrintState [[VisObject]]
 bcoContParse [] = return []

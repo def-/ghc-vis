@@ -24,9 +24,10 @@ import qualified Control.Monad.State as MS
 
 -- | Signals that are sent to the GUI to signal changes
 data Signal = NewSignal Box String -- ^ Add a new Box to be visualized
-            | UpdateSignal  -- ^ Redraw
-            | ClearSignal   -- ^ Remove all Boxes
-            | SwitchSignal  -- ^ Switch to alternative view
+            | UpdateSignal         -- ^ Redraw
+            | ClearSignal          -- ^ Remove all Boxes
+            | SwitchSignal         -- ^ Switch to alternative view
+            | ExportSignal String  -- ^ Export the view to a file
 
 -- | Visualization views
 data ViewType = ListView

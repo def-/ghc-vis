@@ -6,13 +6,15 @@
 
  -}
 module GHC.Vis.GTK.List (
+  export,
   redraw,
   click,
   move,
   updateObjects
   )
   where
-import Graphics.UI.Gtk hiding (Box, Signal)
+import Graphics.UI.Gtk hiding (Box, Signal, Rectangle)
+import qualified Graphics.UI.Gtk as Gtk
 import Graphics.Rendering.Cairo
 
 import Control.Concurrent
@@ -27,9 +29,11 @@ import GHC.Vis.GTK.Common
 
 import GHC.HeapView (Box)
 
+type Rectangle = (Double, Double, Double, Double)
+
 data State = State
   { objects :: [[VisObject]]
-  , bounds :: [(String, (Double, Double, Double, Double))]
+  , bounds :: [(String, Rectangle)]
   , hover :: Maybe String
   }
 
@@ -67,44 +71,57 @@ colorFunctionHighlighted = (1,0,0)
 redraw :: WidgetClass w => w -> IO ()
 redraw canvas = do
   boxes <- readMVar visBoxes
-
   s <- readIORef state
-  Rectangle _ _ rw2 rh2 <- widgetGetAllocation canvas
+  Gtk.Rectangle _ _ rw2 rh2 <- widgetGetAllocation canvas
+
+  boundingBoxes <- render canvas (draw s rw2 rh2 boxes)
+  modifyIORef state (\s' -> s' {bounds = boundingBoxes})
+
+-- | Export the visualization to an SVG file
+export :: String -> IO ()
+export file = do
+  boxes <- readMVar visBoxes
+  s <- readIORef state
+
+  withSVGSurface file (fromIntegral xSize) (fromIntegral ySize)
+    (\surface -> renderWith surface (draw s xSize ySize boxes))
+
+  return ()
+
+  where xSize = 500 :: Int
+        ySize = 500 :: Int
+
+draw :: State -> Int -> Int -> [(a, String)] -> Render [(String, Rectangle)]
+draw s rw2 rh2 boxes = do
+  let objs = objects s
+      names = map ((++ ": ") . snd) boxes
+
+  nameWidths <- mapM (width . Unnamed) names
+  pos <- mapM height objs
+  widths <- mapM (mapM width) objs
 
   -- Text sizes aren't always perfect, assume that texts may be a bit too big
   let rw = 0.97 * fromIntegral rw2
-  let rh = 0.99 * fromIntegral rh2
+      rh = 0.99 * fromIntegral rh2
 
-  let objs = objects s
+      maxNameWidth = maximum nameWidths
+      widths2 = 1 : map (\ws -> maxNameWidth + sum ws) widths
 
-  boundingBoxes <- render canvas $ do
-    let names = map ((++ ": ") . snd) boxes
-    nameWidths <- mapM (width . Unnamed) names
-    let maxNameWidth = maximum nameWidths
+      sw = maximum widths2
+      sh = sum (map (+ 30) pos) - 15
 
-    pos <- mapM height objs
+      sx = min (rw / sw) (rh / sh)
+      sy = sx
+      ox = 0
+      oy = 0
 
-    widths <- mapM (mapM width) objs
-    let widths2 = 1 : map (\ws -> maxNameWidth + sum ws) widths
+  translate ox oy
+  scale sx sy
 
-    let sw = maximum widths2
-    let sh = sum (map (+ 30) pos) - 15
+  let rpos = scanl (\a b -> a + b + 30) 30 pos
+  result <- mapM (drawEntry s maxNameWidth) (zip3 objs rpos names)
 
-    let scalex = min (rw / sw) (rh / sh)
-        scaley = scalex
-        offsetx = 0
-        offsety = 0
-    save
-    translate offsetx offsety
-    scale scalex scaley
-
-    let rpos = scanl (\a b -> a + b + 30) 30 pos
-    result <- mapM (drawEntry s maxNameWidth) (zip3 objs rpos names)
-
-    restore
-    --return result
-    return $ map (\(o, (x,y,w,h)) -> (o, (x*scalex+offsetx,y*scaley+offsety,w*scalex,h*scaley))) $ concat result
-  modifyIORef state (\s' -> s' {bounds = boundingBoxes})
+  return $ map (\(o, (x,y,w,h)) -> (o, (x*sx+ox,y*sy+oy,w*sx,h*sy))) $ concat result
 
 render :: WidgetClass w => w -> Render b -> IO b
 render canvas r = do
@@ -113,9 +130,6 @@ render canvas r = do
     selectFontFace "DejaVu Sans" FontSlantNormal FontWeightNormal
     setFontSize fontSize
     r
-
-  --Rectangle _ _ rw rh <- widgetGetAllocation canvas
-  --withSVGSurface "export.svg" (fromIntegral rw) (fromIntegral rh) (\s -> renderWith s r)
 
 -- | Handle a mouse click. If an object was clicked an 'UpdateSignal' is sent
 --   that causes the object to be evaluated and the screen to be updated.
@@ -155,22 +169,22 @@ updateObjects boxes = do
   objs <- parseBoxes boxes
   modifyIORef state (\s -> s {objects = objs})
 
-drawEntry :: State -> Double -> ([VisObject], Double, String) -> Render [(String, (Double, Double, Double, Double))]
+drawEntry :: State -> Double -> ([VisObject], Double, String) -> Render [(String, Rectangle)]
 drawEntry s nameWidth (obj, pos, name) = do
   save
   translate 0 pos
   moveTo 0 0
-  draw s $ Unnamed name
+  drawBox s $ Unnamed name
   --setSourceRGB 0 0 0
   --showText name
   translate nameWidth 0
   moveTo 0 0
-  boundingBoxes <- mapM (draw s) obj
+  boundingBoxes <- mapM (drawBox s) obj
   restore
   return $ map (\(o, (x,y,w,h)) -> (o, (x+nameWidth,y+pos,w,h))) $ concat boundingBoxes
 
-draw :: State -> VisObject -> Render [(String, (Double, Double, Double, Double))]
-draw _ o@(Unnamed content) = do
+drawBox :: State -> VisObject -> Render [(String, Rectangle)]
+drawBox _ o@(Unnamed content) = do
   (x,_) <- getCurrentPoint
   wc <- width o
   moveTo (x + padding/2) 0
@@ -181,13 +195,13 @@ draw _ o@(Unnamed content) = do
 
   return []
 
-draw s o@(Function target) =
+drawBox s o@(Function target) =
   drawFunctionLink s o target colorFunction colorFunctionHighlighted
 
-draw s o@(Link target) =
+drawBox s o@(Link target) =
   drawFunctionLink s o target colorLink colorLinkHighlighted
 
-draw s o@(Named name content) = do
+drawBox s o@(Named name content) = do
   (x,_) <- getCurrentPoint
   TextExtents xb _ _ _ xa _ <- textExtents name
   FontExtents fa _ fh _ _ <- fontExtents
@@ -214,7 +228,7 @@ draw s o@(Named name content) = do
 
   save
   moveTo (x + padding) 0
-  bb <- mapM (draw s) content
+  bb <- mapM (drawBox s) content
   restore
 
   moveTo (x + uw/2 - (xa - xb)/2) (hc + 7.5 - padding)
@@ -223,7 +237,7 @@ draw s o@(Named name content) = do
 
   return $ concat bb ++ [(name, (ux, uy, uw, uh))]
 
-drawFunctionLink :: State -> VisObject -> String -> (Double, Double, Double) -> (Double, Double, Double) -> Render [(String, (Double, Double, Double, Double))]
+drawFunctionLink :: State -> VisObject -> String -> RGB -> RGB -> Render [(String, Rectangle)]
 drawFunctionLink s o target color1 color2 = do
   (x,_) <- getCurrentPoint
   FontExtents fa _ fh _ _ <- fontExtents

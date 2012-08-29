@@ -21,6 +21,7 @@ import Data.Graph.Inductive hiding (nodes, edges)
 
 import Data.GraphViz hiding (Ellipse, Polygon, parse)
 import qualified Data.GraphViz.Types.Generalised as G
+import Data.GraphViz.Attributes.Complete
 
 import GHC.HeapView hiding (name)
 import GHC.Vis.Internal
@@ -44,6 +45,8 @@ dg as = do
   xDotText <- graphvizWithHandle Dot (defaultVis $ toViewableGraph $ buildGraph hm) XDot hGetContents
   return (parseDotGraph $ B.fromChunks [xDotText], getBoxes hm)
 
+-- | Convert a heap map, our internal data structure, to a graph that can be
+--   converted to a dot graph.
 buildGraph :: HeapMap -> Gr Closure String
 buildGraph hm = insEdges edges $ insNodes nodes empty
   where nodes = zip [0..] $ map (\(_,(_,c)) -> c) rhm
@@ -89,5 +92,9 @@ toViewableGraph :: Gr Closure String -> Gr String String
 toViewableGraph cg = emap id $ nmap showClosure cg
 
 defaultVis :: (Graph gr) => gr String String -> DotGraph Node
-defaultVis = graphToDot params
-  where params = nonClusteredParams { fmtNode = \ (_,l) -> [toLabel l], fmtEdge = \ (_,_,l) -> [toLabel l] }
+defaultVis = graphToDot nonClusteredParams
+  -- Somehow (X11Color Transparency) is white, use (RGBA 0 0 0 0) instead
+  { globalAttributes = [GraphAttrs [BgColor [RGBA 0 0 0 0]]]
+  , fmtNode = \ (_,l) -> [toLabel l]
+  , fmtEdge = \ (_,_,l) -> [toLabel l]
+  }
