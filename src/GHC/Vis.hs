@@ -54,11 +54,16 @@ module GHC.Vis (
   )
   where
 
+import Prelude hiding (catch)
+
 import Graphics.UI.Gtk hiding (Box, Signal)
 import qualified Graphics.UI.Gtk.Gdk.Events as E
 
+import System.IO
 import Control.Concurrent
 import Control.Monad
+
+import Control.Exception hiding (evaluate)
 
 import Data.IORef
 
@@ -154,7 +159,10 @@ react canvas window = do
         ClearSignal    -> modifyMVar_ visBoxes (\_ -> return [])
         UpdateSignal   -> return ()
         SwitchSignal   -> modifyIORef visState (\s -> s {view = succN (view s)})
-        ExportSignal f -> runCorrect Graph.export List.export >>= \e -> e f
+        ExportSignal f -> catch (runCorrect Graph.export List.export >>= \e -> e f)
+          (\e -> do let err = show (e :: IOException)
+                    hPutStrLn stderr $ "Couldn't export to file \"" ++ f ++ "\": " ++ err
+                    return ())
 
       boxes <- readMVar visBoxes
       performGC -- TODO: Else Blackholes appear. Do we want this?
