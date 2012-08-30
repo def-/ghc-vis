@@ -1,51 +1,8 @@
 {- |
    Module      : GHC.Vis
-   Description : Live visualization of data structures in GHC
    Copyright   : (c) Dennis Felsing
    License     : 3-Clause BSD-style
    Maintainer  : dennis@felsin9.de
-
-   Live visualisation of data structures in GHC
-
-   To use this package add the accompanying @ghci@ file to your @.ghci@ like this:
-
-   > :script $PATH_TO_GHC-VIS/ghci
-
-   Now you can run ghci and experiment with @ghc-vis@. Start the visualization:
-
-   > $ ghci
-   > GHCi, version 7.4.2: http://www.haskell.org/ghc/  :? for help
-   > Ok, modules loaded: none.
-   > > :vis
-
-   A blank window should appear now. This is the visualization window. Add an
-   expression to the visualization:
-
-   > > let a = [1..5]
-   > > :view a
-   > > :view "foo"
-
-   Evaluate an object that is shown in the visualization. You can also click on
-   the object to evaluate it.
-
-   > > :eval t0
-
-   Switch between the list view and the graph view:
-
-   > > :switch
-
-   When an object is updated by using its values, you have to call @:update@ to
-   refresh the visualization window. You can also click on an object to force an
-   update:
-
-   > > a !! 2
-   > 3
-   > > :update
-
-   Clear the visualization window, this also happens when you @:load@ or
-   @:reload@ a source file:
-
-   > > :clear
  -}
 module GHC.Vis (
   visualization,
