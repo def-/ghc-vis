@@ -42,8 +42,11 @@ type RGB = (Double, Double, Double)
 state :: IORef State
 state = unsafePerformIO $ newIORef $ State [] [] Nothing
 
-padding :: Double
-padding = 5
+fontName :: String
+-- Cairo's internal font system doesn't detect this as a similar font to "Times
+-- Roman", should switch to Pango
+--fontName = "Nimbus Roman No9 L"
+fontName = "DejaVu Sans"
 
 fontSize :: Double
 fontSize = 15
@@ -65,6 +68,9 @@ colorFunction = (1,0.5,0.5)
 
 colorFunctionHighlighted :: RGB
 colorFunctionHighlighted = (1,0,0)
+
+padding :: Double
+padding = 5
 
 -- | Draw visualization to screen, called on every update or when it's
 --   requested from outside the program.
@@ -127,7 +133,7 @@ render :: WidgetClass w => w -> Render b -> IO b
 render canvas r = do
   win <- widgetGetDrawWindow canvas
   renderWithDrawable win $ do
-    selectFontFace "DejaVu Sans" FontSlantNormal FontWeightNormal
+    selectFontFace fontName FontSlantNormal FontWeightNormal
     setFontSize fontSize
     r
 
@@ -307,7 +313,7 @@ width (Named x ys) = do
 
 width (Unnamed x) = do
   TextExtents xb _ _ _ xa _ <- textExtents x
-  return $ (xa - xb) + 10
+  return $ (xa - xb) + 5
 
 width (Link x) = do
   TextExtents xb _ _ _ xa _ <- textExtents x

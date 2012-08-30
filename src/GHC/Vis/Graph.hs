@@ -30,6 +30,19 @@ import GHC.Vis.Types
 import Graphics.XDot.Types hiding (name, h)
 import Graphics.XDot.Parser
 
+fontName :: B.Text
+--fontName = "Times Roman"
+fontName = "DejaVu Sans"
+
+graphFontSize :: Double
+graphFontSize = 24
+
+nodeFontSize :: Double
+nodeFontSize = 24
+
+edgeFontSize :: Double
+edgeFontSize = 24
+
 -- | Take the objects to be visualized and run them through @dot@ and extract
 --   the drawing operations that have to be exectued to show the graph of the
 --   heap map.
@@ -94,7 +107,7 @@ toViewableGraph cg = emap id $ nmap showClosure cg
 defaultVis :: (Graph gr) => gr String String -> DotGraph Node
 defaultVis = graphToDot nonClusteredParams
   -- Somehow (X11Color Transparency) is white, use (RGBA 0 0 0 0) instead
-  { globalAttributes = [GraphAttrs [BgColor [RGBA 0 0 0 0]]]
-  , fmtNode = \ (_,l) -> [toLabel l]
-  , fmtEdge = \ (_,_,l) -> [toLabel l]
+  { globalAttributes = [GraphAttrs [BgColor [RGBA 0 0 0 0], FontName fontName, FontSize graphFontSize]]
+  , fmtNode = \ (_,l) -> [toLabel l, FontName fontName, FontSize nodeFontSize]
+  , fmtEdge = \ (_,_,l) -> [toLabel l, FontName fontName, FontSize edgeFontSize]
   }
