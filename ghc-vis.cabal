@@ -18,7 +18,7 @@ description:        Visualize live data structures in GHCi. Evaluation is not
                     To use this package add the accompanying @ghci@ file to
                     your @.ghci@ like this:
                     .
-                    > :script ~/.cabal/share/ghc-vis-0.1/ghci
+                    > :script /home/USER/.cabal/share/ghc-vis-0.1/ghci
                     .
                     Now you can run ghci and experiment with @ghc-vis@. Start
                     the visualization:
