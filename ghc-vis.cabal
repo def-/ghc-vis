@@ -18,14 +18,13 @@ description:        Visualize live data structures in GHCi. Evaluation is not
                     To use this package add the accompanying @ghci@ file to
                     your @.ghci@ like this:
                     .
-                    > :script /home/USER/.cabal/share/ghc-vis-0.1/ghci
+                    > echo ":script $HOME/.cabal/share/ghc-vis-0.1/ghci" >> ~/.ghci
                     .
                     Now you can run ghci and experiment with @ghc-vis@. Start
                     the visualization:
                     .
                     > $ ghci
                     > GHCi, version 7.4.2: http://www.haskell.org/ghc/  :? for help
-                    > Ok, modules loaded: none.
                     > > :vis
                     .
                     A blank window should appear now. This is the visualization
@@ -51,8 +50,9 @@ description:        Visualize live data structures in GHCi. Evaluation is not
                     .
                     <http://felsin9.de/nnis/ghc-vis/2.png>
                     .
-                    The first element of @b@ has been evaluated. We see that b
-                    now references itself.
+                    The first element of @b@ has been evaluated. We see that
+                    it's a reference to the value that's also referenced in a,
+                    as they share the same name "t0".
                     .
                     Switch between the list view and the graph view:
                     .
