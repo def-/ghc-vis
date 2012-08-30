@@ -8,13 +8,16 @@ build-type:         Simple
 author:             Dennis Felsing <dennis@felsin9.de>
 maintainer:         Dennis Felsing <dennis@felsin9.de>
 copyright:          Dennis Felsing 2012
-synopsis:           Live visualization of data structures in GHC
-description:        Live visualisation of data structures in GHC
+synopsis:           Live visualization of data structures in GHCi
+description:        Visualize live data structures in GHCi. Evaluation is not
+                    forced and you can interact with the visualized data
+                    structures. This allows seeing Haskell's lazy evaluation
+                    and sharing in action.
                     .
                     To use this package add the accompanying @ghci@ file to
                     your @.ghci@ like this:
                     .
-                    > :script $PATH_TO_GHC-VIS/ghci
+                    > :script ~/.cabal/share/ghc-vis-0.1/ghci
                     .
                     Now you can run ghci and experiment with @ghc-vis@. Start
                     the visualization:
@@ -27,18 +30,34 @@ description:        Live visualisation of data structures in GHC
                     A blank window should appear now. This is the visualization
                     window. Add an expression to the visualization:
                     .
-                    > > let a = [1..5]
+                    > > let a = [1..3]
                     > > :view a
+                    > > let b = cycle a
+                    > > :view b
                     > > :view "foo" ++ "bar"
+                    .
+                    <http://felsin9.de/nnis/ghc-vis/1.png>
+                    .
+                    Functions are red, named objects are green and links to an
+                    already shown object are blue.
+                    .
+                    Notice how @a@ is referenced by @b@.
                     .
                     Evaluate an object that is shown in the visualization. You
                     can also click on the object to evaluate it.
                     .
-                    > > :eval t0
+                    > > :eval t1
+                    .
+                    <http://felsin9.de/nnis/ghc-vis/2.png>
+                    .
+                    The first element of @b@ has been evaluated. We see that b
+                    now references itself.
                     .
                     Switch between the list view and the graph view:
                     .
                     > > :switch
+                    .
+                    <http://felsin9.de/nnis/ghc-vis/3.png>
                     .
                     When an object is updated by accessing it, you have to call
                     @:update@ to refresh the visualization window. You can also
@@ -48,10 +67,14 @@ description:        Live visualisation of data structures in GHC
                     > 3
                     > > :update
                     .
+                    <http://felsin9.de/nnis/ghc-vis/4.png>
+                    .
                     Clear the visualization window, this also happens when you
                     @:load@ or @:reload@ a source file:
                     .
                     > > :clear
+
+data-files: ghci
 
 Library
   Exposed-modules: GHC.Vis GHC.Vis.Internal GHC.Vis.Graph GHC.Vis.Types GHC.Vis.GTK.Graph GHC.Vis.GTK.List GHC.Vis.GTK.Common
