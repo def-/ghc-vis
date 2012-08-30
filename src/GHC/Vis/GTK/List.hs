@@ -313,7 +313,7 @@ width (Named x ys) = do
 
 width (Unnamed x) = do
   TextExtents xb _ _ _ xa _ <- textExtents x
-  return $ (xa - xb) + 5
+  return $ xa - xb + 5
 
 width (Link x) = do
   TextExtents xb _ _ _ xa _ <- textExtents x

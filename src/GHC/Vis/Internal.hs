@@ -273,6 +273,11 @@ parseInternal _ (ConsClosure (StgInfoTable _ 0 _ _) bPtrs [] _ _ name)
        let tPtrs = intercalate [Unnamed " "] cPtrs
        return $ Unnamed (name ++ " ") : tPtrs
 
+parseInternal _ (ConsClosure (StgInfoTable _ _ _ _) bPtrs dArgs _ _ name)
+  = do cPtrs <- mapM (liftM mbParens . contParse) bPtrs
+       let tPtrs = intercalate [Unnamed " "] cPtrs
+       return $ Unnamed (name ++ show dArgs ++ " ") : tPtrs
+
 parseInternal _ (ArrWordsClosure (StgInfoTable 0 0 ARR_WORDS 0) _ arrWords)
   = return $ intercalate [Unnamed ","] (map (\x -> [Unnamed (printf "0x%x" x)]) arrWords)
 
@@ -411,8 +416,11 @@ showClosure (ConsClosure (StgInfoTable 1 3 _ 0) [_] [_,start,end] _ "Data.ByteSt
 showClosure (ConsClosure (StgInfoTable 2 3 _ 1) [_,_] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
   = printf "Chunk[%d,%d]" start end
 
-showClosure (ConsClosure StgInfoTable{} _ _ _ _ name)
+showClosure (ConsClosure StgInfoTable{} _ [] _ _ name)
   = name
+
+showClosure (ConsClosure StgInfoTable{} _ dArgs _ _ name)
+  = name ++ show dArgs
 
 showClosure (ArrWordsClosure (StgInfoTable 0 0 ARR_WORDS 0) _ arrWords)
   = intercalate ",\n" $ map (printf "0x%x") arrWords
