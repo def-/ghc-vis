@@ -79,7 +79,7 @@ data-files: ghci
 Library
   Exposed-modules: GHC.Vis GHC.Vis.Internal GHC.Vis.Graph GHC.Vis.Types GHC.Vis.GTK.Graph GHC.Vis.GTK.List GHC.Vis.GTK.Common
   Default-Language: Haskell2010
-  Build-depends: base,
+  Build-depends: base == 4.5.*,
                  fgl,
                  mtl,
                  deepseq,
