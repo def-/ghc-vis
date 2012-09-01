@@ -320,12 +320,11 @@ parseInternal _ (BCOClosure (StgInfoTable 4 0 BCO 0) _ _ bPtr _ _ _)
   --          notHasName _ _ = True
   --      return vs
 
-parseInternal b (APClosure (StgInfoTable 0 0 _ _) _ _ fun _)
-  = do cPtr <- contParse fun
-       getSetName b >>= \x -> return $ Function x : cPtr
+parseInternal b (APClosure (StgInfoTable 0 0 _ _) _ _ fun pl)
+  = parseAPPAP b fun pl
 
-parseInternal b (PAPClosure (StgInfoTable 0 0 _ _) _ _ _ _)
-  = getSetName b >>= \x -> return [Function x]
+parseInternal b (PAPClosure (StgInfoTable 0 0 _ _) _ _ fun pl)
+  = parseAPPAP b fun pl
 
 parseInternal _ (MVarClosure StgInfoTable{} qHead qTail qValue)
    = do cHead <- liftM mbParens $ contParse qHead
@@ -334,6 +333,17 @@ parseInternal _ (MVarClosure StgInfoTable{} qHead qTail qValue)
         return $ Unnamed "MVar#(" : cHead ++ [Unnamed ","] ++ cTail ++ [Unnamed ","] ++ cValue ++ [Unnamed ")"]
 
 parseInternal _ c = return [Unnamed ("Missing pattern for " ++ show c)]
+
+-- λ> data BinaryTree = BT BinaryTree Int BinaryTree | Leaf deriving Show
+-- λ> let x = BT (BT (BT Leaf 1 (BT Leaf 2 Leaf)) 3 (BT (BT Leaf 4 (BT Leaf 5 Leaf)) 6 Leaf))
+-- λ> :view x (in list view)
+parseAPPAP :: Box -> Box -> [Box] -> PrintState [VisObject]
+parseAPPAP b fun pl = do
+  name <- getSetName b
+  fPtr <- contParse fun
+  pPtrs <- mapM contParse $ reverse pl
+  let tPtrs = intercalate [Unnamed ","] pPtrs
+  return $ Function name : fPtr ++ [Unnamed "["] ++ tPtrs ++ [Unnamed "]"]
 
 parseThunkFun :: Box -> [Box] -> [Word] -> PrintState [VisObject]
 parseThunkFun b bPtrs args = do
