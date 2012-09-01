@@ -14,7 +14,6 @@ where
 
 import System.IO.Unsafe
 
-import Data.Text.IO
 import qualified Data.Text.Lazy as B
 
 import Data.Graph.Inductive hiding (nodes, edges)
@@ -22,6 +21,7 @@ import Data.Graph.Inductive hiding (nodes, edges)
 import Data.GraphViz hiding (Ellipse, Polygon, parse)
 import qualified Data.GraphViz.Types.Generalised as G
 import Data.GraphViz.Attributes.Complete
+import Data.GraphViz.Commands.IO
 
 import GHC.HeapView hiding (name)
 import GHC.Vis.Internal
@@ -55,8 +55,8 @@ dg :: [(Box, String)] -> IO (G.DotGraph Node, [Box])
 dg as = do
   hm <- walkHeap as
   --hm <- walkHeapDepth as
-  xDotText <- graphvizWithHandle Dot (defaultVis $ toViewableGraph $ buildGraph hm) XDot hGetContents
-  return (parseDotGraph $ B.fromChunks [xDotText], getBoxes hm)
+  xDot <- graphvizWithHandle Dot (defaultVis $ toViewableGraph $ buildGraph hm) XDot hGetDot
+  return (xDot, getBoxes hm)
 
 -- | Convert a heap map, our internal data structure, to a graph that can be
 --   converted to a dot graph.

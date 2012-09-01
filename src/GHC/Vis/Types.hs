@@ -32,7 +32,6 @@ data Signal = NewSignal Box String -- ^ Add a new Box to be visualized
 -- | Visualization views
 data ViewType = ListView
               | GraphView
-              deriving (Enum, Eq, Bounded)
 
 -- | The global state used for the visualizations.
 data State = State

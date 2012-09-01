@@ -61,6 +61,8 @@ import System.Mem
 
 import GHC.HeapView hiding (name)
 
+import Data.GraphViz.Commands
+
 import GHC.Vis.Types hiding (view)
 import qualified GHC.Vis.Types as T
 import GHC.Vis.GTK.Common
@@ -113,7 +115,7 @@ export :: String -> IO () -- TODO: Work with different file formats (svg, pdf, p
 export filename = put $ ExportSignal filename
 
 put :: Signal -> IO ()
-put s = (timeout signalTimeout $ putMVar visSignal s) >> return ()
+put s = timeout signalTimeout (putMVar visSignal s) >> return ()
 
 visMainThread :: IO ()
 visMainThread = do
@@ -179,7 +181,7 @@ react canvas window = do
           \y -> if (x,n) `elem` y then return y else return $ y ++ [(x,n)])
         ClearSignal    -> modifyMVar_ visBoxes (\_ -> return [])
         UpdateSignal   -> return ()
-        SwitchSignal   -> modifyIORef visState (\s -> s {T.view = succN (T.view s)})
+        SwitchSignal   -> doSwitch
         ExportSignal f -> catch (runCorrect Graph.export List.export >>= \e -> e f)
           (\e -> do let err = show (e :: IOException)
                     hPutStrLn stderr $ "Couldn't export to file \"" ++ f ++ "\": " ++ err
@@ -193,7 +195,12 @@ react canvas window = do
       postGUISync $ widgetQueueDraw canvas
       react canvas window
 
-  where succN v = if v == maxBound then minBound else succ v
+  where doSwitch = isGraphvizInstalled >>= \gvi -> if gvi
+          then modifyIORef visState (\s -> s {T.view = succN (T.view s)})
+          else putStrLn "Cannot switch view: Graphviz not installed"
+
+        succN GraphView = ListView
+        succN ListView = GraphView
 
 runCorrect :: f -> f -> IO f
 runCorrect f1 f2 = do
