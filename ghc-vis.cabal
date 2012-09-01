@@ -88,7 +88,7 @@ Library
                  ghc-heap-view >= 0.3,
                  cairo,
                  gtk,
-                 graphviz,
+                 graphviz >= 2999.14.1.0,
                  text,
                  xdot
   Hs-source-dirs: src/
