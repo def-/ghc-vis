@@ -284,6 +284,9 @@ parseInternal _ (ArrWordsClosure (StgInfoTable 0 0 ARR_WORDS 0) _ arrWords)
 parseInternal _ (IndClosure (StgInfoTable 1 0 _ 0) b)
   = contParse b
 
+parseInternal _ (SelectorClosure StgInfoTable{} b)
+  = contParse b
+
 parseInternal _ (BlackholeClosure (StgInfoTable 1 0 _ 0) b)
   = contParse b
 
@@ -432,37 +435,49 @@ showClosure (ConsClosure StgInfoTable{} _ [] _ _ name)
 showClosure (ConsClosure StgInfoTable{} _ dArgs _ _ name)
   = name ++ show dArgs
 
+-- Reversed order of ptrs
+showClosure ThunkClosure{}
+  = "Thunk"
+
+showClosure SelectorClosure{}
+  = "Selector"
+
+-- Probably should delete these from Graph
+showClosure IndClosure{}
+  = "Ind"
+
+showClosure BlackholeClosure{}
+  = "Blackhole"
+
+showClosure APClosure{}
+  = "AP"
+
+showClosure PAPClosure{}
+  = "PAP"
+
+showClosure BCOClosure{}
+  = "BCO"
+
 showClosure (ArrWordsClosure (StgInfoTable 0 0 ARR_WORDS 0) _ arrWords)
   = intercalate ",\n" $ map (printf "0x%x") arrWords
 --  = "ArrWords"
 
--- Probably should delete these from Graph
-showClosure (IndClosure (StgInfoTable 1 0 _ 0) _)
-  = "Ind"
-
-showClosure (BlackholeClosure (StgInfoTable 1 0 _ 0) _)
-  = "Blackhole"
-
--- Reversed order of ptrs
-showClosure (ThunkClosure StgInfoTable{} _ _)
-  = "Thunk"
-
-showClosure (FunClosure StgInfoTable{} _ _)
-  = "Fun"
-
-showClosure (MutArrClosure StgInfoTable{} _ _ _)
+showClosure MutArrClosure{}
   = "MutArr"
 
-showClosure (BCOClosure (StgInfoTable 4 0 BCO 0) _ _ _ _ _ _)
-  = "BCO"
+showClosure MutVarClosure{}
+  = "MutVar"
 
-showClosure (APClosure (StgInfoTable 0 0 _ _) _ _ _ _)
-  = "AP"
-
-showClosure (PAPClosure (StgInfoTable 0 0 _ _) _ _ _ _)
-  = "PAP"
-
-showClosure (MVarClosure StgInfoTable{} _ _ _)
+showClosure MVarClosure{}
   = "MVar#"
+
+showClosure FunClosure{}
+  = "Fun"
+
+showClosure BlockingQueueClosure{}
+  = "BlockingQueue"
+
+showClosure OtherClosure{}
+  = "Other"
 
 showClosure c = "Missing pattern for " ++ show c
