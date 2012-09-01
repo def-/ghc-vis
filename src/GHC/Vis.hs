@@ -5,7 +5,13 @@
    Maintainer  : dennis@felsin9.de
  -}
 module GHC.Vis (
-  visualization,
+  visualization, -- TODO: Maybe rename to vis
+  view,
+  eval,
+  switch,
+  update,
+  export,
+  clear,
   visSignal,
   evaluate
   )
@@ -27,7 +33,10 @@ import Data.IORef
 import System.Timeout
 import System.Mem
 
-import GHC.Vis.Types
+import GHC.HeapView hiding (name)
+
+import GHC.Vis.Types hiding (view)
+import qualified GHC.Vis.Types as T
 import GHC.Vis.GTK.Common
 import qualified GHC.Vis.GTK.Graph as Graph
 import qualified GHC.Vis.GTK.List as List
@@ -50,6 +59,35 @@ visualization :: IO ()
 visualization = do
   vr <- swapMVar visRunning True
   unless vr $ void $ forkIO visMainThread
+
+-- | Add expressions with a name to the visualization window.
+view :: a -> String -> IO ()
+view a name = put $ NewSignal (asBox a) name
+
+-- | Evaluate an object that is shown in the visualization. (Names start with 't')
+eval :: String -> IO ()
+eval t = evaluate t >> update
+
+-- | Switch between the list view and the graph view
+switch :: IO ()
+switch = put SwitchSignal
+
+-- | When an object is updated by accessing it, you have to call this to
+--   refresh the visualization window. You can also click on an object to force
+--   an update.
+update :: IO ()
+update = put UpdateSignal
+
+-- | Clear the visualization window, removing all expressions from it.
+clear :: IO ()
+clear = put ClearSignal
+
+-- | Export the current visualization view to an SVG file.
+export :: String -> IO () -- TODO: Work with different file formats (svg, pdf, png)
+export filename = put $ ExportSignal filename
+
+put :: Signal -> IO ()
+put s = (timeout signalTimeout $ putMVar visSignal s) >> return ()
 
 visMainThread :: IO ()
 visMainThread = do
@@ -115,7 +153,7 @@ react canvas window = do
           \y -> if (x,n) `elem` y then return y else return $ y ++ [(x,n)])
         ClearSignal    -> modifyMVar_ visBoxes (\_ -> return [])
         UpdateSignal   -> return ()
-        SwitchSignal   -> modifyIORef visState (\s -> s {view = succN (view s)})
+        SwitchSignal   -> modifyIORef visState (\s -> s {T.view = succN (T.view s)})
         ExportSignal f -> catch (runCorrect Graph.export List.export >>= \e -> e f)
           (\e -> do let err = show (e :: IOException)
                     hPutStrLn stderr $ "Couldn't export to file \"" ++ f ++ "\": " ++ err
@@ -134,6 +172,6 @@ react canvas window = do
 runCorrect :: f -> f -> IO f
 runCorrect f1 f2 = do
   s <- readIORef visState
-  return $ case view s of
+  return $ case T.view s of
              GraphView -> f1
              ListView  -> f2

@@ -76,6 +76,7 @@ description:        Visualize live data structures in GHCi. Evaluation is not
                     > > :clear
 
 data-files: ghci
+Extra-source-files: nonghci-test.hs
 
 Library
   Exposed-modules: GHC.Vis GHC.Vis.Internal GHC.Vis.Graph GHC.Vis.Types GHC.Vis.GTK.Graph GHC.Vis.GTK.List GHC.Vis.GTK.Common

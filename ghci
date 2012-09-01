@@ -1,12 +1,7 @@
-let _put s = "System.Timeout.timeout 1000000 (Control.Concurrent.MVar.putMVar GHC.Vis.visSignal $ GHC.Vis.Types." ++ s ++ ") >> return ()"
-
 :def vis    \_ -> return $ "GHC.Vis.visualization"
-:def view   \x -> return $ _put $ "NewSignal (GHC.HeapView.asBox (" ++ x ++ ")) " ++ show x
-:def eval   \x -> return $ "GHC.Vis.evaluate \"" ++ x ++ "\"\n" ++ _put "UpdateSignal"
-:def switch \_ -> return $ _put "SwitchSignal"
-:def update \_ -> return $ _put "UpdateSignal"
-:def clear  \_ -> return $ _put "ClearSignal"
-:def export \x -> return $ _put $ "ExportSignal " ++ show x
-
--- Remove our temporary bindings
--- :r
+:def view   \x -> return $ "GHC.Vis.view (" ++ x ++ ") " ++ show x
+:def eval   \x -> return $ "GHC.Vis.eval \"" ++ x ++ "\""
+:def switch \_ -> return $ "GHC.Vis.switch"
+:def update \_ -> return $ "GHC.Vis.update"
+:def clear  \_ -> return $ "GHC.Vis.clear"
+:def export \x -> return $ "GHC.Vis.export " ++ show x
