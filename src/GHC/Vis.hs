@@ -3,6 +3,34 @@
    Copyright   : (c) Dennis Felsing
    License     : 3-Clause BSD-style
    Maintainer  : dennis@felsin9.de
+
+Although ghc-vis is meant to be used in GHCi it can also be used as a library
+in regular Haskell programs which are run or compiled by GHC. You can run those
+programs using \"runghc example.hs\" or \"ghc -threaded example.hs && ./example\".
+Without the \"-threaded\"-Flag ghc-vis does not work correctly. This is an
+example using ghc-vis outside of GHCi:
+
+> import GHC.Vis
+>
+> main = do
+>   putStrLn "Start"
+>   let a = "teeest"
+>   let b = [1..3]
+>   let c = b ++ b
+>   let d = [1..]
+>   putStrLn $ show $ d !! 1
+>
+>   visualization
+>   view a "a"
+>   view b "b"
+>   view c "c"
+>   view d "d"
+>
+>   getChar
+>   switch
+>
+>   getChar
+>   putStrLn "End"
  -}
 module GHC.Vis (
   visualization, -- TODO: Maybe rename to vis
@@ -10,10 +38,8 @@ module GHC.Vis (
   eval,
   switch,
   update,
-  export,
   clear,
-  visSignal,
-  evaluate
+  export
   )
   where
 
