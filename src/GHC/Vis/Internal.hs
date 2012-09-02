@@ -273,7 +273,7 @@ parseInternal _ (ConsClosure (StgInfoTable _ 0 _ _) bPtrs [] _ _ name)
        let tPtrs = intercalate [Unnamed " "] cPtrs
        return $ Unnamed (name ++ " ") : tPtrs
 
-parseInternal _ (ConsClosure (StgInfoTable _ _ _ _) bPtrs dArgs _ _ name)
+parseInternal _ (ConsClosure StgInfoTable{} bPtrs dArgs _ _ name)
   = do cPtrs <- mapM (liftM mbParens . contParse) bPtrs
        let tPtrs = intercalate [Unnamed " "] cPtrs
        return $ Unnamed (name ++ show dArgs ++ " ") : tPtrs

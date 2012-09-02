@@ -46,7 +46,7 @@ edgeFontSize = 24
 -- | Take the objects to be visualized and run them through @dot@ and extract
 --   the drawing operations that have to be exectued to show the graph of the
 --   heap map.
-xDotParse :: [(Box, String)] -> IO ([(Maybe Node, Operation)], [Box], Rectangle)
+xDotParse :: [(Box, String)] -> IO ([(Object Node, Operation)], [Box], Rectangle)
 xDotParse as = do
   (dotGraph, boxes) <- dg as
   return (getOperations dotGraph, boxes, getSize dotGraph)
@@ -109,5 +109,6 @@ defaultVis = graphToDot nonClusteredParams
   -- Somehow (X11Color Transparency) is white, use (RGBA 0 0 0 0) instead
   { globalAttributes = [GraphAttrs [BgColor [RGBA 0 0 0 0], FontName fontName, FontSize graphFontSize]]
   , fmtNode = \ (_,l) -> [toLabel l, FontName fontName, FontSize nodeFontSize]
+  --, fmtNode = \ (_,l) -> [toLabel l, FontName fontName, FontSize nodeFontSize, Shape PlainText]
   , fmtEdge = \ (_,_,l) -> [toLabel l, FontName fontName, FontSize edgeFontSize]
   }

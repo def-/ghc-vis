@@ -115,7 +115,7 @@ export :: String -> IO () -- TODO: Work with different file formats (svg, pdf, p
 export filename = put $ ExportSignal filename
 
 put :: Signal -> IO ()
-put s = timeout signalTimeout (putMVar visSignal s) >> return ()
+put s = void $ timeout signalTimeout $ putMVar visSignal s
 
 visMainThread :: IO ()
 visMainThread = do

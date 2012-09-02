@@ -14,7 +14,7 @@ module GHC.Vis.GTK.Graph (
   )
   where
 
-import Graphics.UI.Gtk hiding (Box, Signal, Rectangle)
+import Graphics.UI.Gtk hiding (Box, Signal, Rectangle, Object)
 import qualified Graphics.UI.Gtk as Gtk
 import Graphics.Rendering.Cairo
 
@@ -35,14 +35,14 @@ import Graphics.XDot.Types hiding (size, w, h)
 
 data State = State
   { boxes      :: [Box]
-  , operations :: [(Maybe Int, Operation)]
+  , operations :: [(Object Int, Operation)]
   , totalSize  :: (Double, Double, Double, Double)
-  , bounds     :: [(Int, (Double, Double, Double, Double))]
-  , hover      :: Maybe Int
+  , bounds     :: [(Object Int, (Double, Double, Double, Double))]
+  , hover      :: Object Int
   }
 
 state :: IORef State
-state = unsafePerformIO $ newIORef $ State [] [] (0, 0, 1, 1) [] Nothing
+state = unsafePerformIO $ newIORef $ State [] [] (0, 0, 1, 1) [] None
 
 -- | Draw visualization to screen, called on every update or when it's
 --   requested from outside the program.
@@ -67,7 +67,7 @@ export file = do
 
   return ()
 
-draw :: State -> Int -> Int -> Render [(Int, Rectangle)]
+draw :: State -> Int -> Int -> Render [(Object Int, Rectangle)]
 draw s rw2 rh2 = do
   -- Line widths don't count to size, let's add a bit
   let rw = 0.97 * fromIntegral rw2
@@ -106,7 +106,7 @@ click = do
   s <- readIORef state
 
   case hover s of
-    Just t -> do
+    Node t -> do
       evaluate2 $ boxes s !! t
       putMVar visSignal UpdateSignal
     _ -> return ()
@@ -144,8 +144,12 @@ move canvas = do
         check (o, (x,y,w,h)) =
           if x <= mx && mx <= x + w &&
              y <= my && my <= y + h
-          then Just o else Nothing
-    in s' {hover = msum $ map check (bounds oldS)}
+          then o else None
+
+        validOne (None:xs) = validOne xs
+        validOne (x:_) = x
+        validOne _ = None
+    in s' {hover = validOne $ map check (bounds oldS)}
     )
   s <- readIORef state
   unless (oldHover == hover s) $ widgetQueueDraw canvas
