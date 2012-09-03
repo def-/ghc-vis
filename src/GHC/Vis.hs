@@ -64,12 +64,12 @@ import GHC.HeapView hiding (name)
 
 import GHC.Vis.Types hiding (view)
 import qualified GHC.Vis.Types as T
-import GHC.Vis.GTK.Common
-import qualified GHC.Vis.GTK.List as List
+import GHC.Vis.View.Common
+import qualified GHC.Vis.View.List as List
 
 #ifdef GRAPH_VIEW
 import Data.GraphViz.Commands
-import qualified GHC.Vis.GTK.Graph as Graph
+import qualified GHC.Vis.View.Graph as Graph
 #endif
 
 views :: [View]

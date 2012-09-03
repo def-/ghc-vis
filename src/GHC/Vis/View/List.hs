@@ -1,11 +1,11 @@
 {- |
-   Module      : GHC.Vis.GTK.List
+   Module      : GHC.Vis.View.List
    Copyright   : (c) Dennis Felsing
    License     : 3-Clause BSD-style
    Maintainer  : dennis@felsin9.de
 
  -}
-module GHC.Vis.GTK.List (
+module GHC.Vis.View.List (
   export,
   redraw,
   click,
@@ -25,7 +25,7 @@ import System.IO.Unsafe
 
 import GHC.Vis.Internal
 import GHC.Vis.Types hiding (State, View(..))
-import GHC.Vis.GTK.Common
+import GHC.Vis.View.Common
 
 import GHC.HeapView (Box)
 

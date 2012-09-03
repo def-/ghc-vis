@@ -1,11 +1,11 @@
 {- |
-   Module      : GHC.Vis.GTK.Common
+   Module      : GHC.Vis.View.Common
    Copyright   : (c) Dennis Felsing
    License     : 3-Clause BSD-style
    Maintainer  : dennis@felsin9.de
 
  -}
-module GHC.Vis.GTK.Common (
+module GHC.Vis.View.Common (
   visSignal,
   visRunning,
   visState,

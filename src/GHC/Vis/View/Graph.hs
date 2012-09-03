@@ -1,11 +1,11 @@
 {- |
-   Module      : GHC.Vis.GTK.Graph
+   Module      : GHC.Vis.View.Graph
    Copyright   : (c) Dennis Felsing
    License     : 3-Clause BSD-style
    Maintainer  : dennis@felsin9.de
 
  -}
-module GHC.Vis.GTK.Graph (
+module GHC.Vis.View.Graph (
   export,
   redraw,
   click,
@@ -24,9 +24,9 @@ import Control.Monad
 import Data.IORef
 import System.IO.Unsafe
 
-import GHC.Vis.Graph
+import GHC.Vis.View.Graph.Parser
 import GHC.Vis.Types hiding (State, View(..))
-import GHC.Vis.GTK.Common
+import GHC.Vis.View.Common
 
 import GHC.HeapView hiding (size)
 

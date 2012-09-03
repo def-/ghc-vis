@@ -1,13 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 {- |
-   Module      : GHC.Vis.Graph
+   Module      : GHC.Vis.View.Graph.Parser
    Copyright   : (c) Dennis Felsing
    License     : 3-Clause BSD-style
    Maintainer  : dennis@felsin9.de
 
  -}
-module GHC.Vis.Graph (
+module GHC.Vis.View.Graph.Parser (
   xDotParse
 )
 where
@@ -19,7 +19,6 @@ import qualified Data.Text.Lazy as B
 import Data.Graph.Inductive hiding (nodes, edges)
 
 import Data.GraphViz hiding (Ellipse, Polygon, parse)
-import qualified Data.GraphViz.Types.Generalised as G
 import Data.GraphViz.Attributes.Complete
 import Data.GraphViz.Commands.IO
 
@@ -48,15 +47,9 @@ edgeFontSize = 24
 --   heap map.
 xDotParse :: [(Box, String)] -> IO ([(Object Node, Operation)], [Box], Rectangle)
 xDotParse as = do
-  (dotGraph, boxes) <- dg as
-  return (getOperations dotGraph, boxes, getSize dotGraph)
-
-dg :: [(Box, String)] -> IO (G.DotGraph Node, [Box])
-dg as = do
   hm <- walkHeap as
-  --hm <- walkHeapDepth as
   xDot <- graphvizWithHandle Dot (defaultVis $ toViewableGraph $ buildGraph hm) XDot hGetDot
-  return (xDot, getBoxes hm)
+  return (getOperations xDot, getBoxes hm, getSize xDot)
 
 -- | Convert a heap map, our internal data structure, to a graph that can be
 --   converted to a dot graph.
