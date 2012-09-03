@@ -31,7 +31,7 @@ import Graphics.XDot.Parser
 
 fontName :: B.Text
 --fontName = "Times Roman"
-fontName = "DejaVu Sans"
+fontName = "DejaVu,Vera,Courier Sans"
 
 graphFontSize :: Double
 graphFontSize = 24
