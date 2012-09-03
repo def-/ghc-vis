@@ -78,21 +78,31 @@ description:        Visualize live data structures in GHCi. Evaluation is not
 data-files: ghci
 Extra-source-files: nonghci-test.hs
 
+flag graph
+  Default: True
+  Description: "Enable graph view using Graphviz"
+
 Library
-  Exposed-modules: GHC.Vis GHC.Vis.Internal GHC.Vis.Graph GHC.Vis.Types GHC.Vis.GTK.Graph GHC.Vis.GTK.List GHC.Vis.GTK.Common
+  Exposed-modules: GHC.Vis GHC.Vis.Internal GHC.Vis.Types GHC.Vis.GTK.List GHC.Vis.GTK.Common
+  --Other-modules: GHC.Vis.Internal GHC.Vis.Types GHC.Vis.GTK.List GHC.Vis.Common
   Default-Language: Haskell2010
   Build-depends: base == 4.5.*,
                  fgl,
                  mtl,
                  deepseq,
-                 ghc-heap-view >= 0.3,
-                 cairo,
-                 gtk,
-                 graphviz >= 2999.14.1.0,
                  text,
-                 xdot
+                 gtk == 0.12.*,
+                 cairo == 0.12.*,
+                 ghc-heap-view >= 0.3
   Hs-source-dirs: src/
   Ghc-options: -Wall -fno-warn-unused-do-bind
+
+  if flag(graph)
+      Exposed-modules: GHC.Vis.Graph GHC.Vis.GTK.Graph
+      --Other-modules: GHC.Vis.Graph GHC.Vis.GTK.Graph
+      Build-depends: graphviz >= 2999.14.1.0,
+                     xdot
+      Cpp-options: -DGRAPH_VIEW
 
 --source-repository head
 --    type:     darcs

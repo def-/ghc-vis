@@ -25,7 +25,7 @@ import Data.IORef
 import System.IO.Unsafe
 
 import GHC.Vis.Graph
-import GHC.Vis.Types hiding (State)
+import GHC.Vis.Types hiding (State, View(..))
 import GHC.Vis.GTK.Common
 
 import GHC.HeapView hiding (size)

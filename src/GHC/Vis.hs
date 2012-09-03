@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {- |
    Module      : GHC.Vis
    Copyright   : (c) Dennis Felsing
@@ -61,13 +62,23 @@ import System.Mem
 
 import GHC.HeapView hiding (name)
 
-import Data.GraphViz.Commands
-
 import GHC.Vis.Types hiding (view)
 import qualified GHC.Vis.Types as T
 import GHC.Vis.GTK.Common
-import qualified GHC.Vis.GTK.Graph as Graph
 import qualified GHC.Vis.GTK.List as List
+
+#ifdef GRAPH_VIEW
+import Data.GraphViz.Commands
+import qualified GHC.Vis.GTK.Graph as Graph
+#endif
+
+views :: [View]
+views =
+  View List.redraw List.click List.move List.updateObjects List.export :
+#ifdef GRAPH_VIEW
+  View Graph.redraw Graph.click Graph.move Graph.updateObjects Graph.export :
+#endif
+  []
 
 title :: String
 title = "ghc-vis"
@@ -132,18 +143,18 @@ visMainThread = do
   (uncurry $ windowSetDefaultSize window) defaultSize
 
   onExpose canvas $ const $ do
-    runCorrect Graph.redraw List.redraw >>= \f -> f canvas
-    runCorrect Graph.move List.move >>= \f -> f canvas
+    runCorrect redraw >>= \f -> f canvas
+    runCorrect move >>= \f -> f canvas
     return True
 
   onMotionNotify canvas False $ \e -> do
     modifyIORef visState (\s -> s {mousePos = (E.eventX e, E.eventY e)})
-    runCorrect Graph.move List.move >>= \f -> f canvas
+    runCorrect move >>= \f -> f canvas
     return True
 
   onButtonPress canvas $ \e -> do
-    click <- runCorrect Graph.click List.click
-    when (E.eventButton e == LeftButton && E.eventClick e == SingleClick) click
+    cf <- runCorrect click
+    when (E.eventButton e == LeftButton && E.eventClick e == SingleClick) cf
     return True
 
   widgetShowAll window
@@ -182,7 +193,7 @@ react canvas window = do
         ClearSignal    -> modifyMVar_ visBoxes (\_ -> return [])
         UpdateSignal   -> return ()
         SwitchSignal   -> doSwitch
-        ExportSignal f -> catch (runCorrect Graph.export List.export >>= \e -> e f)
+        ExportSignal f -> catch (runCorrect exportView >>= \e -> e f)
           (\e -> do let err = show (e :: IOException)
                     hPutStrLn stderr $ "Couldn't export to file \"" ++ f ++ "\": " ++ err
                     return ())
@@ -190,21 +201,23 @@ react canvas window = do
       boxes <- readMVar visBoxes
       performGC -- TODO: Else Blackholes appear. Do we want this?
 
-      runCorrect Graph.updateObjects List.updateObjects >>= \f -> f boxes
+      runCorrect updateObjects >>= \f -> f boxes
 
       postGUISync $ widgetQueueDraw canvas
       react canvas window
 
+#ifdef GRAPH_VIEW
   where doSwitch = isGraphvizInstalled >>= \gvi -> if gvi
           then modifyIORef visState (\s -> s {T.view = succN (T.view s)})
           else putStrLn "Cannot switch view: Graphviz not installed"
 
         succN GraphView = ListView
         succN ListView = GraphView
+#else
+  where doSwitch = putStrLn "Cannot switch view: Graph view disabled at build"
+#endif
 
-runCorrect :: f -> f -> IO f
-runCorrect f1 f2 = do
+runCorrect :: (View -> f) -> IO f
+runCorrect f = do
   s <- readIORef visState
-  return $ case T.view s of
-             GraphView -> f1
-             ListView  -> f2
+  return $ f $ views !! fromEnum (T.view s)

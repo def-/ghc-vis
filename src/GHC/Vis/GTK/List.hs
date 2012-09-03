@@ -24,7 +24,7 @@ import Data.IORef
 import System.IO.Unsafe
 
 import GHC.Vis.Internal
-import GHC.Vis.Types hiding (State)
+import GHC.Vis.Types hiding (State, View(..))
 import GHC.Vis.GTK.Common
 
 import GHC.HeapView (Box)

@@ -1,3 +1,4 @@
+{-# LANGUAGE Rank2Types #-}
 {- |
    Module      : GHC.Vis.Types
    Copyright   : (c) Dennis Felsing
@@ -7,6 +8,7 @@
  -}
 module GHC.Vis.Types (
   Signal(..),
+  View(..),
   ViewType(..),
   State(..),
   HeapEntry,
@@ -18,9 +20,11 @@ module GHC.Vis.Types (
 
 import GHC.HeapView
 
-import Graphics.XDot.Types
-
 import qualified Control.Monad.State as MS
+
+import Graphics.UI.Gtk hiding (Box, Signal, Point)
+
+type Point = (Double, Double)
 
 -- | Signals that are sent to the GUI to signal changes
 data Signal = NewSignal Box String -- ^ Add a new Box to be visualized
@@ -29,9 +33,19 @@ data Signal = NewSignal Box String -- ^ Add a new Box to be visualized
             | SwitchSignal         -- ^ Switch to alternative view
             | ExportSignal String  -- ^ Export the view to a file
 
+-- | All functions a view has to provide
+data View = View
+  { redraw        :: WidgetClass w => w -> IO ()
+  , click         :: IO ()
+  , move          :: WidgetClass w => w -> IO ()
+  , updateObjects :: [(Box, String)] -> IO ()
+  , exportView    :: String -> IO ()
+  }
+
 -- | Visualization views
 data ViewType = ListView
               | GraphView
+              deriving (Enum)
 
 -- | The global state used for the visualizations.
 data State = State
