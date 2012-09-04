@@ -46,7 +46,8 @@ fontName :: String
 -- Cairo's internal font system doesn't detect this as a similar font to "Times
 -- Roman", should switch to Pango
 --fontName = "Nimbus Roman No9 L"
-fontName = "DejaVu Sans"
+fontName = "DejaVu,Vera,Courier Sans"
+--fontName = "Lucida Grande" -- TODO: Try, also in Pango
 
 fontSize :: Double
 fontSize = 15
@@ -107,8 +108,9 @@ draw s rw2 rh2 boxes = do
   widths <- mapM (mapM width) objs
 
   -- Text sizes aren't always perfect, assume that texts may be a bit too big
-  let rw = 0.97 * fromIntegral rw2
-      rh = 0.99 * fromIntegral rh2
+  -- TODO: This doesn't work for small font sizes
+  let rw = 0.9 * fromIntegral rw2
+      rh = fromIntegral rh2
 
       maxNameWidth = maximum nameWidths
       widths2 = 1 : map (\ws -> maxNameWidth + sum ws) widths
@@ -124,6 +126,16 @@ draw s rw2 rh2 boxes = do
   translate ox oy
   scale sx sy
 
+  --nameWidths <- mapM (width . Unnamed) names
+  --widths <- mapM (mapM width) objs
+  --let maxNameWidth = maximum nameWidths
+  --    widths2 = 1 : map (\ws -> maxNameWidth + sum ws) widths
+  --    sw2 = maximum widths2
+  --scale (0.9 * rw / (sw2 * sx)) (0.9 * rw / (sw2 * sx))
+  --liftIO $ putStrLn $ show rw2
+  --liftIO $ putStrLn $ show $ sw2 * sx
+  --liftIO $ putStrLn "--"
+
   let rpos = scanl (\a b -> a + b + 30) 30 pos
   result <- mapM (drawEntry s maxNameWidth) (zip3 objs rpos names)
 
@@ -132,10 +144,7 @@ draw s rw2 rh2 boxes = do
 render :: WidgetClass w => w -> Render b -> IO b
 render canvas r = do
   win <- widgetGetDrawWindow canvas
-  renderWithDrawable win $ do
-    selectFontFace fontName FontSlantNormal FontWeightNormal
-    setFontSize fontSize
-    r
+  renderWithDrawable win r
 
 -- | Handle a mouse click. If an object was clicked an 'UpdateSignal' is sent
 --   that causes the object to be evaluated and the screen to be updated.
@@ -181,8 +190,6 @@ drawEntry s nameWidth (obj, pos, name) = do
   translate 0 pos
   moveTo 0 0
   drawBox s $ Unnamed name
-  --setSourceRGB 0 0 0
-  --showText name
   translate nameWidth 0
   moveTo 0 0
   boundingBoxes <- mapM (drawBox s) obj
@@ -193,10 +200,13 @@ drawBox :: State -> VisObject -> Render [(String, Rectangle)]
 drawBox _ o@(Unnamed content) = do
   (x,_) <- getCurrentPoint
   wc <- width o
-  moveTo (x + padding/2) 0
+
+  (layout, metrics) <- pangoLayout content
+  let fa = ascent metrics
+
+  moveTo (x + padding/2) (-fa)
   setSourceRGB 0 0 0
-  showText content
-  --translate wc 0
+  showLayout layout
   moveTo (x + wc) 0
 
   return []
@@ -209,10 +219,13 @@ drawBox s o@(Link target) =
 
 drawBox s o@(Named name content) = do
   (x,_) <- getCurrentPoint
-  TextExtents xb _ _ _ xa _ <- textExtents name
-  FontExtents fa _ fh _ _ <- fontExtents
+
   hc <- height content
   wc <- width o
+
+  (layout, metrics) <- pangoLayout name
+  (_, PangoRectangle _ _ xa fh) <- liftIO $ layoutGetExtents layout
+  let fa = ascent metrics
 
   let (ux, uy, uw, uh) =
         ( x
@@ -237,16 +250,53 @@ drawBox s o@(Named name content) = do
   bb <- mapM (drawBox s) content
   restore
 
-  moveTo (x + uw/2 - (xa - xb)/2) (hc + 7.5 - padding)
-  showText name
+  moveTo (x + uw/2 - xa/2) (hc + 7.5 - padding - fa)
+  showLayout layout
   moveTo (x + wc) 0
 
   return $ concat bb ++ [(name, (ux, uy, uw, uh))]
 
+pangoLayout :: String -> Render (PangoLayout, FontMetrics)
+pangoLayout text = do
+  layout <- createLayout text
+  context <- liftIO $ layoutGetContext layout
+
+  --fo <- liftIO $ cairoContextGetFontOptions context
+
+  --fontOptionsSetAntialias fo AntialiasDefault
+  --fontOptionsSetHintStyle fo HintStyleNone
+  --fontOptionsSetHintMetrics fo HintMetricsOff
+  --liftIO $ cairoContextSetFontOptions context fo
+
+  --liftIO $ layoutContextChanged layout
+
+  -- This does not work with "Times Roman", but it works with a font that is
+  -- installed on the system
+  --font <- liftIO fontDescriptionNew
+  --liftIO $ fontDescriptionSetFamily font "Nimbus Roman No9 L, Regular"
+  --liftIO $ fontDescriptionSetFamily font "Times Roman"
+  --liftIO $ fontDescriptionSetSize font fontSize'
+
+  -- Only fontDescriptionFromString works as expected, choosing a similar
+  -- alternative font when the selected one is not available
+  font <- liftIO $ fontDescriptionFromString fontName
+  liftIO $ fontDescriptionSetSize font fontSize
+  liftIO $ layoutSetFontDescription layout (Just font)
+
+  liftIO $ layoutSetText layout text
+
+  language <- liftIO $ contextGetLanguage context
+  metrics <- liftIO $ contextGetMetrics context font language
+
+  return (layout, metrics)
+
 drawFunctionLink :: State -> VisObject -> String -> RGB -> RGB -> Render [(String, Rectangle)]
 drawFunctionLink s o target color1 color2 = do
   (x,_) <- getCurrentPoint
-  FontExtents fa _ fh _ _ <- fontExtents
+  (layout, metrics) <- pangoLayout target
+  (_, PangoRectangle _ _ _ fh) <- liftIO $ layoutGetExtents layout
+  let fa = ascent metrics
+
   wc <- width o
 
   let (ux, uy, uw, uh) =
@@ -263,8 +313,8 @@ drawFunctionLink s o target color1 color2 = do
 
   fillAndSurround
 
-  moveTo (x + padding) 0
-  showText target
+  moveTo (x + padding) (-fa)
+  showLayout layout
   moveTo (x + wc) 0
 
   return [(target, (ux, uy, uw, uh))]
@@ -298,27 +348,28 @@ roundedRect x y w h = do
 
 height :: [VisObject] -> Render Double
 height xs = do
-  FontExtents _ _ fh _ _ <- fontExtents
-  let go (Named _ ys) = (fh + 15) + maximum (map go ys)
-      go (Unnamed _)  = fh
-      go (Link _)     = fh + 10
-      go (Function _) = fh + 10
+  (layout, _) <- pangoLayout ""
+  (_, PangoRectangle _ _ _ ya) <- liftIO $ layoutGetExtents layout
+  let go (Named _ ys) = (ya + 15) + maximum (map go ys)
+      go (Unnamed _)  = ya
+      go (Link _)     = ya + 2 * padding
+      go (Function _) = ya + 2 * padding
   return $ maximum $ map go xs
 
 width :: VisObject -> Render Double
 width (Named x ys) = do
-  TextExtents xb _ _ _ xa _ <- textExtents x
+  nameWidth <- simpleWidth x $ 2 * padding
   w2s <- mapM width ys
-  return $ max (xa - xb) (sum w2s) + 10
+  return $ max nameWidth $ sum w2s + 2 * padding
 
-width (Unnamed x) = do
-  TextExtents xb _ _ _ xa _ <- textExtents x
-  return $ xa - xb + 5
+width (Unnamed x) = simpleWidth x padding
 
-width (Link x) = do
-  TextExtents xb _ _ _ xa _ <- textExtents x
-  return $ xa - xb + 10
+width (Link x) = simpleWidth x $ 2 * padding
 
-width (Function x) = do
-  TextExtents xb _ _ _ xa _ <- textExtents x
-  return $ xa - xb + 10
+width (Function x) = simpleWidth x $ 2 * padding
+
+simpleWidth :: String -> Double -> Render Double
+simpleWidth x pad = do
+  (layout, _) <- pangoLayout x
+  (_, PangoRectangle _ _ xa _) <- liftIO $ layoutGetExtents layout
+  return $ xa + pad
