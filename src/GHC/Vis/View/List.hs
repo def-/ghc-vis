@@ -341,7 +341,8 @@ roundedRect x y w h = do
   arcNegative (x + pad)     (y + pad)     pad (-pi/2) (-pi)
   closePath
 
-  where pad = 1/10 * min w h
+  --where pad = 1/10 * min w h
+  where pad = 5
 
 height :: [VisObject] -> Render Double
 height xs = do
