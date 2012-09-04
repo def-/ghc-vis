@@ -1,4 +1,4 @@
-{-# LANGUAGE MagicHash #-}
+{-# LANGUAGE MagicHash, DeriveDataTypeable #-}
 
 {- |
    Module      : GHC.Vis.Internal
@@ -9,28 +9,38 @@
  -}
 module GHC.Vis.Internal (
   walkHeap,
-  --walkHeapDepth,
   parseBoxes,
   parseBoxesHeap,
-  --parseClosure,
-  --pointersToFollow,
   pointersToFollow2,
   showClosure
   )
   where
+
+import Prelude hiding (catch)
 
 import GHC.Vis.Types
 import GHC.HeapView hiding (name, pkg, modl, fun, arrWords)
 
 import Control.Monad
 import Control.Monad.State hiding (State, fix)
+
 import Data.Word
 import Data.Char
 import Data.List hiding (insert)
+import Data.Typeable
+
 import Text.Printf
 import Unsafe.Coerce
 
+import Control.Exception
+
+import System.IO
 import System.IO.Unsafe
+
+data ParseException = ParseException
+  deriving (Show, Typeable)
+
+instance Exception ParseException
 
 -- | Walk the heap for a list of objects to be visualized and their
 --   corresponding names.
@@ -43,12 +53,18 @@ parseBoxes = generalParseBoxes evalState
 parseBoxesHeap :: [(Box, String)] -> IO ([[VisObject]], (Integer, HeapMap, HeapMap))
 parseBoxesHeap = generalParseBoxes runState
 
+runUntilWorks :: IO a -> IO a
+runUntilWorks f = catch f (\e -> do let err = show (e :: ParseException)
+                                    hPutStrLn stderr $ "Warning: " ++ err ++ ": Heap changed while parsing it, trying again"
+                                    runUntilWorks f)
+
 generalParseBoxes :: Num t =>
      (PrintState [[VisObject]] -> (t, HeapMap, HeapMap) -> b)
   -> [(Box, String)] -> IO b
-generalParseBoxes f bs = walkHeapSimply bs >>= \h -> walkHeapWithBCO bs >>= \h2 -> return $ f (go bs) (0,h,h2)
+generalParseBoxes f bs = runUntilWorks $
+  walkHeapSimply bs >>= \h -> walkHeapWithBCO bs >>= \h2 -> return $ f (go bs) (0,h,h2)
   where go ((b',_):b's) = do (_,h,_) <- get
-                             let (Just (_,c)) = lookup b' h
+                             let (_,c) = fromJust1 "0" $ lookup b' h
                              r <- parseClosure b' c
                              rs <- go b's
                              --return (r:rs)
@@ -74,7 +90,7 @@ parseClosure b c = do
 
 fromJust1 :: String -> Maybe t -> t
 fromJust1 _ (Just n) = n
-fromJust1 x _ = error $ "Invalid fromJust " ++ x
+fromJust1 _ _ = throw ParseException
 
 correctObject :: Box -> PrintState VisObject
 correctObject box = do
@@ -110,7 +126,8 @@ walkHeapWithBCO :: [(Box, String)] -> IO HeapMap
 walkHeapWithBCO = walkHeapGeneral (const Nothing) pointersToFollow2
 
 walkHeapGeneral :: (String -> Maybe String) -> (Closure -> IO [Box]) -> [(Box, String)] -> IO HeapMap
-walkHeapGeneral topF p2fF bs = foldM (topNodes topF) [dummy] bs >>= \s -> foldM (startWalk p2fF) s bs
+walkHeapGeneral topF p2fF bs = runUntilWorks $
+  foldM (topNodes topF) [dummy] bs >>= \s -> foldM (startWalk p2fF) s bs
   where topNodes hn l (b,n) = do -- Adds the top nodes without looking at their pointers
           c' <- getBoxedClosureData b
           return $ insert (b, (hn n, c')) l
