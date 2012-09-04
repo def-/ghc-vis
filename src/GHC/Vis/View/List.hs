@@ -43,11 +43,10 @@ state :: IORef State
 state = unsafePerformIO $ newIORef $ State [] [] Nothing
 
 fontName :: String
--- Cairo's internal font system doesn't detect this as a similar font to "Times
--- Roman", should switch to Pango
---fontName = "Nimbus Roman No9 L"
-fontName = "DejaVu,Vera,Courier Sans"
---fontName = "Lucida Grande" -- TODO: Try, also in Pango
+fontName = "Sans"
+--fontName = "Times Roman"
+--fontName = "DejaVu Sans"
+--fontName = "Lucida Grande"
 
 fontSize :: Double
 fontSize = 15
@@ -282,8 +281,6 @@ pangoLayout text = do
   font <- liftIO $ fontDescriptionFromString fontName
   liftIO $ fontDescriptionSetSize font fontSize
   liftIO $ layoutSetFontDescription layout (Just font)
-
-  liftIO $ layoutSetText layout text
 
   language <- liftIO $ contextGetLanguage context
   metrics <- liftIO $ contextGetMetrics context font language
