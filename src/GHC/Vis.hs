@@ -200,6 +200,10 @@ react canvas window = do
 
       boxes <- readMVar visBoxes
       performGC -- TODO: Else Blackholes appear. Do we want this?
+                -- Example for bad behaviour that would happen then:
+                -- λ> let xs = [1..42] :: [Int]
+                -- λ> let x = 17 :: Int
+                -- λ> let ys = [ y | y <- xs, y >= x ]
 
       runCorrect updateObjects >>= \f -> f boxes
 
