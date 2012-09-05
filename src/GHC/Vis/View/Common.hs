@@ -10,9 +10,7 @@ module GHC.Vis.View.Common (
   visRunning,
   visState,
   visBoxes,
-  evaluate,
-  --printOne,
-  --printAll
+  evaluate
   )
   where
 
@@ -65,4 +63,3 @@ printAll = do
   bs <- readMVar visBoxes
   (t,(_,h,_)) <- parseBoxesHeap bs
   return (show t, h)
-

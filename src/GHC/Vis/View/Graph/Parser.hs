@@ -12,7 +12,7 @@ module GHC.Vis.View.Graph.Parser (
 )
 where
 
-import System.IO.Unsafe
+import Control.Monad
 
 import qualified Data.Text.Lazy as B
 
@@ -43,52 +43,73 @@ nodeFontSize = 24
 edgeFontSize :: Double
 edgeFontSize = 24
 
+foldlMaybe :: (a -> b -> Maybe a) -> a -> [b] -> Maybe a
+foldlMaybe f a bs =
+   foldr (\b g x -> f x b >>= g) Just bs a
+
 -- | Take the objects to be visualized and run them through @dot@ and extract
 --   the drawing operations that have to be exectued to show the graph of the
 --   heap map.
 xDotParse :: [(Box, String)] -> IO ([(Object Node, Operation)], [Box], Rectangle)
 xDotParse as = do
   hm <- walkHeap as
-  xDot <- graphvizWithHandle Dot (defaultVis $ toViewableGraph $ buildGraph hm) XDot hGetDot
-  return (getOperations xDot, getBoxes hm, getSize xDot)
 
--- | Convert a heap map, our internal data structure, to a graph that can be
---   converted to a dot graph.
-buildGraph :: HeapMap -> Gr Closure String
-buildGraph hm = insEdges edges $ insNodes nodes empty
-  where nodes = zip [0..] $ map (\(_,(_,c)) -> c) rhm
-        edges = foldr toLEdge [] $ foldr mbEdges [] nodes
-        -- Reversing it fixes the ordering of nodes in the graph. Should run
-        -- through allPtrs and sort by order inside of all allPtrs lists.
-        --
-        -- When building the graph directly out of [Box] instead of going
-        -- through the HeapMap, then the order of nodes might not be right for
-        -- non-trivial graphs.
-        --
-        -- In some cases it's impossible to get the order right. Maybe there is
-        -- a way in graphviz to specify outgoing edge orientation after all?
-        rhm = reverse hm
+  let nodes = zip [0..] $ map (\(_,(_,c)) -> c) rhm
+      edges = do
+        mbe <- foldM mbEdges [] nodes
+        return $ foldlMaybe toLEdge [] mbe
+      -- Reversing it fixes the ordering of nodes in the graph. Should run
+      -- through allPtrs and sort by order inside of all allPtrs lists.
+      --
+      -- When building the graph directly out of [Box] instead of going
+      -- through the HeapMap, then the order of nodes might not be right for
+      -- non-trivial graphs.
+      --
+      -- In some cases it's impossible to get the order right. Maybe there is
+      -- a way in graphviz to specify outgoing edge orientation after all?
+      rhm = reverse hm
 
-        toLEdge (0, Just t) xs = case rhm !! t of
-          (_,(Just name, _)) -> (0,t,name):xs
-          (_,(Nothing, _))   -> (0,t,""):xs
-        toLEdge (f, Just t) xs = (f,t,""):xs
-        toLEdge _ xs = xs
+      toLEdge xs (0, Just t) = if length rhm <= t
+        then Nothing -- This might be able to happen, let's make sure it doesn't
+        else case rhm !! t of
+          (_,(Just name, _)) -> Just $ (0,t,name):xs
+          (_,(Nothing, _))   -> Just $ (0,t,""):xs
+      toLEdge xs (f, Just t) = Just $ (f,t,""):xs
+      toLEdge xs _ = Just xs
 
-        mbEdges (p,BCOClosure _ _ _ bPtr _ _ _) xs = map (\b -> (p, Just b)) (bcoChildren [bPtr] hm) ++ xs
-        -- Using allPtrs and then filtering the closures not available in the
-        -- heap map out emulates pointersToFollow without being in IO
-        mbEdges (p,c) xs = map (\b -> (p, boxPos b)) (allPtrs c) ++ xs
+      mbEdges xs (p,BCOClosure _ _ _ bPtr _ _ _) = do
+        children <- bcoChildren [bPtr]
+        return $ map (\b -> (p, Just b)) children ++ xs
+      -- Using allPtrs and then filtering the closures not available in the
+      -- heap map out emulates pointersToFollow without being in IO
+      mbEdges xs (p,c) = return $ map (\b -> (p, boxPos b)) (allPtrs c) ++ xs
 
-        boxPos :: Box -> Maybe Int
-        boxPos b = lookup b $ zip (map fst rhm) [0..]
+      boxPos :: Box -> Maybe Int
+      boxPos b = lookup b $ zip (map fst rhm) [0..]
 
-        bcoChildren :: [Box] -> HeapMap -> [Int]
-        bcoChildren [] _ = []
-        bcoChildren (b:bs) h = case boxPos b of
-          Nothing  -> let ptf = unsafePerformIO $ getBoxedClosureData b >>= pointersToFollow2
-                      in bcoChildren (ptf ++ bs) h -- Could go into infinite loop
-          Just pos -> pos : bcoChildren bs h
+      bcoChildren :: [Box] -> IO [Int]
+      bcoChildren [] = return []
+      bcoChildren (b:bs) = case boxPos b of
+        --Nothing  -> let ptf = unsafePerformIO $ getBoxedClosureData b >>= pointersToFollow2
+        --            in bcoChildren (ptf ++ bs) h -- Could go into infinite loop
+        Nothing  -> do c <- getBoxedClosureData b
+                       ptf <- pointersToFollow2 c
+                       bcoChildren (ptf ++ bs)
+        Just pos -> do children <- bcoChildren bs
+                       return $ pos : children
+
+  es' <- edges
+
+  case es' of
+    Nothing -> xDotParse as
+    Just es -> do
+      -- | Convert a heap map, our internal data structure, to a graph that can be
+      --   converted to a dot graph.
+      let buildGraph :: Gr Closure String
+          buildGraph = insEdges es $ insNodes nodes empty
+
+      xDot <- graphvizWithHandle Dot (defaultVis $ toViewableGraph buildGraph) XDot hGetDot
+      return (getOperations xDot, getBoxes hm, getSize xDot)
 
 getBoxes :: HeapMap -> [Box]
 getBoxes hm = map (\(b,(_,_)) -> b) $ reverse hm

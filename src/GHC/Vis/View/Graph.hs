@@ -106,9 +106,12 @@ click = do
   s <- readIORef state
 
   case hover s of
-    Node t -> do
+    -- This might fail when a click occurs during an update
+    Node t -> unless (length (boxes s) <= t) $ do
       evaluate2 $ boxes s !! t
-      putMVar visSignal UpdateSignal
+      -- Without forkIO it would hang indefinitely if some action is currently
+      -- executed
+      void $ forkIO $ putMVar visSignal UpdateSignal
     _ -> return ()
 
 evaluate2 :: Box -> IO ()
@@ -158,4 +161,4 @@ move canvas = do
 updateObjects :: [(Box, String)] -> IO ()
 updateObjects bs = do
   (ops, bs', size) <- xDotParse bs
-  modifyIORef state (\s -> s {operations = ops, boxes = bs', totalSize = size})
+  modifyIORef state (\s -> s {operations = ops, boxes = bs', totalSize = size, hover = None})

@@ -1,4 +1,4 @@
-{-# LANGUAGE MagicHash, DeriveDataTypeable #-}
+{-# LANGUAGE MagicHash, DeriveDataTypeable, NoMonomorphismRestriction, RankNTypes #-}
 
 {- |
    Module      : GHC.Vis.Internal
@@ -27,49 +27,50 @@ import Control.Monad.State hiding (State, fix)
 import Data.Word
 import Data.Char
 import Data.List hiding (insert)
-import Data.Typeable
 
 import Text.Printf
 import Unsafe.Coerce
 
-import Control.Exception
+import Control.Monad.Trans.Maybe
 
-import System.IO
 import System.IO.Unsafe
-
-data ParseException = ParseException
-  deriving (Show, Typeable)
-
-instance Exception ParseException
 
 -- | Walk the heap for a list of objects to be visualized and their
 --   corresponding names.
 parseBoxes :: [(Box, String)] -> IO [[VisObject]]
-parseBoxes = generalParseBoxes evalState
+parseBoxes bs = do
+  r <- generalParseBoxes evalState bs
+  case r of
+    Just x -> return x
+    _ -> parseBoxes bs
 
 -- | Walk the heap for a list of objects to be visualized and their
 --   corresponding names. Also return the resulting 'HeapMap' and another
 --   'HeapMap' that does not contain BCO pointers.
 parseBoxesHeap :: [(Box, String)] -> IO ([[VisObject]], (Integer, HeapMap, HeapMap))
-parseBoxesHeap = generalParseBoxes runState
-
-runUntilWorks :: IO a -> IO a
-runUntilWorks f = catch f (\e -> do let err = show (e :: ParseException)
-                                    hPutStrLn stderr $ "Warning: " ++ err ++ ": Heap changed while parsing it, trying again"
-                                    runUntilWorks f)
+parseBoxesHeap bs = do
+  r <- generalParseBoxes runState bs
+  case r of
+    (Just x, y) -> return (x,y)
+    _ -> parseBoxesHeap bs
 
 generalParseBoxes :: Num t =>
-     (PrintState [[VisObject]] -> (t, HeapMap, HeapMap) -> b)
+     (PrintState (Maybe [[VisObject]]) -> (t, HeapMap, HeapMap) -> b)
   -> [(Box, String)] -> IO b
-generalParseBoxes f bs = runUntilWorks $
-  walkHeapSimply bs >>= \h -> walkHeapWithBCO bs >>= \h2 -> return $ f (go bs) (0,h,h2)
-  where go ((b',_):b's) = do (_,h,_) <- get
-                             let (_,c) = fromJust1 "0" $ lookup b' h
+generalParseBoxes f bs = do
+  h <- walkHeapSimply bs
+  h2 <- walkHeapWithBCO bs
+  return $ f (g bs) (0,h,h2)
+  where g bs' = runMaybeT $ go bs'
+        go ((b',_):b's) = do (_,h,_) <- lift get
+                             (_,c) <- lookupT b' h
                              r <- parseClosure b' c
                              rs <- go b's
-                             --return (r:rs)
-                             return (simplify r:rs)
+                             return $ simplify r : rs
         go [] = return []
+
+lookupT :: Eq a => a -> [(a,b)] -> MaybeT PrintState b
+lookupT b' h = MaybeT $ return $ lookup b' h
 
 -- Pulls together multiple Unnamed objects to one
 simplify :: [VisObject] -> [VisObject]
@@ -80,7 +81,7 @@ simplify (Unnamed a : Unnamed b : xs) = simplify $ Unnamed (a ++ b) : xs
 simplify (Named a bs : xs) = Named a (simplify bs) : simplify xs
 simplify (a:xs) = a : simplify xs
 
-parseClosure :: Box -> Closure -> PrintState [VisObject]
+parseClosure :: Box -> Closure -> MaybeT PrintState [VisObject]
 parseClosure b c = do
   o <- correctObject b
   case o of
@@ -88,20 +89,17 @@ parseClosure b c = do
     _      -> do i <- parseInternal b c
                  return $ insertObjects o i
 
-fromJust1 :: String -> Maybe t -> t
-fromJust1 _ (Just n) = n
-fromJust1 _ _ = throw ParseException
-
-correctObject :: Box -> PrintState VisObject
+correctObject :: Box -> MaybeT PrintState VisObject
 correctObject box = do
-  r <- countReferences box
+  r <- lift $ countReferences box
   n <- getName box
 
   case n of
     Just name -> return $ Link name
     Nothing -> if r > 1 then
                  (do setName box
-                     name <- liftM (fromJust1 "1") $ getName box
+                     mbName <- getName box
+                     name <- MaybeT $ return mbName
                      return $ Named name [])
                  else return $ Unnamed ""
 
@@ -126,8 +124,7 @@ walkHeapWithBCO :: [(Box, String)] -> IO HeapMap
 walkHeapWithBCO = walkHeapGeneral (const Nothing) pointersToFollow2
 
 walkHeapGeneral :: (String -> Maybe String) -> (Closure -> IO [Box]) -> [(Box, String)] -> IO HeapMap
-walkHeapGeneral topF p2fF bs = runUntilWorks $
-  foldM (topNodes topF) [dummy] bs >>= \s -> foldM (startWalk p2fF) s bs
+walkHeapGeneral topF p2fF bs = foldM (topNodes topF) [dummy] bs >>= \s -> foldM (startWalk p2fF) s bs
   where topNodes hn l (b,n) = do -- Adds the top nodes without looking at their pointers
           c' <- getBoxedClosureData b
           return $ insert (b, (hn n, c')) l
@@ -200,27 +197,29 @@ insert (b,x) xs = case find (\(c,_) -> c == b) xs of
   Just _  -> xs
   Nothing -> (b,x):xs
 
-adjust :: (HeapEntry -> HeapEntry) -> Box -> HeapMap -> HeapMap
-adjust f b h = h1 ++ ((b,f x) : h2)
-  where i = fromJust1 "2" $ findIndex (\(y,_) -> y == b) h
-        (h1,(_,x):h2) = splitAt i h
+adjust :: (HeapEntry -> HeapEntry) -> Box -> HeapMap -> Maybe HeapMap
+adjust f b h = do i <- findIndex (\(y,_) -> y == b) h
+                  let (h1,(_,x):h2) = splitAt i h
+                  return $ h1 ++ ((b,f x) : h2)
 
-setName :: Box -> PrintState ()
-setName b = modify go
-  where go (i,h,h2) = (i + 1, adjust (set i) b h, h2)
-        set i (Nothing, closure) = (Just ('t' : show i), closure)
+setName :: Box -> MaybeT PrintState ()
+setName b = do (i, h, h2) <- lift get
+               h' <- MaybeT $ return $ adjust (set i) b h
+               lift $ put (i + 1, h', h2)
+  where set i (Nothing, closure) = (Just ('t' : show i), closure)
         set _ _ = error "unexpected pattern"
 
-getName :: Box -> PrintState (Maybe String)
-getName b = do (_,h,_) <- get
-               return $ fst $ fromJust1 "3" $ lookup b h
+getName :: Box -> MaybeT PrintState (Maybe String)
+getName b = do (_,h,_) <- lift get
+               (name,_) <- lookupT b h
+               return name
 
-getSetName :: Box -> PrintState String
+getSetName :: Box -> MaybeT PrintState String
 getSetName b = do mn <- getName b
                   case mn of
                     Nothing   -> do setName b
-                                    n <- getName b
-                                    return $ fromJust1 "4" n
+                                    name <- getName b
+                                    MaybeT $ return name
                     Just name -> return name
 
 -- How often is a box referenced in the entire heap map
@@ -230,7 +229,7 @@ countReferences b = do
   return $ sum $ map countR h
  where countR (_,(_,c)) = length $ filter (== b) $ allPtrs c
 
-parseInternal :: Box -> Closure -> PrintState [VisObject]
+parseInternal :: Box -> Closure -> MaybeT PrintState [VisObject]
 parseInternal _ (ConsClosure StgInfoTable{} _ [dataArg] _pkg modl name) =
  return [Unnamed $ case (modl, name) of
     k | k `elem` [ ("GHC.Word", "W#")
@@ -357,7 +356,7 @@ parseInternal _ c = return [Unnamed ("Missing pattern for " ++ show c)]
 -- λ> data BinaryTree = BT BinaryTree Int BinaryTree | Leaf deriving Show
 -- λ> let x = BT (BT (BT Leaf 1 (BT Leaf 2 Leaf)) 3 (BT (BT Leaf 4 (BT Leaf 5 Leaf)) 6 Leaf))
 -- λ> :view x (in list view)
-parseAPPAP :: Box -> Box -> [Box] -> PrintState [VisObject]
+parseAPPAP :: Box -> Box -> [Box] -> MaybeT PrintState [VisObject]
 parseAPPAP b fun pl = do
   name <- getSetName b
   fPtr <- contParse fun
@@ -365,7 +364,7 @@ parseAPPAP b fun pl = do
   let tPtrs = intercalate [Unnamed ","] pPtrs
   return $ Function name : fPtr ++ [Unnamed "["] ++ tPtrs ++ [Unnamed "]"]
 
-parseThunkFun :: Box -> [Box] -> [Word] -> PrintState [VisObject]
+parseThunkFun :: Box -> [Box] -> [Word] -> MaybeT PrintState [VisObject]
 parseThunkFun b bPtrs args = do
   name <- getSetName b
   cPtrs <- mapM contParse $ reverse bPtrs
@@ -374,10 +373,12 @@ parseThunkFun b bPtrs args = do
     Function name : Unnamed "(" : tPtrs ++ [Unnamed ")"] else
     Function name : (Unnamed $ show args ++ "(") : tPtrs ++ [Unnamed ")"]
 
-contParse :: Box -> PrintState [VisObject]
-contParse b = get >>= \(_,h,_) -> parseClosure b (snd $ fromJust1 "5" $ lookup b h)
+contParse :: Box -> MaybeT PrintState [VisObject]
+contParse b = do (_,h,_) <- lift get
+                 (_,c) <- lookupT b h
+                 parseClosure b c
 
-bcoContParse :: [Box] -> PrintState [[VisObject]]
+bcoContParse :: [Box] -> MaybeT PrintState [[VisObject]]
 bcoContParse [] = return []
 bcoContParse (b:bs) = get >>= \(_,h,_) -> case lookup b h of
   Nothing    -> do let ptf = unsafePerformIO $ getBoxedClosureData b >>= pointersToFollow2
@@ -386,7 +387,7 @@ bcoContParse (b:bs) = get >>= \(_,h,_) -> case lookup b h of
                    ps <- bcoContParse bs
                    return $ p : ps
 
-mutArrContParse :: [Box] -> PrintState [[VisObject]]
+mutArrContParse :: [Box] -> MaybeT PrintState [[VisObject]]
 mutArrContParse [] = return []
 mutArrContParse (b:bs) = get >>= \(_,h,_) -> case lookup b h of
   Nothing -> mutArrContParse bs

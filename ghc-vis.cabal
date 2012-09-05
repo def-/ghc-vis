@@ -91,6 +91,7 @@ Library
                  fgl,
                  deepseq,
                  text,
+                 transformers,
                  gtk == 0.12.*,
                  cairo == 0.12.*,
                  ghc-heap-view >= 0.3

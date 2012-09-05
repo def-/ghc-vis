@@ -32,9 +32,9 @@ import GHC.HeapView (Box)
 type Rectangle = (Double, Double, Double, Double)
 
 data State = State
-  { objects :: [[VisObject]]
-  , bounds :: [(String, Rectangle)]
-  , hover :: Maybe String
+  { objects :: [(Box, String, [VisObject])]
+  , bounds  :: [(String, Rectangle)]
+  , hover   :: Maybe String
   }
 
 type RGB = (Double, Double, Double)
@@ -76,31 +76,31 @@ padding = 5
 --   requested from outside the program.
 redraw :: WidgetClass w => w -> IO ()
 redraw canvas = do
-  boxes <- readMVar visBoxes
   s <- readIORef state
   Gtk.Rectangle _ _ rw2 rh2 <- widgetGetAllocation canvas
 
-  boundingBoxes <- render canvas (draw s rw2 rh2 boxes)
+  boundingBoxes <- render canvas (draw s rw2 rh2)
   modifyIORef state (\s' -> s' {bounds = boundingBoxes})
 
 -- | Export the visualization to an SVG file
 export :: String -> IO ()
 export file = do
-  boxes <- readMVar visBoxes
   s <- readIORef state
 
   withSVGSurface file (fromIntegral xSize) (fromIntegral ySize)
-    (\surface -> renderWith surface (draw s xSize ySize boxes))
+    (\surface -> renderWith surface (draw s xSize ySize))
 
   return ()
 
   where xSize = 500 :: Int
         ySize = 500 :: Int
 
-draw :: State -> Int -> Int -> [(a, String)] -> Render [(String, Rectangle)]
-draw s rw2 rh2 boxes = do
-  let objs = objects s
-      names = map ((++ ": ") . snd) boxes
+draw :: State -> Int -> Int -> Render [(String, Rectangle)]
+draw s rw2 rh2 = do
+  let os = objects s
+      objs  = map (\(_,_,x) -> x) os
+      --boxes = map (\(x,_,_) -> x) os
+      names = map ((++ ": ") . (\(_,x,_) -> x)) os
 
   nameWidths <- mapM (width . Unnamed) names
   pos <- mapM height objs
@@ -154,7 +154,9 @@ click = do
   case hover s of
      Just t -> do
        evaluate t
-       putMVar visSignal UpdateSignal
+       -- Without forkIO it would hang indefinitely if some action is currently
+       -- executed
+       void $ forkIO $ putMVar visSignal UpdateSignal
      _ -> return ()
 
 -- | Handle a mouse move. Causes an 'UpdateSignal' if the mouse is hovering a
@@ -180,8 +182,9 @@ move canvas = do
 -- | Something might have changed on the heap, update the view.
 updateObjects :: [(Box, String)] -> IO ()
 updateObjects boxes = do
-  objs <- parseBoxes boxes
-  modifyIORef state (\s -> s {objects = objs})
+  os <- parseBoxes boxes
+  let objs = zipWith (\(x,y) z -> (x,y,z)) boxes os
+  modifyIORef state (\s -> s {objects = objs, hover = Nothing})
 
 drawEntry :: State -> Double -> ([VisObject], Double, String) -> Render [(String, Rectangle)]
 drawEntry s nameWidth (obj, pos, name) = do
