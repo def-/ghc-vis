@@ -103,8 +103,8 @@ xDotParse as = do
   case es' of
     Nothing -> xDotParse as
     Just es -> do
-      -- | Convert a heap map, our internal data structure, to a graph that can be
-      --   converted to a dot graph.
+      -- Convert a heap map, our internal data structure, to a graph that can be
+      -- converted to a dot graph.
       let buildGraph :: Gr Closure String
           buildGraph = insEdges es $ insNodes nodes empty
 
