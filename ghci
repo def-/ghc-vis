@@ -5,6 +5,3 @@
 :def update \_ -> return $ "GHC.Vis.update"
 :def clear  \_ -> return $ "GHC.Vis.clear"
 :def export \x -> return $ "GHC.Vis.export " ++ show x
-
-:def stepupdate \x -> return $ ":step " ++ x ++ "\n:update"
-:def su     \x -> return $ ":step " ++ x ++ "\n:update"
