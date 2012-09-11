@@ -146,14 +146,14 @@ walkHeapGeneral topF p2fF bs = foldM (topNodes topF) [dummy] bs >>= \s -> foldM 
 -- New: We're not inspecting the BCOs and instead later looks which of its
 -- recursive children are still in the heap. Only those should be visualized.
 pointersToFollow :: Closure -> IO [Box]
-pointersToFollow (BCOClosure StgInfoTable{} _ _ _ _ _ _) = return []
+pointersToFollow (BCOClosure _ _ _ _ _ _ _) = return []
 
-pointersToFollow (MutArrClosure StgInfoTable{} _ _ bPtrs) =
+pointersToFollow (MutArrClosure _ _ _ bPtrs) =
   do cPtrs <- mapM getBoxedClosureData bPtrs
      return $ fix $ zip bPtrs cPtrs
-  where fix ((_,ConsClosure StgInfoTable{} _ _ _ "ByteCodeInstr" "BreakInfo"):_:_:xs) = fix xs
-        fix ((_,ConsClosure StgInfoTable{} _ _ _ "ByteCodeInstr" "BreakInfo"):_:xs) = fix xs
-        fix ((_,ConsClosure StgInfoTable{} _ _ _ "ByteCodeInstr" "BreakInfo"):xs) = fix xs
+  where fix ((_,ConsClosure _ _ _ _ "ByteCodeInstr" "BreakInfo"):_:_:xs) = fix xs
+        fix ((_,ConsClosure _ _ _ _ "ByteCodeInstr" "BreakInfo"):_:xs) = fix xs
+        fix ((_,ConsClosure _ _ _ _ "ByteCodeInstr" "BreakInfo"):xs) = fix xs
         fix ((x,_):xs) = x : fix xs
         fix [] = []
 
@@ -162,12 +162,12 @@ pointersToFollow x = return $ allPtrs x
 -- | Follows 'GHC.HeapView.BCOClosure's, but not the debugging data structures
 --   (ByteCodeInstr.BreakInfo) of GHC.
 pointersToFollow2 :: Closure -> IO [Box]
-pointersToFollow2 (MutArrClosure StgInfoTable{} _ _ bPtrs) =
+pointersToFollow2 (MutArrClosure _ _ _ bPtrs) =
   do cPtrs <- mapM getBoxedClosureData bPtrs
      return $ fix $ zip bPtrs cPtrs
-  where fix ((_,ConsClosure StgInfoTable{} _ _ _ "ByteCodeInstr" "BreakInfo"):_:_:xs) = fix xs
-        fix ((_,ConsClosure StgInfoTable{} _ _ _ "ByteCodeInstr" "BreakInfo"):_:xs) = fix xs
-        fix ((_,ConsClosure StgInfoTable{} _ _ _ "ByteCodeInstr" "BreakInfo"):xs) = fix xs
+  where fix ((_,ConsClosure _ _ _ _ "ByteCodeInstr" "BreakInfo"):_:_:xs) = fix xs
+        fix ((_,ConsClosure _ _ _ _ "ByteCodeInstr" "BreakInfo"):_:xs) = fix xs
+        fix ((_,ConsClosure _ _ _ _ "ByteCodeInstr" "BreakInfo"):xs) = fix xs
         fix ((x,_):xs) = x : fix xs
         fix [] = []
 
@@ -230,7 +230,7 @@ countReferences b = do
  where countR (_,(_,c)) = length $ filter (== b) $ allPtrs c
 
 parseInternal :: Box -> Closure -> MaybeT PrintState [VisObject]
-parseInternal _ (ConsClosure StgInfoTable{} _ [dataArg] _pkg modl name) =
+parseInternal _ (ConsClosure _ _ [dataArg] _pkg modl name) =
  return [Unnamed $ case (modl, name) of
     k | k `elem` [ ("GHC.Word", "W#")
                  , ("GHC.Word", "W8#")
@@ -289,37 +289,50 @@ parseInternal _ (ConsClosure (StgInfoTable _ 0 _ _) bPtrs [] _ _ name)
        let tPtrs = intercalate [Unnamed " "] cPtrs
        return $ Unnamed (name ++ " ") : tPtrs
 
-parseInternal _ (ConsClosure StgInfoTable{} bPtrs dArgs _ _ name)
+parseInternal _ (ConsClosure _ bPtrs dArgs _ _ name)
   = do cPtrs <- mapM (liftM mbParens . contParse) bPtrs
        let tPtrs = intercalate [Unnamed " "] cPtrs
        return $ Unnamed (name ++ show dArgs ++ " ") : tPtrs
 
-parseInternal _ (ArrWordsClosure (StgInfoTable 0 0 ARR_WORDS 0) _ arrWords)
+parseInternal _ (ArrWordsClosure _ _ arrWords)
   = return $ intercalate [Unnamed ","] (map (\x -> [Unnamed (printf "0x%x" x)]) arrWords)
 
-parseInternal _ (IndClosure (StgInfoTable 1 0 _ 0) b)
+parseInternal _ (IndClosure _ b)
   = contParse b
 
-parseInternal _ (SelectorClosure StgInfoTable{} b)
+parseInternal _ (SelectorClosure _ b)
   = contParse b
 
-parseInternal _ (BlackholeClosure (StgInfoTable 1 0 _ 0) b)
+parseInternal _ (BlackholeClosure _ b)
   = contParse b
+
+parseInternal _ BlockingQueueClosure{}
+  = return [Unnamed "BlockingQueue"]
+
+parseInternal _ (OtherClosure (StgInfoTable _ _ cTipe _) _ _)
+  = return [Unnamed $ show cTipe]
+
+parseInternal _ (UnsupportedClosure (StgInfoTable _ _ cTipe _))
+  = return [Unnamed $ show cTipe]
 
 -- Reversed order of ptrs
-parseInternal b (ThunkClosure StgInfoTable{} bPtrs args)
+parseInternal b (ThunkClosure _ bPtrs args)
   = parseThunkFun b bPtrs args
 
-parseInternal b (FunClosure StgInfoTable{} bPtrs args)
+parseInternal b (FunClosure _ bPtrs args)
   = parseThunkFun b bPtrs args
 
 -- bPtrs here can currently point to Nothing, because else we might get infinite heaps
-parseInternal _ (MutArrClosure StgInfoTable{} _ _ bPtrs)
+parseInternal _ (MutArrClosure _ _ _ bPtrs)
   = do cPtrs <- mutArrContParse bPtrs
        let tPtrs = intercalate [Unnamed ","] cPtrs
        return $ Unnamed "(" : tPtrs ++ [Unnamed ")"]
 
-parseInternal _ (BCOClosure (StgInfoTable 4 0 BCO 0) _ _ bPtr _ _ _)
+parseInternal _ (MutVarClosure _ b)
+  = do c <- contParse b
+       return $ Unnamed "MutVar " : c
+
+parseInternal _ (BCOClosure _ _ _ bPtr _ _ _)
   = do cPtrs <- bcoContParse [bPtr]
        let tPtrs = intercalate [Unnamed ","] cPtrs
        return $ Unnamed "(" : tPtrs ++ [Unnamed ")"]
@@ -339,19 +352,19 @@ parseInternal _ (BCOClosure (StgInfoTable 4 0 BCO 0) _ _ bPtr _ _ _)
   --          notHasName _ _ = True
   --      return vs
 
-parseInternal b (APClosure (StgInfoTable 0 0 _ _) _ _ fun pl)
+parseInternal b (APClosure _ _ _ fun pl)
   = parseAPPAP b fun pl
 
-parseInternal b (PAPClosure (StgInfoTable 0 0 _ _) _ _ fun pl)
+parseInternal b (PAPClosure _ _ _ fun pl)
   = parseAPPAP b fun pl
 
-parseInternal _ (MVarClosure StgInfoTable{} qHead qTail qValue)
+parseInternal _ (MVarClosure _ qHead qTail qValue)
    = do cHead <- liftM mbParens $ contParse qHead
         cTail <- liftM mbParens $ contParse qTail
         cValue <- liftM mbParens $ contParse qValue
         return $ Unnamed "MVar#(" : cHead ++ [Unnamed ","] ++ cTail ++ [Unnamed ","] ++ cValue ++ [Unnamed ")"]
 
-parseInternal _ c = return [Unnamed ("Missing pattern for " ++ show c)]
+--parseInternal _ c = return [Unnamed ("Missing pattern for " ++ show c)]
 
 -- λ> data BinaryTree = BT BinaryTree Int BinaryTree | Leaf deriving Show
 -- λ> let x = BT (BT (BT Leaf 1 (BT Leaf 2 Leaf)) 3 (BT (BT Leaf 4 (BT Leaf 5 Leaf)) 6 Leaf))
@@ -408,7 +421,7 @@ mbParens t | ' ' `objElem` t = Unnamed "(" : t ++ [Unnamed ")"]
 
 -- | Textual representation of Heap objects, used in the graph visualization.
 showClosure :: Closure -> String
-showClosure (ConsClosure StgInfoTable{} _ [dataArg] _ modl name) =
+showClosure (ConsClosure _ _ [dataArg] _ modl name) =
  case (modl, name) of
     k | k `elem` [ ("GHC.Word", "W#")
                  , ("GHC.Word", "W8#")
@@ -447,10 +460,10 @@ showClosure (ConsClosure (StgInfoTable 1 3 _ 0) [_] [_,start,end] _ "Data.ByteSt
 showClosure (ConsClosure (StgInfoTable 2 3 _ 1) [_,_] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
   = printf "Chunk[%d,%d]" start end
 
-showClosure (ConsClosure StgInfoTable{} _ [] _ _ name)
+showClosure (ConsClosure _ _ [] _ _ name)
   = name
 
-showClosure (ConsClosure StgInfoTable{} _ dArgs _ _ name)
+showClosure (ConsClosure _ _ dArgs _ _ name)
   = name ++ show dArgs
 
 -- Reversed order of ptrs
@@ -476,9 +489,8 @@ showClosure PAPClosure{}
 showClosure BCOClosure{}
   = "BCO"
 
-showClosure (ArrWordsClosure (StgInfoTable 0 0 ARR_WORDS 0) _ arrWords)
+showClosure (ArrWordsClosure _ _ arrWords)
   = intercalate ",\n" $ map (printf "0x%x") arrWords
---  = "ArrWords"
 
 showClosure MutArrClosure{}
   = "MutArr"
@@ -495,7 +507,10 @@ showClosure FunClosure{}
 showClosure BlockingQueueClosure{}
   = "BlockingQueue"
 
-showClosure OtherClosure{}
-  = "Other"
+showClosure (OtherClosure (StgInfoTable _ _ cTipe _) _ _)
+  = show cTipe
 
-showClosure c = "Missing pattern for " ++ show c
+showClosure (UnsupportedClosure (StgInfoTable _ _ cTipe _))
+  = show cTipe
+
+--showClosure c = "Missing pattern for " ++ show c
