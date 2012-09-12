@@ -5,3 +5,12 @@
 :def update \_ -> return $ "GHC.Vis.update"
 :def clear  \_ -> return $ "GHC.Vis.clear"
 :def export \x -> return $ "GHC.Vis.export " ++ show x
+
+-- Evaluate one step and update values in ghc-vis
+:def su \x -> return $ ":step " ++ x ++ "\n:update"
+
+-- Keep evaluating and updating on any key pressed, quit with q
+:def asu \x -> getChar >>= \c -> case c of { 'q' -> return ""; _ -> return $ ":step " ++ x ++ "\n:update\n:asu" }
+
+-- Evaluate one step every second until any key is pressed
+:def tsu \x -> (System.Timeout.timeout 1000000 getChar) >>= \c -> case c of { Just _ -> return ""; _ -> return $ ":step " ++ x ++ "\n:update\n:tsu" }
