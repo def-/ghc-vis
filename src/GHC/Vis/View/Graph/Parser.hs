@@ -26,7 +26,7 @@ import GHC.HeapView hiding (name)
 import GHC.Vis.Internal
 import GHC.Vis.Types
 
-import Graphics.XDot.Types hiding (name, h)
+import Graphics.XDot.Types hiding (name, h, Style, Color)
 import Graphics.XDot.Parser
 
 fontName :: B.Text
@@ -124,6 +124,7 @@ defaultVis = graphToDot nonClusteredParams
   -- Somehow (X11Color Transparency) is white, use (RGBA 0 0 0 0) instead
   { globalAttributes = [GraphAttrs [BgColor [RGBA 0 0 0 0], FontName fontName, FontSize graphFontSize]]
   , fmtNode = \ (_,l) -> [toLabel l, FontName fontName, FontSize nodeFontSize]
+  --, fmtNode = \ (_,l) -> [toLabel l, FontName fontName, FontSize nodeFontSize, Style [SItem Filled []], FillColor [RGBA 255 255 255 255], Color [RGBA 0 0 0 255]]
   --, fmtNode = \ (_,l) -> [toLabel l, FontName fontName, FontSize nodeFontSize, Shape PlainText]
   , fmtEdge = \ (_,_,l) -> [toLabel l, FontName fontName, FontSize edgeFontSize]
   }
