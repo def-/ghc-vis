@@ -237,7 +237,7 @@ parseInternal _ (ConsClosure _ _ [dataArg] _pkg modl name) =
                  , ("GHC.Word", "W16#")
                  , ("GHC.Word", "W32#")
                  , ("GHC.Word", "W64#")
-                 ] -> show dataArg
+                 ] -> name ++ " " ++ show dataArg
 
     k | k `elem` [ ("GHC.Integer.Type", "S#")
                  , ("GHC.Types", "I#")
@@ -245,7 +245,7 @@ parseInternal _ (ConsClosure _ _ [dataArg] _pkg modl name) =
                  , ("GHC.Int", "I16#")
                  , ("GHC.Int", "I32#")
                  , ("GHC.Int", "I64#")
-                 ] -> show $ (fromIntegral :: Word -> Int) dataArg
+                 ] -> name ++ " " ++ (show $ (fromIntegral :: Word -> Int) dataArg)
 
     ("GHC.Types", "C#") -> show . chr $ fromIntegral dataArg
 
@@ -428,7 +428,7 @@ showClosure (ConsClosure _ _ [dataArg] _ modl name) =
                  , ("GHC.Word", "W16#")
                  , ("GHC.Word", "W32#")
                  , ("GHC.Word", "W64#")
-                 ] -> show dataArg
+                 ] -> name ++ " " ++ show dataArg
 
     k | k `elem` [ ("GHC.Integer.Type", "S#")
                  , ("GHC.Types", "I#")
@@ -436,7 +436,7 @@ showClosure (ConsClosure _ _ [dataArg] _ modl name) =
                  , ("GHC.Int", "I16#")
                  , ("GHC.Int", "I32#")
                  , ("GHC.Int", "I64#")
-                 ] -> show $ (fromIntegral :: Word -> Int) dataArg
+                 ] -> name ++ " " ++ (show $ (fromIntegral :: Word -> Int) dataArg)
 
     ("GHC.Types", "C#") -> show . chr $ fromIntegral dataArg
 
