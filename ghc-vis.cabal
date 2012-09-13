@@ -95,7 +95,7 @@ Library
                  transformers,
                  gtk == 0.12.*,
                  cairo == 0.12.*,
-                 ghc-heap-view >= 0.3
+                 ghc-heap-view >= 0.3.0.2
   Hs-source-dirs: src/
   Ghc-options: -Wall -fno-warn-unused-do-bind
 
