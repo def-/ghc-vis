@@ -9,6 +9,9 @@
 -- Evaluate one step and update values in ghc-vis
 :def su \x -> return $ ":step " ++ x ++ "\n:update"
 
+-- Continue to next breakpoint and update values in ghc-vis
+:def cu \_ -> return $ ":continue\n:update"
+
 -- Keep evaluating and updating on any key pressed, quit with q
 :def asu \x -> getChar >>= \c -> case c of { 'q' -> return ""; _ -> return $ ":step " ++ x ++ "\n:update\n:asu" }
 
