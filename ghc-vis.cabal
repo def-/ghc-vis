@@ -1,5 +1,5 @@
 name:               ghc-vis
-version:            0.3.1
+version:            0.3.1.1
 license:            BSD3
 license-file:       LICENSE
 category:           GHC, Debug, Development
@@ -18,7 +18,7 @@ description:        Visualize live data structures in GHCi. Evaluation is not
                     To use this package add the accompanying @ghci@ file to
                     your @.ghci@ like this:
                     .
-                    > echo ":script $HOME/.cabal/share/ghc-vis-0.3.1/ghci" >> ~/.ghci
+                    > echo ":script $HOME/.cabal/share/ghc-vis-0.3.1.1/ghci" >> ~/.ghci
                     .
                     Now you can run ghci and experiment with @ghc-vis@. Start
                     the visualization:

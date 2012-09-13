@@ -312,8 +312,8 @@ parseInternal _ BlockingQueueClosure{}
 parseInternal _ (OtherClosure (StgInfoTable _ _ cTipe _) _ _)
   = return [Unnamed $ show cTipe]
 
-parseInternal _ (UnsupportedClosure (StgInfoTable _ _ cTipe _))
-  = return [Unnamed $ show cTipe]
+--parseInternal _ (UnsupportedClosure (StgInfoTable _ _ cTipe _))
+--  = return [Unnamed $ show cTipe]
 
 -- Reversed order of ptrs
 parseInternal b (ThunkClosure _ bPtrs args)
@@ -510,7 +510,7 @@ showClosure BlockingQueueClosure{}
 showClosure (OtherClosure (StgInfoTable _ _ cTipe _) _ _)
   = show cTipe
 
-showClosure (UnsupportedClosure (StgInfoTable _ _ cTipe _))
-  = show cTipe
+--showClosure (UnsupportedClosure (StgInfoTable _ _ cTipe _))
+--  = show cTipe
 
 --showClosure c = "Missing pattern for " ++ show c
