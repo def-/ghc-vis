@@ -184,7 +184,7 @@ react canvas window = do
       if running then react canvas window else
         -- :r caused visRunning to be reset
         (do swapMVar visRunning True
-            putMVar visSignal UpdateSignal
+            timeout signalTimeout (putMVar visSignal UpdateSignal)
             react canvas window)
     Just signal -> do
       case signal of
