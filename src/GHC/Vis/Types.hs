@@ -13,6 +13,7 @@ module GHC.Vis.Types (
   State(..),
   HeapEntry,
   HeapMap,
+  PState(..),
   PrintState,
   VisObject(..)
   )
@@ -65,12 +66,21 @@ type HeapEntry =
 type HeapMap   = [(Box, HeapEntry)]
 
 -- | The second HeapMap includes BCO pointers, needed for list visualization
-type PrintState = MS.State (Integer, HeapMap, HeapMap)
+data PState = PState
+  { tCounter :: Integer
+  , fCounter :: Integer
+  , bCounter :: Integer
+  , heapMap  :: HeapMap
+  , heapMap' :: HeapMap
+  }
+
+type PrintState = MS.State PState
 
 -- | Simple representation of objects on the heap, so they can be arranged linearly
 data VisObject = Unnamed String
                | Named String [VisObject]
                | Link String
+               | Thunk String
                | Function String
                deriving Eq
 
@@ -78,6 +88,7 @@ instance Show VisObject where
   show (Unnamed x) = x
   show (Named x ys) = x ++ "=(" ++ show ys ++ ")"
   show (Link x) = x
+  show (Thunk x) = x
   show (Function x) = x
 
   showList = foldr ((.) . showString . show) (showString "")

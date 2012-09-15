@@ -47,22 +47,22 @@ parseBoxes bs = do
 -- | Walk the heap for a list of objects to be visualized and their
 --   corresponding names. Also return the resulting 'HeapMap' and another
 --   'HeapMap' that does not contain BCO pointers.
-parseBoxesHeap :: [(Box, String)] -> IO ([[VisObject]], (Integer, HeapMap, HeapMap))
+parseBoxesHeap :: [(Box, String)] -> IO ([[VisObject]], PState)
 parseBoxesHeap bs = do
   r <- generalParseBoxes runState bs
   case r of
     (Just x, y) -> return (x,y)
     _ -> parseBoxesHeap bs
 
-generalParseBoxes :: Num t =>
-     (PrintState (Maybe [[VisObject]]) -> (t, HeapMap, HeapMap) -> b)
+generalParseBoxes ::
+     (PrintState (Maybe [[VisObject]]) -> PState -> b)
   -> [(Box, String)] -> IO b
 generalParseBoxes f bs = do
   h <- walkHeapSimply bs
   h2 <- walkHeapWithBCO bs
-  return $ f (g bs) (0,h,h2)
+  return $ f (g bs) $ PState 0 0 0 h h2
   where g bs' = runMaybeT $ go bs'
-        go ((b',_):b's) = do (_,h,_) <- lift get
+        go ((b',_):b's) = do h <- lift $ gets heapMap
                              (_,c) <- lookupT b' h
                              r <- parseClosure b' c
                              rs <- go b's
@@ -105,6 +105,7 @@ correctObject box = do
 
 insertObjects :: VisObject -> [VisObject] -> [VisObject]
 insertObjects _ xs@(Function _ : _) = xs
+insertObjects _ xs@(Thunk _ : _) = xs
 insertObjects (Link name) _ = [Link name]
 insertObjects (Named name _) xs = [Named name xs]
 insertObjects (Unnamed _) xs = xs
@@ -203,14 +204,21 @@ adjust f b h = do i <- findIndex (\(y,_) -> y == b) h
                   return $ h1 ++ ((b,f x) : h2)
 
 setName :: Box -> MaybeT PrintState ()
-setName b = do (i, h, h2) <- lift get
-               h' <- MaybeT $ return $ adjust (set i) b h
-               lift $ put (i + 1, h', h2)
-  where set i (Nothing, closure) = (Just ('t' : show i), closure)
-        set _ _ = error "unexpected pattern"
+setName b = do PState ti fi bi h h2 <- lift get
+               (_,c) <- lookupT b h
+               let (n, ti',fi',bi') = case c of
+                     ThunkClosure{} -> ('t' : show ti, ti+1, fi, bi)
+                     APClosure{}    -> ('t' : show ti, ti+1, fi, bi)
+                     FunClosure{}   -> ('f' : show fi, ti, fi+1, bi)
+                     PAPClosure{}   -> ('f' : show fi, ti, fi+1, bi)
+                     _              -> ('b' : show bi, ti, fi, bi+1)
+                   set (Nothing, closure) = (Just n, closure)
+                   set _ = error "unexpected pattern"
+               h' <- MaybeT $ return $ adjust set b h
+               lift $ put $ PState ti' fi' bi' h' h2
 
 getName :: Box -> MaybeT PrintState (Maybe String)
-getName b = do (_,h,_) <- lift get
+getName b = do h <- lift $ gets heapMap
                (name,_) <- lookupT b h
                return name
 
@@ -225,7 +233,7 @@ getSetName b = do mn <- getName b
 -- How often is a box referenced in the entire heap map
 countReferences :: Box -> PrintState Int
 countReferences b = do
-  (_,_,h) <- get
+  h <- gets heapMap'
   return $ sum $ map countR h
  where countR (_,(_,c)) = length $ filter (== b) $ allPtrs c
 
@@ -316,17 +324,27 @@ parseInternal _ (UnsupportedClosure (StgInfoTable _ _ cTipe _))
   = return [Unnamed $ show cTipe]
 
 -- Reversed order of ptrs
-parseInternal b (ThunkClosure _ bPtrs args)
-  = parseThunkFun b bPtrs args
+parseInternal b (ThunkClosure _ bPtrs args) = do
+  name <- getSetName b
+  cPtrs <- mapM contParse $ reverse bPtrs
+  let tPtrs = intercalate [Unnamed ","] cPtrs
+      sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "(" : tPtrs ++ [Unnamed ")"]
+      sArgs = Unnamed $ if null args then "" else show args
+  return $ Thunk name : sArgs : sPtrs
 
-parseInternal b (FunClosure _ bPtrs args)
-  = parseThunkFun b bPtrs args
+parseInternal b (FunClosure _ bPtrs args) = do
+  name <- getSetName b
+  cPtrs <- mapM contParse $ reverse bPtrs
+  let tPtrs = intercalate [Unnamed ","] cPtrs
+      sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "(" : tPtrs ++ [Unnamed ")"]
+      sArgs = Unnamed $ if null args then "" else show args
+  return $ Function name : sArgs : sPtrs
 
 -- bPtrs here can currently point to Nothing, because else we might get infinite heaps
 parseInternal _ (MutArrClosure _ _ _ bPtrs)
   = do cPtrs <- mutArrContParse bPtrs
        let tPtrs = intercalate [Unnamed ","] cPtrs
-       return $ Unnamed "(" : tPtrs ++ [Unnamed ")"]
+       return $ if null tPtrs then [Unnamed ""] else Unnamed "(" : tPtrs ++ [Unnamed ")"]
 
 parseInternal _ (MutVarClosure _ b)
   = do c <- contParse b
@@ -335,7 +353,7 @@ parseInternal _ (MutVarClosure _ b)
 parseInternal _ (BCOClosure _ _ _ bPtr _ _ _)
   = do cPtrs <- bcoContParse [bPtr]
        let tPtrs = intercalate [Unnamed ","] cPtrs
-       return $ Unnamed "(" : tPtrs ++ [Unnamed ")"]
+       return $ if null tPtrs then [Unnamed ""] else Unnamed "(" : tPtrs ++ [Unnamed ")"]
   -- = do case lookup b h of
   --        Nothing -> c <- getBoxedClosureData bPtr
   --        Just (_,c) -> p  <- parseClosure bPtr c
@@ -352,11 +370,21 @@ parseInternal _ (BCOClosure _ _ _ bPtr _ _ _)
   --          notHasName _ _ = True
   --      return vs
 
-parseInternal b (APClosure _ _ _ fun pl)
-  = parseAPPAP b fun pl
+parseInternal b (APClosure _ _ _ fun pl) = do
+  name <- getSetName b
+  fPtr <- contParse fun
+  pPtrs <- mapM contParse $ reverse pl
+  let tPtrs = intercalate [Unnamed ","] pPtrs
+      sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "[" : tPtrs ++ [Unnamed "]"]
+  return $ Thunk name : fPtr ++ sPtrs
 
-parseInternal b (PAPClosure _ _ _ fun pl)
-  = parseAPPAP b fun pl
+parseInternal b (PAPClosure _ _ _ fun pl) = do
+  name <- getSetName b
+  fPtr <- contParse fun
+  pPtrs <- mapM contParse $ reverse pl
+  let tPtrs = intercalate [Unnamed ","] pPtrs
+      sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "[" : tPtrs ++ [Unnamed "]"]
+  return $ Function name : fPtr ++ sPtrs
 
 parseInternal _ (MVarClosure _ qHead qTail qValue)
    = do cHead <- liftM mbParens $ contParse qHead
@@ -364,36 +392,14 @@ parseInternal _ (MVarClosure _ qHead qTail qValue)
         cValue <- liftM mbParens $ contParse qValue
         return $ Unnamed "MVar#(" : cHead ++ [Unnamed ","] ++ cTail ++ [Unnamed ","] ++ cValue ++ [Unnamed ")"]
 
---parseInternal _ c = return [Unnamed ("Missing pattern for " ++ show c)]
-
--- λ> data BinaryTree = BT BinaryTree Int BinaryTree | Leaf deriving Show
--- λ> let x = BT (BT (BT Leaf 1 (BT Leaf 2 Leaf)) 3 (BT (BT Leaf 4 (BT Leaf 5 Leaf)) 6 Leaf))
--- λ> :view x (in list view)
-parseAPPAP :: Box -> Box -> [Box] -> MaybeT PrintState [VisObject]
-parseAPPAP b fun pl = do
-  name <- getSetName b
-  fPtr <- contParse fun
-  pPtrs <- mapM contParse $ reverse pl
-  let tPtrs = intercalate [Unnamed ","] pPtrs
-  return $ Function name : fPtr ++ [Unnamed "["] ++ tPtrs ++ [Unnamed "]"]
-
-parseThunkFun :: Box -> [Box] -> [Word] -> MaybeT PrintState [VisObject]
-parseThunkFun b bPtrs args = do
-  name <- getSetName b
-  cPtrs <- mapM contParse $ reverse bPtrs
-  let tPtrs = intercalate [Unnamed ","] cPtrs
-  return $ if null args then
-    Function name : Unnamed "(" : tPtrs ++ [Unnamed ")"] else
-    Function name : (Unnamed $ show args ++ "(") : tPtrs ++ [Unnamed ")"]
-
 contParse :: Box -> MaybeT PrintState [VisObject]
-contParse b = do (_,h,_) <- lift get
+contParse b = do h <- lift $ gets heapMap
                  (_,c) <- lookupT b h
                  parseClosure b c
 
 bcoContParse :: [Box] -> MaybeT PrintState [[VisObject]]
 bcoContParse [] = return []
-bcoContParse (b:bs) = get >>= \(_,h,_) -> case lookup b h of
+bcoContParse (b:bs) = gets heapMap >>= \h -> case lookup b h of
   Nothing    -> do let ptf = unsafePerformIO $ getBoxedClosureData b >>= pointersToFollow2
                    bcoContParse $ ptf ++ bs -- Could go into infinite loop
   Just (_,c) -> do p  <- parseClosure b c
@@ -402,7 +408,7 @@ bcoContParse (b:bs) = get >>= \(_,h,_) -> case lookup b h of
 
 mutArrContParse :: [Box] -> MaybeT PrintState [[VisObject]]
 mutArrContParse [] = return []
-mutArrContParse (b:bs) = get >>= \(_,h,_) -> case lookup b h of
+mutArrContParse (b:bs) = gets heapMap >>= \h -> case lookup b h of
   Nothing -> mutArrContParse bs
   Just (_,c) -> do p  <- parseClosure b c
                    ps <- mutArrContParse bs

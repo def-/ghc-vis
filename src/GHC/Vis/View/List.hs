@@ -63,11 +63,17 @@ colorLink = (0.5,0.5,1)
 colorLinkHighlighted :: RGB
 colorLinkHighlighted = (0.25,0.25,1)
 
+colorThunk :: RGB
+colorThunk = (1,0.5,0.5)
+
+colorThunkHighlighted :: RGB
+colorThunkHighlighted = (1,0,0)
+
 colorFunction :: RGB
-colorFunction = (1,0.5,0.5)
+colorFunction = (1,1,0.5)
 
 colorFunctionHighlighted :: RGB
-colorFunctionHighlighted = (1,0,0)
+colorFunctionHighlighted = (1,1,0)
 
 padding :: Double
 padding = 5
@@ -213,6 +219,9 @@ drawBox _ o@(Unnamed content) = do
 
   return []
 
+drawBox s o@(Thunk target) =
+  drawFunctionLink s o target colorThunk colorThunkHighlighted
+
 drawBox s o@(Function target) =
   drawFunctionLink s o target colorFunction colorFunctionHighlighted
 
@@ -354,6 +363,7 @@ height xs = do
   let go (Named _ ys) = (ya + 15) + maximum (map go ys)
       go (Unnamed _)  = ya
       go (Link _)     = ya + 2 * padding
+      go (Thunk _) = ya + 2 * padding
       go (Function _) = ya + 2 * padding
   return $ maximum $ map go xs
 
@@ -366,6 +376,8 @@ width (Named x ys) = do
 width (Unnamed x) = simpleWidth x padding
 
 width (Link x) = simpleWidth x $ 2 * padding
+
+width (Thunk x) = simpleWidth x $ 2 * padding
 
 width (Function x) = simpleWidth x $ 2 * padding
 

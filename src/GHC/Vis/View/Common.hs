@@ -61,5 +61,5 @@ evaluate identifier = do (_,hm) <- printAll
 printAll :: IO (String, HeapMap)
 printAll = do
   bs <- readMVar visBoxes
-  (t,(_,h,_)) <- parseBoxesHeap bs
+  (t, PState{heapMap = h}) <- parseBoxesHeap bs
   return (show t, h)
