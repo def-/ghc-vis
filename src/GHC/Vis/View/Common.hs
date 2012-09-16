@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 {- |
    Module      : GHC.Vis.View.Common
    Copyright   : (c) Dennis Felsing
@@ -14,8 +15,11 @@ module GHC.Vis.View.Common (
   )
   where
 
+import Prelude hiding (catch)
+
 import Control.Concurrent
 import Control.DeepSeq
+import Control.Exception hiding (evaluate)
 
 import Data.IORef
 
@@ -44,7 +48,8 @@ visBoxes = unsafePerformIO (newMVar [] :: IO (MVar [(Box, String)]))
 -- | Evaluate an object identified by a String.
 evaluate :: String -> IO ()
 evaluate identifier = do (_,hm) <- printAll
-                         show (map go hm) `deepseq` return ()
+                         (show (map go hm) `deepseq` return ()) `catch`
+                           \(e :: SomeException) -> putStrLn $ "Caught exception while evaluating: " ++ show e
   where go (Box a,(Just n, y)) | n == identifier = seq a (Just n, y)
                                  | otherwise = (Just n, y)
         go (_,(x,y)) = (x,y)

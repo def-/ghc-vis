@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 {- |
    Module      : GHC.Vis.View.Graph
    Copyright   : (c) Dennis Felsing
@@ -14,12 +15,15 @@ module GHC.Vis.View.Graph (
   )
   where
 
+import Prelude hiding (catch)
+
 import Graphics.UI.Gtk hiding (Box, Signal, Rectangle, Object)
 import qualified Graphics.UI.Gtk as Gtk
 import Graphics.Rendering.Cairo
 
 import Control.Concurrent
 import Control.Monad
+import Control.Exception
 
 import Data.IORef
 import System.IO.Unsafe
@@ -132,6 +136,8 @@ evaluate2 b@(Box a) = do
     APClosure{} -> a `seq` return ()
     PAPClosure{} -> a `seq` return ()
     _ -> return ()
+  `catch`
+    \(e :: SomeException) -> putStrLn $ "Caught exception while evaluating: " ++ show e
 
 -- | Handle a mouse move. Causes an 'UpdateSignal' if the mouse is hovering a
 --   different object now, so the object gets highlighted and the screen
