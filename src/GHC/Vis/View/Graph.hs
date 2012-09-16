@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RankNTypes, ScopedTypeVariables #-}
 {- |
    Module      : GHC.Vis.View.Graph
    Copyright   : (c) Dennis Felsing
@@ -60,13 +60,13 @@ redraw canvas = do
   modifyIORef state (\s' -> s' {bounds = boundingBoxes})
 
 -- | Export the visualization to an SVG file
-export :: String -> IO ()
-export file = do
+export :: DrawFunction -> String -> IO ()
+export drawFn file = do
   s <- readIORef state
 
   let (_, _, xSize, ySize) = totalSize s
 
-  withSVGSurface file xSize ySize
+  drawFn file xSize ySize
     (\surface -> renderWith surface (draw s (round xSize) (round ySize)))
 
   return ()

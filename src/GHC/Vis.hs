@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP, RankNTypes, ImpredicativeTypes #-}
 {- |
    Module      : GHC.Vis
    Copyright   : (c) Dennis Felsing
@@ -44,7 +44,7 @@ module GHC.Vis (
   )
   where
 
-import Prelude hiding (catch)
+import Prelude hiding (catch, error)
 
 import Graphics.UI.Gtk hiding (Box, Signal)
 import qualified Graphics.UI.Gtk.Gdk.Events as E
@@ -55,6 +55,7 @@ import Control.Monad
 
 import Control.Exception hiding (evaluate)
 
+import Data.Char
 import Data.IORef
 
 import System.Timeout
@@ -71,6 +72,8 @@ import qualified GHC.Vis.View.List as List
 import Data.GraphViz.Commands
 import qualified GHC.Vis.View.Graph as Graph
 #endif
+
+import Graphics.Rendering.Cairo
 
 views :: [View]
 views =
@@ -121,9 +124,27 @@ update = put UpdateSignal
 clear :: IO ()
 clear = put ClearSignal
 
--- | Export the current visualization view to an SVG file.
-export :: String -> IO () -- TODO: Work with different file formats (svg, pdf, png)
-export filename = put $ ExportSignal filename
+-- | Export the current visualization view to a file, format depends on the
+--   file ending. Currently supported: svg, png, pdf, ps
+export :: String -> IO ()
+export filename = do
+  case mbDrawFn of
+    Right error -> putStrLn error
+    Left _ -> put $ ExportSignal ((\(Left x) -> x) mbDrawFn) filename
+
+  where mbDrawFn = case map toLower (reverse . take 4 . reverse $ filename) of
+          ".svg"  -> Left withSVGSurface
+          ".pdf"  -> Left withPDFSurface
+          ".png"  -> Left withPNGSurface
+          _:".ps" -> Left withPSSurface
+          _       -> Right $ "Unknown file extension, try one of the following: .svg, .pdf, .ps, .png"
+
+        withPNGSurface filePath width height action =
+          withImageSurface FormatARGB32 (ceiling width) (ceiling height) $
+          \surface -> do
+            ret <- action surface
+            surfaceWriteToPNG surface filePath
+            return ret
 
 put :: Signal -> IO ()
 put s = void $ timeout signalTimeout $ putMVar visSignal s
@@ -193,7 +214,7 @@ react canvas window = do
         ClearSignal    -> modifyMVar_ visBoxes (\_ -> return [])
         UpdateSignal   -> return ()
         SwitchSignal   -> doSwitch
-        ExportSignal f -> catch (runCorrect exportView >>= \e -> e f)
+        ExportSignal d f -> catch (runCorrect exportView >>= \e -> e d f)
           (\e -> do let err = show (e :: IOException)
                     hPutStrLn stderr $ "Couldn't export to file \"" ++ f ++ "\": " ++ err
                     return ())

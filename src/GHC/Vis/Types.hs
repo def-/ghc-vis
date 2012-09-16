@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE RankNTypes #-}
 {- |
    Module      : GHC.Vis.Types
    Copyright   : (c) Dennis Felsing
@@ -7,6 +7,7 @@
 
  -}
 module GHC.Vis.Types (
+  DrawFunction,
   Signal(..),
   View(..),
   ViewType(..),
@@ -24,15 +25,18 @@ import GHC.HeapView
 import qualified Control.Monad.State as MS
 
 import Graphics.UI.Gtk hiding (Box, Signal, Point)
+import Graphics.Rendering.Cairo
 
 type Point = (Double, Double)
+
+type DrawFunction = forall a. FilePath -> Double -> Double -> (Surface -> IO a) -> IO a
 
 -- | Signals that are sent to the GUI to signal changes
 data Signal = NewSignal Box String -- ^ Add a new Box to be visualized
             | UpdateSignal         -- ^ Redraw
             | ClearSignal          -- ^ Remove all Boxes
             | SwitchSignal         -- ^ Switch to alternative view
-            | ExportSignal String  -- ^ Export the view to a file
+            | ExportSignal DrawFunction String -- ^ Export the view to a file
 
 -- | All functions a view has to provide
 data View = View
@@ -40,7 +44,7 @@ data View = View
   , click         :: IO ()
   , move          :: WidgetClass w => w -> IO ()
   , updateObjects :: [(Box, String)] -> IO ()
-  , exportView    :: String -> IO ()
+  , exportView    :: DrawFunction -> String -> IO ()
   }
 
 -- | Visualization views

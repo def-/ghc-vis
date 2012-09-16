@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 {- |
    Module      : GHC.Vis.View.List
    Copyright   : (c) Dennis Felsing
@@ -89,11 +90,11 @@ redraw canvas = do
   modifyIORef state (\s' -> s' {bounds = boundingBoxes})
 
 -- | Export the visualization to an SVG file
-export :: String -> IO ()
-export file = do
+export :: DrawFunction -> String -> IO ()
+export drawFn file = do
   s <- readIORef state
 
-  withSVGSurface file (fromIntegral xSize) (fromIntegral ySize)
+  drawFn file (fromIntegral xSize) (fromIntegral ySize)
     (\surface -> renderWith surface (draw s xSize ySize))
 
   return ()
