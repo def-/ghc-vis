@@ -238,7 +238,7 @@ countReferences b = do
  where countR (_,(_,c)) = length $ filter (== b) $ allPtrs c
 
 parseInternal :: Box -> Closure -> MaybeT PrintState [VisObject]
-parseInternal _ (ConsClosure _ _ [dataArg] _pkg modl name) =
+parseInternal _ (ConsClosure _ [] [dataArg] _pkg modl name) =
  return [Unnamed $ case (modl, name) of
     k | k `elem` [ ("GHC.Word", "W#")
                  , ("GHC.Word", "W8#")
@@ -265,19 +265,19 @@ parseInternal _ (ConsClosure _ _ [dataArg] _pkg modl name) =
 
 -- Empty ByteStrings point to a nullForeignPtr, evaluating it leads to an
 -- Prelude.undefined exception
-parseInternal _ (ConsClosure (StgInfoTable 1 3 _ 0) _ [_,0,0] _ "Data.ByteString.Internal" "PS")
-  = return [Unnamed "ByteString[0,0]()"]
+parseInternal _ (ConsClosure (StgInfoTable 1 3 _ _) _ [_,0,0] _ "Data.ByteString.Internal" "PS")
+  = return [Unnamed "ByteString 0 0"]
 
-parseInternal _ (ConsClosure (StgInfoTable 1 3 _ 0) [bPtr] [_,start,end] _ "Data.ByteString.Internal" "PS")
-  = do cPtr  <- contParse bPtr
-       return $ Unnamed (printf "ByteString[%d,%d](" start end) : cPtr ++ [Unnamed ")"]
+parseInternal _ (ConsClosure (StgInfoTable 1 3 _ _) [bPtr] [_,start,end] _ "Data.ByteString.Internal" "PS")
+  = do cPtr  <- liftM mbParens $ contParse bPtr
+       return $ Unnamed (printf "ByteString %d %d " start end) : cPtr
 
-parseInternal _ (ConsClosure (StgInfoTable 2 3 _ 1) [bPtr1,bPtr2] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
-  = do cPtr1 <- contParse bPtr1
-       cPtr2 <- contParse bPtr2
-       return $ Unnamed (printf "Chunk[%d,%d](" start end) : cPtr1 ++ [Unnamed ","] ++ cPtr2 ++ [Unnamed ")"]
+parseInternal _ (ConsClosure (StgInfoTable 2 3 _ _) [bPtr1,bPtr2] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
+  = do cPtr1 <- liftM mbParens $ contParse bPtr1
+       cPtr2 <- liftM mbParens $ contParse bPtr2
+       return $ Unnamed (printf "Chunk %d %d " start end) : cPtr1 ++ [Unnamed " "] ++ cPtr2
 
-parseInternal _ (ConsClosure (StgInfoTable 2 0 _ 1) [bHead,bTail] [] _ "GHC.Types" ":")
+parseInternal _ (ConsClosure (StgInfoTable 2 0 _ _) [bHead,bTail] [] _ "GHC.Types" ":")
   = do cHead <- liftM mbParens $ contParse bHead
        cTail <- liftM mbParens $ contParse bTail
        return $ cHead ++ [Unnamed ":"] ++ cTail
@@ -402,14 +402,23 @@ mutArrContParse (b:bs) = gets heapMap >>= \h -> case lookup b h of
 
 -- TODO: Doesn't work quite right, for example with (1,"fo")
 mbParens :: [VisObject] -> [VisObject]
-mbParens t@(Unnamed ('"':_):_) = t
-mbParens t@(Unnamed ('(':_):_) = t
-mbParens t | ' ' `objElem` t = Unnamed "(" : t ++ [Unnamed ")"]
-            | otherwise     = t
-  where objElem c = any go
-          where go (Unnamed xs) = c `elem` xs
-                go (Named _ os) = any go os
-                go _ = False
+mbParens t = if needsParens
+    then Unnamed "(" : t ++ [Unnamed ")"]
+    else t
+  where needsParens = go (0 :: Int) $ show t
+        go 0 (' ':_) = True
+        go _ [] = False
+        go c (')':ts) = go (c-1) ts
+        go c ('(':ts) = go (c+1) ts
+        go c ('\'':'(':ts) = go c ts
+        go c ('\'':')':ts) = go c ts
+        go c (_:ts) = go c ts
+--mbParens t | ' ' `objElem` t = Unnamed "(" : t ++ [Unnamed ")"]
+--           | otherwise     = t
+--  where objElem c = any go
+--          where go (Unnamed xs) = c `elem` xs
+--                go (Named _ os) = any go os
+--                go _ = False
 
 -- | Textual representation of Heap objects, used in the graph visualization.
 showClosure :: Closure -> String
@@ -439,18 +448,16 @@ showClosure (ConsClosure _ _ [dataArg] _ modl name) =
     -- let b = array ((1,1),(3,2)) [((1,1),42),((1,2),23),((2,1),999),((2,2),1000),((3,1),1001),((3,2),1002)]
     -- b
     -- :view b
-    ("GHC.Arr", "Array") -> printf "Array[%d]" dataArg
-
     (_,name') -> printf "%s %d" name' dataArg
 
 showClosure (ConsClosure (StgInfoTable 1 3 _ 0) _ [_,0,0] _ "Data.ByteString.Internal" "PS")
-  = "ByteString[0,0]"
+  = "ByteString 0 0"
 
 showClosure (ConsClosure (StgInfoTable 1 3 _ 0) [_] [_,start,end] _ "Data.ByteString.Internal" "PS")
-  = printf "ByteString[%d,%d]" start end
+  = printf "ByteString %d %d" start end
 
 showClosure (ConsClosure (StgInfoTable 2 3 _ 1) [_,_] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
-  = printf "Chunk[%d,%d]" start end
+  = printf "Chunk %d %d" start end
 
 showClosure (ConsClosure _ _ dArgs _ _ name)
   = intercalate " " $ name : map show dArgs
