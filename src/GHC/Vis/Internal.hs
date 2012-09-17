@@ -316,7 +316,7 @@ parseInternal b (ThunkClosure _ bPtrs args) = do
   let tPtrs = intercalate [Unnamed ","] cPtrs
       sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "(" : tPtrs ++ [Unnamed ")"]
       sArgs = Unnamed $ if null args then "" else show args
-  return $ Thunk name : sArgs : sPtrs
+  return $ Thunk name : sPtrs ++ [sArgs]
 
 parseInternal b (FunClosure _ bPtrs args) = do
   name <- getSetName b
@@ -324,7 +324,7 @@ parseInternal b (FunClosure _ bPtrs args) = do
   let tPtrs = intercalate [Unnamed ","] cPtrs
       sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "(" : tPtrs ++ [Unnamed ")"]
       sArgs = Unnamed $ if null args then "" else show args
-  return $ Function name : sArgs : sPtrs
+  return $ Function name : sPtrs ++ [sArgs]
 
 -- bPtrs here can currently point to Nothing, because else we might get infinite heaps
 parseInternal _ (MutArrClosure _ _ _ bPtrs)
@@ -370,7 +370,7 @@ parseInternal b (PAPClosure _ _ _ fun pl) = do
   pPtrs <- mapM contParse $ reverse pl
   let tPtrs = intercalate [Unnamed ","] pPtrs
       sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "[" : tPtrs ++ [Unnamed "]"]
-  return $ Function name : fPtr ++ sPtrs
+  return $ Function name : Unnamed "(" : fPtr ++ [Unnamed ")"] ++ sPtrs
 
 parseInternal _ (MVarClosure _ qHead qTail qValue)
    = do cHead <- liftM mbParens $ contParse qHead
