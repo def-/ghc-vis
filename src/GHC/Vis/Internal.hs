@@ -452,9 +452,6 @@ showClosure (ConsClosure (StgInfoTable 1 3 _ 0) [_] [_,start,end] _ "Data.ByteSt
 showClosure (ConsClosure (StgInfoTable 2 3 _ 1) [_,_] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
   = printf "Chunk[%d,%d]" start end
 
-showClosure (ConsClosure _ _ [] _ _ name)
-  = name
-
 showClosure (ConsClosure _ _ dArgs _ _ name)
   = intercalate " " $ name : map show dArgs
 
