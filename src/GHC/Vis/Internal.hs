@@ -257,10 +257,10 @@ parseInternal _ (ConsClosure _ _ [dataArg] _pkg modl name) =
 
     ("GHC.Types", "C#") -> show . chr $ fromIntegral dataArg
 
-    ("Types", "D#") -> printf "%0.5f" (unsafeCoerce dataArg :: Double)
-    ("Types", "F#") -> printf "%0.5f" (unsafeCoerce dataArg :: Double)
+    ("Types", "D#") -> printf "D# %0.5f" (unsafeCoerce dataArg :: Double)
+    ("Types", "F#") -> printf "F# %0.5f" (unsafeCoerce dataArg :: Double)
 
-    (_,name') -> printf "%s[%d]" name' dataArg
+    (_,name') -> printf "%s %d" name' dataArg
   ]
 
 -- Empty ByteStrings point to a nullForeignPtr, evaluating it leads to an
@@ -446,8 +446,8 @@ showClosure (ConsClosure _ _ [dataArg] _ modl name) =
 
     ("GHC.Types", "C#") -> show . chr $ fromIntegral dataArg
 
-    ("Types", "D#") -> printf "%0.5f" (unsafeCoerce dataArg :: Double)
-    ("Types", "F#") -> printf "%0.5f" (unsafeCoerce dataArg :: Double)
+    ("Types", "D#") -> printf "D# %0.5f" (unsafeCoerce dataArg :: Double)
+    ("Types", "F#") -> printf "F# %0.5f" (unsafeCoerce dataArg :: Double)
 
     -- :m +GHC.Arr
     -- let b = array ((1,1),(3,2)) [((1,1),42),((1,2),23),((2,1),999),((2,2),1000),((3,1),1001),((3,2),1002)]
@@ -455,7 +455,7 @@ showClosure (ConsClosure _ _ [dataArg] _ modl name) =
     -- :view b
     ("GHC.Arr", "Array") -> printf "Array[%d]" dataArg
 
-    (_,name') -> printf "%s[%d]" name' dataArg
+    (_,name') -> printf "%s %d" name' dataArg
 
 showClosure (ConsClosure (StgInfoTable 1 3 _ 0) _ [_,0,0] _ "Data.ByteString.Internal" "PS")
   = "ByteString[0,0]"
