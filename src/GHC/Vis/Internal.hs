@@ -277,30 +277,16 @@ parseInternal _ (ConsClosure (StgInfoTable 2 3 _ 1) [bPtr1,bPtr2] [_,start,end] 
        cPtr2 <- contParse bPtr2
        return $ Unnamed (printf "Chunk[%d,%d](" start end) : cPtr1 ++ [Unnamed ","] ++ cPtr2 ++ [Unnamed ")"]
 
-parseInternal _ (ConsClosure (StgInfoTable 1 0 CONSTR_1_0 _) [bPtr] [] _ _ name)
-  = do cPtr <- contParse bPtr
-       return $ Unnamed (name ++ " ") : mbParens cPtr
-
-parseInternal _ (ConsClosure (StgInfoTable 0 0 CONSTR_NOCAF_STATIC _) [] [] _ _ name)
-  = return [Unnamed name]
-
-parseInternal _ (ConsClosure (StgInfoTable 0 _ CONSTR_NOCAF_STATIC _) [] args _ _ name)
-  = return [Unnamed (name ++ " " ++ show args)]
-
 parseInternal _ (ConsClosure (StgInfoTable 2 0 _ 1) [bHead,bTail] [] _ "GHC.Types" ":")
   = do cHead <- liftM mbParens $ contParse bHead
        cTail <- liftM mbParens $ contParse bTail
        return $ cHead ++ [Unnamed ":"] ++ cTail
 
-parseInternal _ (ConsClosure (StgInfoTable _ 0 _ _) bPtrs [] _ _ name)
-  = do cPtrs <- mapM (liftM mbParens . contParse) bPtrs
-       let tPtrs = intercalate [Unnamed " "] cPtrs
-       return $ Unnamed (name ++ " ") : tPtrs
-
 parseInternal _ (ConsClosure _ bPtrs dArgs _ _ name)
   = do cPtrs <- mapM (liftM mbParens . contParse) bPtrs
        let tPtrs = intercalate [Unnamed " "] cPtrs
-       return $ Unnamed (name ++ show dArgs ++ " ") : tPtrs
+       let sPtrs = if null tPtrs then [Unnamed ""] else Unnamed " " : tPtrs
+       return $ Unnamed (intercalate " " $ name : map show dArgs) : sPtrs
 
 parseInternal _ (ArrWordsClosure _ _ arrWords)
   = return $ intercalate [Unnamed ","] (map (\x -> [Unnamed (printf "0x%x" x)]) arrWords)
@@ -470,7 +456,7 @@ showClosure (ConsClosure _ _ [] _ _ name)
   = name
 
 showClosure (ConsClosure _ _ dArgs _ _ name)
-  = name ++ show dArgs
+  = intercalate " " $ name : map show dArgs
 
 -- Reversed order of ptrs
 showClosure ThunkClosure{}
