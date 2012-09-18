@@ -127,17 +127,16 @@ clear = put ClearSignal
 -- | Export the current visualization view to a file, format depends on the
 --   file ending. Currently supported: svg, png, pdf, ps
 export :: String -> IO ()
-export filename = do
-  case mbDrawFn of
-    Right error -> putStrLn error
-    Left _ -> put $ ExportSignal ((\(Left x) -> x) mbDrawFn) filename
+export filename = case mbDrawFn of
+  Right error -> putStrLn error
+  Left _ -> put $ ExportSignal ((\(Left x) -> x) mbDrawFn) filename
 
   where mbDrawFn = case map toLower (reverse . take 4 . reverse $ filename) of
           ".svg"  -> Left withSVGSurface
           ".pdf"  -> Left withPDFSurface
           ".png"  -> Left withPNGSurface
           _:".ps" -> Left withPSSurface
-          _       -> Right $ "Unknown file extension, try one of the following: .svg, .pdf, .ps, .png"
+          _       -> Right "Unknown file extension, try one of the following: .svg, .pdf, .ps, .png"
 
         withPNGSurface filePath width height action =
           withImageSurface FormatARGB32 (ceiling width) (ceiling height) $
@@ -221,6 +220,9 @@ react canvas window = do
 
       boxes <- readMVar visBoxes
       performGC -- TODO: Else Blackholes appear. Do we want this?
+                -- Blackholes stop our current thread and only resume after
+                -- they have been replaced with their result, thereby leading
+                -- to an additional element in the HeapMap we don't want.
                 -- Example for bad behaviour that would happen then:
                 -- λ> let xs = [1..42] :: [Int]
                 -- λ> let x = 17 :: Int

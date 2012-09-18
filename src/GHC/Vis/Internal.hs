@@ -142,12 +142,10 @@ walkHeapGeneral topF p2fF bs = foldM (topNodes topF) [dummy] bs >>= \s -> foldM 
         dummy = (asBox (1 :: Integer),
           (Nothing, ConsClosure (StgInfoTable 0 0 CONSTR_0_1 0) (map fst bs) [] "" "" ""))
 
--- Don't inspect deep pointers in BCOClosures for now, they never end
-
--- New: We're not inspecting the BCOs and instead later looks which of its
--- recursive children are still in the heap. Only those should be visualized.
+-- We're not inspecting the BCOs and instead later looks which of its recursive
+-- children are still in the heap. Only those should be visualized.
 pointersToFollow :: Closure -> IO [Box]
-pointersToFollow (BCOClosure _ _ _ _ _ _ _) = return []
+pointersToFollow BCOClosure{} = return []
 
 pointersToFollow (MutArrClosure _ _ _ bPtrs) =
   do cPtrs <- mapM getBoxedClosureData bPtrs
@@ -253,7 +251,7 @@ parseInternal _ (ConsClosure _ [] [dataArg] _pkg modl name) =
                  , ("GHC.Int", "I16#")
                  , ("GHC.Int", "I32#")
                  , ("GHC.Int", "I64#")
-                 ] -> name ++ " " ++ (show $ (fromIntegral :: Word -> Int) dataArg)
+                 ] -> name ++ " " ++ show ((fromIntegral :: Word -> Int) dataArg)
 
     ("GHC.Types", "C#") -> show . chr $ fromIntegral dataArg
 
@@ -286,7 +284,7 @@ parseInternal _ (ConsClosure _ bPtrs dArgs _ _ name)
   = do cPtrs <- mapM (liftM mbParens . contParse) bPtrs
        let tPtrs = intercalate [Unnamed " "] cPtrs
        let sPtrs = if null tPtrs then [Unnamed ""] else Unnamed " " : tPtrs
-       return $ Unnamed (intercalate " " $ name : map show dArgs) : sPtrs
+       return $ Unnamed (unwords $ name : map show dArgs) : sPtrs
 
 parseInternal _ (ArrWordsClosure _ _ arrWords)
   = return $ intercalate [Unnamed ","] (map (\x -> [Unnamed (printf "0x%x" x)]) arrWords)
@@ -437,7 +435,7 @@ showClosure (ConsClosure _ _ [dataArg] _ modl name) =
                  , ("GHC.Int", "I16#")
                  , ("GHC.Int", "I32#")
                  , ("GHC.Int", "I64#")
-                 ] -> name ++ " " ++ (show $ (fromIntegral :: Word -> Int) dataArg)
+                 ] -> name ++ " " ++ show ((fromIntegral :: Word -> Int) dataArg)
 
     ("GHC.Types", "C#") -> show . chr $ fromIntegral dataArg
 
@@ -460,7 +458,7 @@ showClosure (ConsClosure (StgInfoTable 2 3 _ 1) [_,_] [_,start,end] _ "Data.Byte
   = printf "Chunk %d %d" start end
 
 showClosure (ConsClosure _ _ dArgs _ _ name)
-  = intercalate " " $ name : map show dArgs
+  = unwords $ name : map show dArgs
 
 -- Reversed order of ptrs
 showClosure ThunkClosure{}

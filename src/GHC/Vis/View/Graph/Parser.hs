@@ -90,8 +90,6 @@ xDotParse as = do
       bcoChildren :: [Box] -> IO [Int]
       bcoChildren [] = return []
       bcoChildren (b:bs) = case boxPos b of
-        --Nothing  -> let ptf = unsafePerformIO $ getBoxedClosureData b >>= pointersToFollow2
-        --            in bcoChildren (ptf ++ bs) h -- Could go into infinite loop
         Nothing  -> do c <- getBoxedClosureData b
                        ptf <- pointersToFollow2 c
                        bcoChildren (ptf ++ bs)

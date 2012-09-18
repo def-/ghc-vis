@@ -29,6 +29,7 @@ import Graphics.Rendering.Cairo
 
 type Point = (Double, Double)
 
+-- | A function to draw a cairo drawing to a file.
 type DrawFunction = forall a. FilePath -> Double -> Double -> (Surface -> IO a) -> IO a
 
 -- | Signals that are sent to the GUI to signal changes
