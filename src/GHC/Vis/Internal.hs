@@ -255,8 +255,8 @@ parseInternal _ (ConsClosure _ [] [dataArg] _pkg modl name) =
 
     ("GHC.Types", "C#") -> show . chr $ fromIntegral dataArg
 
-    ("Types", "D#") -> printf "D# %0.5f" (unsafeCoerce dataArg :: Double)
-    ("Types", "F#") -> printf "F# %0.5f" (unsafeCoerce dataArg :: Double)
+    ("GHC.Types", "D#") -> printf "D# %0.5f" (unsafeCoerce dataArg :: Double)
+    ("GHC.Types", "F#") -> printf "F# %0.5f" (unsafeCoerce dataArg :: Double)
 
     (_,name') -> printf "%s %d" name' dataArg
   ]
@@ -439,8 +439,8 @@ showClosure (ConsClosure _ _ [dataArg] _ modl name) =
 
     ("GHC.Types", "C#") -> show . chr $ fromIntegral dataArg
 
-    ("Types", "D#") -> printf "D# %0.5f" (unsafeCoerce dataArg :: Double)
-    ("Types", "F#") -> printf "F# %0.5f" (unsafeCoerce dataArg :: Double)
+    ("GHC.Types", "D#") -> printf "D# %0.5f" (unsafeCoerce dataArg :: Double)
+    ("GHC.Types", "F#") -> printf "F# %0.5f" (unsafeCoerce dataArg :: Double)
 
     -- :m +GHC.Arr
     -- let b = array ((1,1),(3,2)) [((1,1),42),((1,2),23),((2,1),999),((2,2),1000),((3,1),1001),((3,2),1002)]
