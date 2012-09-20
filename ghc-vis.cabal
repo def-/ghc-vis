@@ -29,8 +29,8 @@ flag graph
   Description: "Enable graph view using Graphviz"
 
 Library
-  Exposed-modules: GHC.Vis
-  Other-modules: GHC.Vis.Internal GHC.Vis.Types GHC.Vis.View.List GHC.Vis.View.Common
+  Exposed-modules: GHC.Vis GHC.Vis.Internal GHC.Vis.Types GHC.Vis.View.List GHC.Vis.View.Common
+  --Other-modules: GHC.Vis.Internal GHC.Vis.Types GHC.Vis.View.List GHC.Vis.View.Common
   Default-Language: Haskell2010
   Build-depends: base == 4.*,
                  mtl >= 2.0,

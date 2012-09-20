@@ -9,6 +9,8 @@
  -}
 module GHC.Vis.Internal (
   walkHeap,
+  walkHeapSimply,
+  walkHeapWithBCO,
   parseBoxes,
   parseBoxesHeap,
   pointersToFollow2,
@@ -42,7 +44,9 @@ parseBoxes bs = do
   r <- generalParseBoxes evalState bs
   case r of
     Just x -> return x
-    _ -> parseBoxes bs
+    _ -> do
+      putStrLn "Failure, trying again"
+      parseBoxes bs
 
 -- | Walk the heap for a list of objects to be visualized and their
 --   corresponding names. Also return the resulting 'HeapMap' and another
@@ -62,7 +66,7 @@ generalParseBoxes f bs = do
   h2 <- walkHeapWithBCO bs
   return $ f (g bs) $ PState 0 0 0 h h2
   where g bs' = runMaybeT $ go bs'
-        go ((b',_):b's) = do h <- lift $ gets heapMap
+        go ((b',_):b's) = do h <- lift $ gets heapMap'
                              (_,c) <- lookupT b' h
                              r <- parseClosure b' c
                              rs <- go b's
@@ -203,7 +207,7 @@ adjust f b h = do i <- findIndex (\(y,_) -> y == b) h
 
 setName :: Box -> MaybeT PrintState ()
 setName b = do PState ti fi bi h h2 <- lift get
-               (_,c) <- lookupT b h
+               (_,c) <- lookupT b h2
                let (n, ti',fi',bi') = case c of
                      ThunkClosure{} -> ('t' : show ti, ti+1, fi, bi)
                      APClosure{}    -> ('t' : show ti, ti+1, fi, bi)
@@ -213,10 +217,18 @@ setName b = do PState ti fi bi h h2 <- lift get
                    set (Nothing, closure) = (Just n, closure)
                    set _ = error "unexpected pattern"
                h' <- MaybeT $ return $ adjust set b h
-               lift $ put $ PState ti' fi' bi' h' h2
+               h2' <- MaybeT $ return $ adjust set b h2
+               lift $ put $ PState ti' fi' bi' h' h2'
+
+setVisited :: Box -> MaybeT PrintState ()
+setVisited b = do PState ti fi bi h h2 <- lift get
+                  let set (Nothing, closure) = (Just "visited", closure)
+                      set _ = error "unexpected pattern"
+                  h2' <- MaybeT $ return $ adjust set b h2
+                  lift $ put $ PState ti fi bi h h2'
 
 getName :: Box -> MaybeT PrintState (Maybe String)
-getName b = do h <- lift $ gets heapMap
+getName b = do h <- lift $ gets heapMap'
                (name,_) <- lookupT b h
                return name
 
@@ -334,10 +346,11 @@ parseInternal _ (MutVarClosure _ b)
   = do c <- contParse b
        return $ Unnamed "MutVar " : c
 
-parseInternal _ (BCOClosure _ _ _ bPtr _ _ _)
+parseInternal b (BCOClosure _ _ _ bPtr _ _ _)
   = do cPtrs <- bcoContParse [bPtr]
        let tPtrs = intercalate [Unnamed ","] cPtrs
-       return $ if null tPtrs then [Unnamed ""] else Unnamed "(" : tPtrs ++ [Unnamed ")"]
+       r <- lift $ countReferences b
+       return $ if null tPtrs then if r > 1 then [Unnamed "BCO"] else [Unnamed ""] else Unnamed "BCO(" : tPtrs ++ [Unnamed ")"]
   -- = do case lookup b h of
   --        Nothing -> c <- getBoxedClosureData bPtr
   --        Just (_,c) -> p  <- parseClosure bPtr c
@@ -381,11 +394,24 @@ contParse b = do h <- lift $ gets heapMap
                  (_,c) <- lookupT b h
                  parseClosure b c
 
+-- It turned out that bcoContParse actually does go into an infinite loop, for
+-- example for this:
+-- foldr' op i [] = i
+-- foldr' op i (x:xs) = op x (foldr' op i xs)
+-- :view foldr'
+-- We fix this by giving visited closures a dummy name, so we recognize when we
+-- get into a loop.
 bcoContParse :: [Box] -> MaybeT PrintState [[VisObject]]
 bcoContParse [] = return []
 bcoContParse (b:bs) = gets heapMap >>= \h -> case lookup b h of
   Nothing    -> do let ptf = unsafePerformIO $ getBoxedClosureData b >>= pointersToFollow2
-                   bcoContParse $ ptf ++ bs -- Could go into infinite loop
+                   r <- lift $ countReferences b
+                   n <- getName b
+                   case n of
+                     Just _ -> bcoContParse bs
+                     Nothing -> do
+                       when (r > 1) $ setVisited b
+                       bcoContParse $ ptf ++ bs
   Just (_,c) -> do p  <- parseClosure b c
                    ps <- bcoContParse bs
                    return $ p : ps
