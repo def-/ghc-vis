@@ -351,7 +351,7 @@ parseInternal b (BCOClosure _ _ _ bPtr _ _ _)
   = do cPtrs <- bcoContParse [bPtr]
        let tPtrs = intercalate [Unnamed ","] cPtrs
        r <- lift $ countReferences b
-       return $ if null tPtrs then if r > 1 then [Unnamed "BCO"] else [Unnamed ""] else Unnamed "BCO(" : tPtrs ++ [Unnamed ")"]
+       return $ if null tPtrs then if r > 1 then [Unnamed "BCO"] else [Unnamed ""] else (if r > 1 then Unnamed "BCO(" else Unnamed "(") : tPtrs ++ [Unnamed ")"]
   -- = do case lookup b h of
   --        Nothing -> c <- getBoxedClosureData bPtr
   --        Just (_,c) -> p  <- parseClosure bPtr c
@@ -382,7 +382,7 @@ parseInternal b (PAPClosure _ _ _ fun pl) = do
   pPtrs <- mapM contParse $ reverse pl
   let tPtrs = intercalate [Unnamed ","] pPtrs
       sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "[" : tPtrs ++ [Unnamed "]"]
-  return $ Function name : Unnamed "(" : fPtr ++ [Unnamed ")"] ++ sPtrs
+  return $ Function name : fPtr ++ sPtrs
 
 parseInternal _ (MVarClosure _ qHead qTail qValue)
    = do cHead <- liftM mbParens $ contParse qHead
