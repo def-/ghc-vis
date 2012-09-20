@@ -43,6 +43,9 @@ type RGB = (Double, Double, Double)
 state :: IORef State
 state = unsafePerformIO $ newIORef $ State [] [] Nothing
 
+layout' :: IORef (Maybe PangoLayout)
+layout' = unsafePerformIO $ newIORef Nothing
+
 fontName :: String
 fontName = "Sans"
 --fontName = "Times Roman"
@@ -109,13 +112,14 @@ draw s rw2 rh2 = do
       --boxes = map (\(x,_,_) -> x) os
       names = map ((++ ": ") . (\(_,x,_) -> x)) os
 
+  layout <- pangoEmptyLayout
+  liftIO $ writeIORef layout' $ Just layout
+
   nameWidths <- mapM (width . Unnamed) names
   pos <- mapM height objs
   widths <- mapM (mapM width) objs
 
-  -- Text sizes aren't always perfect, assume that texts may be a bit too big
-  -- TODO: This doesn't work for small font sizes
-  let rw = 0.9 * fromIntegral rw2
+  let rw = fromIntegral rw2
       rh = fromIntegral rh2
 
       maxNameWidth = maximum nameWidths
@@ -129,18 +133,7 @@ draw s rw2 rh2 = do
       ox = 0
       oy = 0
 
-  translate ox oy
   scale sx sy
-
-  --nameWidths <- mapM (width . Unnamed) names
-  --widths <- mapM (mapM width) objs
-  --let maxNameWidth = maximum nameWidths
-  --    widths2 = 1 : map (\ws -> maxNameWidth + sum ws) widths
-  --    sw2 = maximum widths2
-  --scale (0.9 * rw / (sw2 * sx)) (0.9 * rw / (sw2 * sx))
-  --liftIO $ putStrLn $ show rw2
-  --liftIO $ putStrLn $ show $ sw2 * sx
-  --liftIO $ putStrLn "--"
 
   let rpos = scanl (\a b -> a + b + 30) 30 pos
   result <- mapM (drawEntry s maxNameWidth) (zip3 objs rpos names)
@@ -270,7 +263,10 @@ drawBox s o@(Named name content) = do
 
 pangoLayout :: String -> Render (PangoLayout, FontMetrics)
 pangoLayout text = do
-  layout <- createLayout text
+  --layout <- createLayout text
+  Just layout'' <- liftIO $ readIORef layout'
+  layout <- liftIO $ layoutCopy layout''
+  liftIO $ layoutSetText layout text
   context <- liftIO $ layoutGetContext layout
 
   --fo <- liftIO $ cairoContextGetFontOptions context
@@ -293,12 +289,28 @@ pangoLayout text = do
   -- alternative font when the selected one is not available
   font <- liftIO $ fontDescriptionFromString fontName
   liftIO $ fontDescriptionSetSize font fontSize
-  liftIO $ layoutSetFontDescription layout (Just font)
+  --liftIO $ layoutSetFontDescription layout (Just font)
 
   language <- liftIO $ contextGetLanguage context
   metrics <- liftIO $ contextGetMetrics context font language
 
   return (layout, metrics)
+
+pangoEmptyLayout = do
+  layout <- createLayout ""
+  context <- liftIO $ layoutGetContext layout
+
+  font <- liftIO $ fontDescriptionFromString fontName
+  liftIO $ fontDescriptionSetSize font fontSize
+  liftIO $ layoutSetFontDescription layout (Just font)
+
+  language <- liftIO $ contextGetLanguage context
+  metrics <- liftIO $ contextGetMetrics context font language
+
+  return layout
+
+  --font <- fontDescriptionFromString fontName
+  --cairoCreateContext Nothing
 
 drawFunctionLink :: State -> VisObject -> String -> RGB -> RGB -> Render [(String, Rectangle)]
 drawFunctionLink s o target color1 color2 = do
