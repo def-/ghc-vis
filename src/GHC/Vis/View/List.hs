@@ -296,16 +296,14 @@ pangoLayout text = do
 
   return (layout, metrics)
 
+pangoEmptyLayout :: Render PangoLayout
 pangoEmptyLayout = do
   layout <- createLayout ""
-  context <- liftIO $ layoutGetContext layout
 
-  font <- liftIO $ fontDescriptionFromString fontName
-  liftIO $ fontDescriptionSetSize font fontSize
-  liftIO $ layoutSetFontDescription layout (Just font)
-
-  language <- liftIO $ contextGetLanguage context
-  metrics <- liftIO $ contextGetMetrics context font language
+  liftIO $ do
+    font <- fontDescriptionFromString fontName
+    fontDescriptionSetSize font fontSize
+    layoutSetFontDescription layout (Just font)
 
   return layout
 

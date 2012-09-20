@@ -266,6 +266,7 @@ parseInternal _ (ConsClosure _ [] [dataArg] _pkg modl name) =
                  ] -> name ++ " " ++ show ((fromIntegral :: Word -> Int) dataArg)
 
     ("GHC.Types", "C#") -> show . chr $ fromIntegral dataArg
+    --("GHC.Types", "C#") -> '\'' : (chr $ fromIntegral dataArg) : "'"
 
     ("GHC.Types", "D#") -> printf "D# %0.5f" (unsafeCoerce dataArg :: Double)
     ("GHC.Types", "F#") -> printf "F# %0.5f" (unsafeCoerce dataArg :: Double)
