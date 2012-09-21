@@ -271,7 +271,7 @@ parseInternal _ (ConsClosure _ [] [dataArg] _pkg modl name) =
     ("GHC.Types", "D#") -> printf "D# %0.5f" (unsafeCoerce dataArg :: Double)
     ("GHC.Types", "F#") -> printf "F# %0.5f" (unsafeCoerce dataArg :: Double)
 
-    (_,name') -> printf "%s %d" name' dataArg
+    _ -> printf "%s %d" (infixFix name) dataArg
   ]
 
 -- Empty ByteStrings point to a nullForeignPtr, evaluating it leads to an
@@ -297,7 +297,7 @@ parseInternal _ (ConsClosure _ bPtrs dArgs _ _ name)
   = do cPtrs <- mapM (liftM mbParens . contParse) bPtrs
        let tPtrs = intercalate [Unnamed " "] cPtrs
        let sPtrs = if null tPtrs then [Unnamed ""] else Unnamed " " : tPtrs
-       return $ Unnamed (unwords $ name : map show dArgs) : sPtrs
+       return $ Unnamed (unwords $ (infixFix name) : map show dArgs) : sPtrs
 
 parseInternal _ (ArrWordsClosure _ _ arrWords)
   = return $ intercalate [Unnamed ","] (map (\x -> [Unnamed (printf "0x%x" x)]) arrWords)
@@ -327,7 +327,7 @@ parseInternal b (ThunkClosure _ bPtrs args) = do
   let tPtrs = intercalate [Unnamed ","] cPtrs
       sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "(" : tPtrs ++ [Unnamed ")"]
       sArgs = Unnamed $ if null args then "" else show args
-  return $ Thunk name : sPtrs ++ [sArgs]
+  return $ Thunk (infixFix name) : sPtrs ++ [sArgs]
 
 parseInternal b (FunClosure _ bPtrs args) = do
   name <- getSetName b
@@ -335,7 +335,7 @@ parseInternal b (FunClosure _ bPtrs args) = do
   let tPtrs = intercalate [Unnamed ","] cPtrs
       sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "(" : tPtrs ++ [Unnamed ")"]
       sArgs = Unnamed $ if null args then "" else show args
-  return $ Function name : sPtrs ++ [sArgs]
+  return $ Function (infixFix name) : sPtrs ++ [sArgs]
 
 -- bPtrs here can currently point to Nothing, because else we might get infinite heaps
 parseInternal _ (MutArrClosure _ _ _ bPtrs)
@@ -374,7 +374,7 @@ parseInternal b (APClosure _ _ _ fun pl) = do
   pPtrs <- mapM contParse $ reverse pl
   let tPtrs = intercalate [Unnamed ","] pPtrs
       sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "[" : tPtrs ++ [Unnamed "]"]
-  return $ Thunk name : fPtr ++ sPtrs
+  return $ Thunk (infixFix name) : fPtr ++ sPtrs
 
 parseInternal b (PAPClosure _ _ _ fun pl) = do
   name <- getSetName b
@@ -382,7 +382,15 @@ parseInternal b (PAPClosure _ _ _ fun pl) = do
   pPtrs <- mapM contParse $ reverse pl
   let tPtrs = intercalate [Unnamed ","] pPtrs
       sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "[" : tPtrs ++ [Unnamed "]"]
-  return $ Function name : fPtr ++ sPtrs
+  return $ Function (infixFix name) : fPtr ++ sPtrs
+
+parseInternal b (APStackClosure _ fun pl) = do
+  name <- getSetName b
+  fPtr <- contParse fun
+  pPtrs <- mapM contParse $ reverse pl
+  let tPtrs = intercalate [Unnamed ","] pPtrs
+      sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "[" : tPtrs ++ [Unnamed "]"]
+  return $ Thunk (infixFix name) : fPtr ++ sPtrs
 
 parseInternal _ (MVarClosure _ qHead qTail qValue)
    = do cHead <- liftM mbParens $ contParse qHead
@@ -473,7 +481,7 @@ showClosure (ConsClosure _ _ [dataArg] _ modl name) =
     -- let b = array ((1,1),(3,2)) [((1,1),42),((1,2),23),((2,1),999),((2,2),1000),((3,1),1001),((3,2),1002)]
     -- b
     -- :view b
-    (_,name') -> printf "%s %d" name' dataArg
+    _ -> printf "%s %d" name dataArg
 
 showClosure (ConsClosure (StgInfoTable 1 3 _ 0) _ [_,0,0] _ "Data.ByteString.Internal" "PS")
   = "ByteString 0 0"
@@ -507,6 +515,9 @@ showClosure APClosure{}
 showClosure PAPClosure{}
   = "PAP"
 
+showClosure APStackClosure{}
+  = "APStack"
+
 showClosure BCOClosure{}
   = "BCO"
 
@@ -535,3 +546,21 @@ showClosure (UnsupportedClosure (StgInfoTable _ _ cTipe _))
   = show cTipe
 
 --showClosure c = "Missing pattern for " ++ show c
+
+-- | Make infix names prefix
+infixFix :: String -> String
+infixFix xs
+  | isInfix xs = '(' : xs ++ ")"
+  | otherwise  = xs
+
+-- | Determine whether a name is an infix name, based on
+-- http://www.haskell.org/onlinereport/haskell2010/haskellch2.html
+isInfix :: String -> Bool
+isInfix []            = False
+isInfix ('[':_)       = False
+isInfix (x:_)
+  | elem x ascSymbols = True
+  | isSymbol x        = True
+  | isPunctuation x   = True
+  | otherwise         = False
+  where ascSymbols = "!#$%&*+./<=>?@  \\^|-~:"
