@@ -15,5 +15,6 @@
 -- Keep evaluating and updating on any key pressed, quit with q
 :def asu \x -> getChar >>= \c -> case c of { 'q' -> return ""; _ -> return $ ":step " ++ x ++ "\n:update\n:asu" }
 
--- Evaluate one step every second until any key is pressed
-:def tsu \x -> (System.Timeout.timeout 1000000 getChar) >>= \c -> case c of { Just _ -> return ""; _ -> return $ ":step " ++ x ++ "\n:update\n:tsu" }
+-- :tsu t x
+-- Evaluate one step of expression x every t seconds until any key is pressed
+:def tsu \x -> (System.Timeout.timeout (round $ 1000000 * (read . head $ words x :: Double)) getChar) >>= \c -> case c of { Just _ -> return ""; _ -> return $ ":step " ++ (unwords . tail $ words x) ++ "\n:update\n:tsu " ++ (head $ words x) }
