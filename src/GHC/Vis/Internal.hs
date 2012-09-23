@@ -558,6 +558,7 @@ infixFix xs
 isInfix :: String -> Bool
 isInfix []            = False
 isInfix ('[':_)       = False
+isInfix ('(':_)       = False
 isInfix (x:_)
   | elem x ascSymbols = True
   | isSymbol x        = True
