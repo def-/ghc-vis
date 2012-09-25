@@ -119,7 +119,7 @@ draw s rw2 rh2 = do
   pos <- mapM height objs
   widths <- mapM (mapM width) objs
 
-  let rw = fromIntegral rw2
+  let rw = 0.98 * fromIntegral rw2
       rh = fromIntegral rh2
 
       maxNameWidth = maximum nameWidths
@@ -264,7 +264,13 @@ drawBox s o@(Named name content) = do
 pangoLayout :: String -> Render (PangoLayout, FontMetrics)
 pangoLayout text = do
   --layout <- createLayout text
-  Just layout'' <- liftIO $ readIORef layout'
+  mbLayout <- liftIO $ readIORef layout'
+  layout'' <- case mbLayout of
+                Just layout''' -> return layout'''
+                Nothing -> do layout''' <- pangoEmptyLayout
+                              liftIO $ writeIORef layout' $ Just layout'''
+                              return layout'''
+
   layout <- liftIO $ layoutCopy layout''
   liftIO $ layoutSetText layout text
   context <- liftIO $ layoutGetContext layout

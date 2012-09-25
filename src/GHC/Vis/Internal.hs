@@ -37,6 +37,11 @@ import Control.Monad.Trans.Maybe
 
 import System.IO.Unsafe
 
+-- | Maximum depth which walkHeap recurses to. Prevents users from evaluating
+--   data structures which are too big and would take very long to visualize.
+maxHeapWalkDepth :: Int
+maxHeapWalkDepth = 100
+
 -- | Walk the heap for a list of objects to be visualized and their
 --   corresponding names.
 parseBoxes :: [(Box, String)] -> IO [[VisObject]]
@@ -136,15 +141,20 @@ walkHeapGeneral topF p2fF bs = foldM (topNodes topF) [dummy] bs >>= \s -> foldM 
         startWalk p2f l (b,_) = do -- Ignores that the top nodes are already in the heap map
           c' <- getBoxedClosureData b
           p  <- p2f c'
-          foldM (step p2f) l p
-        step p2f l b = case lookup b l of
+          foldM (step maxHeapWalkDepth p2f) l p
+        step depth p2f l b = case lookup b l of
           Just _  -> return l
           Nothing -> do
             c' <- getBoxedClosureData b
             p  <- p2f c'
-            foldM (step p2f) (insert (b, (Nothing, c')) l) p
+            if (depth == 0 && not (null p))
+            then do
+              putStrLn "Warning: Maximum data structure depth reached, output is truncated"
+              return $ insert (b, (Nothing, maxDepthClosure)) l
+            else foldM (step (depth - 1) p2f) (insert (b, (Nothing, c')) l) p
         dummy = (asBox (1 :: Integer),
-          (Nothing, ConsClosure (StgInfoTable 0 0 CONSTR_0_1 0) (map fst bs) [] "" "" ""))
+          (Nothing, ConsClosure (StgInfoTable 0 0 CONSTR 0) (map fst bs) [] "" "" ""))
+        maxDepthClosure = ConsClosure (StgInfoTable 0 0 CONSTR 0) [] [] "" "" "..."
 
 -- We're not inspecting the BCOs and instead later looks which of its recursive
 -- children are still in the heap. Only those should be visualized.
