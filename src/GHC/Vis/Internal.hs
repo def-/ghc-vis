@@ -9,8 +9,6 @@
  -}
 module GHC.Vis.Internal (
   walkHeap,
-  walkHeapSimply,
-  walkHeapWithBCO,
   parseBoxes,
   parseBoxesHeap,
   pointersToFollow2,
@@ -126,7 +124,7 @@ insertObjects _ _ = error "unexpected arguments"
 walkHeap :: [(Box, String)] -> IO HeapMap
 walkHeap = walkHeapGeneral Just pointersToFollow
 
--- walkHeap, but without Top level names
+-- | walkHeap, but without Top level names
 walkHeapSimply :: [(Box, String)] -> IO HeapMap
 walkHeapSimply = walkHeapGeneral (const Nothing) pointersToFollow
 
@@ -147,7 +145,7 @@ walkHeapGeneral topF p2fF bs = foldM (topNodes topF) [dummy] bs >>= \s -> foldM 
           Nothing -> do
             c' <- getBoxedClosureData b
             p  <- p2f c'
-            if (depth == 0 && not (null p))
+            if depth == 0 && not (null p)
             then do
               putStrLn "Warning: Maximum data structure depth reached, output is truncated"
               return $ insert (b, (Nothing, maxDepthClosure)) l
@@ -307,7 +305,7 @@ parseInternal _ (ConsClosure _ bPtrs dArgs _ _ name)
   = do cPtrs <- mapM (liftM mbParens . contParse) bPtrs
        let tPtrs = intercalate [Unnamed " "] cPtrs
        let sPtrs = if null tPtrs then [Unnamed ""] else Unnamed " " : tPtrs
-       return $ Unnamed (unwords $ (infixFix name) : map show dArgs) : sPtrs
+       return $ Unnamed (unwords $ infixFix name : map show dArgs) : sPtrs
 
 parseInternal _ (ArrWordsClosure _ _ arrWords)
   = return $ intercalate [Unnamed ","] (map (\x -> [Unnamed (printf "0x%x" x)]) arrWords)
@@ -566,12 +564,12 @@ infixFix xs
 -- | Determine whether a name is an infix name, based on
 -- http://www.haskell.org/onlinereport/haskell2010/haskellch2.html
 isInfix :: String -> Bool
-isInfix []            = False
-isInfix ('[':_)       = False
-isInfix ('(':_)       = False
+isInfix []              = False
+isInfix ('[':_)         = False
+isInfix ('(':_)         = False
 isInfix (x:_)
-  | elem x ascSymbols = True
-  | isSymbol x        = True
-  | isPunctuation x   = True
-  | otherwise         = False
+  | x `elem` ascSymbols = True
+  | isSymbol x          = True
+  | isPunctuation x     = True
+  | otherwise           = False
   where ascSymbols = "!#$%&*+./<=>?@  \\^|-~:"

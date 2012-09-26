@@ -65,7 +65,6 @@ type HeapEntry =
   , Closure
   )
 -- | A map of heap objects.
---
 --   We're using a slow, eq-based list instead of a proper map because
 --   StableNames' hash values aren't stable enough
 type HeapMap   = [(Box, HeapEntry)]
@@ -90,10 +89,10 @@ data VisObject = Unnamed String
                deriving Eq
 
 instance Show VisObject where
-  show (Unnamed x) = x
+  show (Unnamed x)  = x
   show (Named x ys) = x ++ "=(" ++ show ys ++ ")"
-  show (Link x) = x
-  show (Thunk x) = x
+  show (Link x)     = x
+  show (Thunk x)    = x
   show (Function x) = x
 
   showList = foldr ((.) . showString . show) (showString "")
