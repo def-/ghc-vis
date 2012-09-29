@@ -1,4 +1,5 @@
+- Zooming
 - return $ MVarClosure itbl (ptrs !! 0) (ptrs !! 1) (ptrs !! 2)
   in HeapView sometimes fails at (ptrs !! 0) (primes example with byte-code)
 - Sometimes random hangs in ghc-vis?
-- Check if pdf, png, svg, ps support in cairo activated at all
+- Check if pdf, png, svg, ps support in cairo activated at all, seems to be weird
