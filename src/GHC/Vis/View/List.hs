@@ -119,6 +119,8 @@ draw s rw2 rh2 = do
   pos <- mapM height objs
   widths <- mapM (mapM width) objs
 
+  vS <- liftIO $ readIORef visState
+
   let rw = 0.98 * fromIntegral rw2
       rh = fromIntegral rh2
 
@@ -128,11 +130,10 @@ draw s rw2 rh2 = do
       sw = maximum widths2
       sh = sum (map (+ 30) pos) - 15
 
-      sx = min (rw / sw) (rh / sh)
-      sy = sx
-      ox = 0
-      oy = 0
+      (sx,sy) = (zoomRatio vS * min (rw / sw) (rh / sh), sx)
+      (ox,oy) = position vS
 
+  translate ox oy
   scale sx sy
 
   let rpos = scanl (\a b -> a + b + 30) 30 pos

@@ -92,6 +92,12 @@ backgroundColor = Color 0xffff 0xffff 0xffff
 defaultSize :: (Int, Int)
 defaultSize = (640, 480)
 
+zoomIncrement :: Double
+zoomIncrement = 1.25
+
+positionIncrement :: Double
+positionIncrement = 100
+
 signalTimeout :: Int
 signalTimeout = 1000000
 
@@ -168,13 +174,109 @@ visMainThread = do
     return True
 
   onMotionNotify canvas False $ \e -> do
+    state <- readIORef visState
     modifyIORef visState (\s -> s {mousePos = (E.eventX e, E.eventY e)})
-    runCorrect move >>= \f -> f canvas
+
+    if dragging state
+    then do
+      let (oldX, oldY) = mousePos state
+          (deltaX, deltaY) = (E.eventX e - oldX, E.eventY e - oldY)
+          (oldPosX, oldPosY) = position state
+      modifyIORef visState (\s -> s {position = (oldPosX + deltaX, oldPosY + deltaY)})
+      widgetQueueDraw canvas
+    else
+      runCorrect move >>= \f -> f canvas
+
     return True
 
   onButtonPress canvas $ \e -> do
+    when (E.eventButton e == LeftButton && E.eventClick e == SingleClick) $ do
+      modifyIORef visState (\s -> s {dragging = True})
+
+    when (E.eventButton e == MiddleButton && E.eventClick e == SingleClick) $ do
+      modifyIORef visState (\s -> s {zoomRatio = 1, position = (0, 0)})
+      widgetQueueDraw canvas
+
+    return True
+
+  onButtonRelease canvas $ \e -> do
+    putStrLn $ show $ E.eventButton e
+
     cf <- runCorrect click
-    when (E.eventButton e == LeftButton && E.eventClick e == SingleClick) cf
+    when (E.eventButton e == LeftButton) $ do
+      modifyIORef visState (\s -> s {dragging = False})
+      cf
+
+    return True
+
+  onScroll canvas $ \e -> do
+    state <- readIORef visState
+
+    -- rect = self.get_allocation()
+    -- x, y = pos
+    -- x -= 0.5*rect.width
+    -- y -= 0.5*rect.height
+    -- self.x += x / self.zoom_ratio - x / zoom_ratio
+    -- self.y += y / self.zoom_ratio - y / zoom_ratio
+
+    -- TODO: Mouse must stay at same spot
+    E.Rectangle _ _ rw rh <- widgetGetAllocation canvas
+
+    let (x, y) = mousePos state
+        (oldPosX, oldPosY) = position state
+
+    when (E.eventDirection e == ScrollUp) $
+      modifyIORef visState (\s ->
+        let newZoomRatio = zoomRatio s * zoomIncrement
+            (newX, newY) = (oldPosX + x * zoomRatio s - x * newZoomRatio, oldPosY + y * zoomRatio s - y * newZoomRatio)
+        in s {zoomRatio = newZoomRatio, position = (newX, newY)})
+
+    when (E.eventDirection e == ScrollDown) $
+      modifyIORef visState (\s ->
+        let newZoomRatio = zoomRatio s / zoomIncrement
+            (newX, newY) = (oldPosX + x * zoomRatio s - x * newZoomRatio, oldPosY + y * zoomRatio s - y * newZoomRatio)
+        in s {zoomRatio = newZoomRatio, position = (newX, newY)})
+
+    widgetQueueDraw canvas
+    return True
+
+  onKeyPress window $ \e -> do
+    putStrLn $ E.eventKeyName e
+
+    when (E.eventKeyName e `elem` ["plus", "Page_Up", "Add"]) $
+      modifyIORef visState (\s -> s {zoomRatio = zoomRatio s * zoomIncrement})
+
+    when (E.eventKeyName e `elem` ["minus", "Page_Down", "Subtract"]) $
+      modifyIORef visState (\s -> s {zoomRatio = zoomRatio s / zoomIncrement})
+
+    when (E.eventKeyName e `elem` ["0", "Equal"]) $
+      modifyIORef visState (\s -> s {zoomRatio = 1, position = (0, 0)})
+
+    when (E.eventKeyName e `elem` ["Left", "h", "a"]) $
+      modifyIORef visState (\s ->
+        let (x,y) = position s
+            newX  = x + positionIncrement * zoomRatio s
+        in s {position = (newX, y)})
+
+    when (E.eventKeyName e `elem` ["Right", "l", "d"]) $
+      modifyIORef visState (\s ->
+        let (x,y) = position s
+            newX  = x - positionIncrement * zoomRatio s
+        in s {position = (newX, y)})
+
+    when (E.eventKeyName e `elem` ["Up", "k", "w"]) $
+      modifyIORef visState (\s ->
+        let (x,y) = position s
+            newY  = y + positionIncrement * zoomRatio s
+        in s {position = (x, newY)})
+
+    when (E.eventKeyName e `elem` ["Down", "j", "s"]) $
+      modifyIORef visState (\s ->
+        let (x,y) = position s
+            newY  = y - positionIncrement * zoomRatio s
+        in s {position = (x, newY)})
+
+    widgetQueueDraw canvas
     return True
 
   widgetShowAll window
@@ -235,7 +337,7 @@ react canvas window = do
 
 #ifdef GRAPH_VIEW
   where doSwitch = isGraphvizInstalled >>= \gvi -> if gvi
-          then modifyIORef visState (\s -> s {T.view = succN (T.view s)})
+          then modifyIORef visState (\s -> s {T.view = succN (T.view s), zoomRatio = 1, position = (0, 0)})
           else putStrLn "Cannot switch view: Graphviz not installed"
 
         succN GraphView = ListView

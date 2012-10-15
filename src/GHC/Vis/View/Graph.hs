@@ -73,6 +73,8 @@ export drawFn file = do
 
 draw :: State -> Int -> Int -> Render [(Object Int, Rectangle)]
 draw s rw2 rh2 = do
+  vS <- liftIO $ readIORef visState
+
   -- Line widths don't count to size, let's add a bit
   let rw = 0.97 * fromIntegral rw2
       rh = 0.97 * fromIntegral rh2
@@ -81,10 +83,10 @@ draw s rw2 rh2 = do
       size@(_,_,sw,sh) = totalSize s
 
   -- Proportional scaling
-      sx = min (rw / sw) (rh / sh)
-      sy = sx
-      ox = 0.5 * fromIntegral rw2
-      oy = 0.5 * fromIntegral rh2
+      (sx,sy) = (zoomRatio vS * min (rw / sw) (rh / sh), sx)
+      (ox1,oy1) = (0.5 * fromIntegral rw2, 0.5 * fromIntegral rh2)
+      (ox2,oy2) = position vS
+      (ox,oy) = (ox1 + ox2, oy1 + oy2)
 
   translate ox oy
   scale sx sy

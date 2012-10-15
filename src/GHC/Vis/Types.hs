@@ -55,8 +55,11 @@ data ViewType = ListView
 
 -- | The global state used for the visualizations.
 data State = State
-  { mousePos :: Point -- ^ Current position of the mouse, updated with every movement
-  , view     :: ViewType -- ^ What kind of visualization is currently running
+  { mousePos  :: Point    -- ^ Current position of the mouse, updated with every movement
+  , view      :: ViewType -- ^ What kind of visualization is currently running
+  , zoomRatio :: Double   -- ^ How much the window is zoomed in
+  , position  :: Point    -- ^ Current position in the zoom
+  , dragging  :: Bool     -- ^ Whether the mouse is dragging
   }
 
 -- | An entry in a 'HeapMap', consisting of an identifier and a parsed GHC heap entry

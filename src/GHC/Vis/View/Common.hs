@@ -39,7 +39,7 @@ visRunning = unsafePerformIO (newMVar False)
 
 -- | Internal state of the visualization
 visState :: IORef State
-visState = unsafePerformIO $ newIORef $ State (0, 0) ListView
+visState = unsafePerformIO $ newIORef $ State (0, 0) ListView 1 (0, 0) False
 
 -- | All the visualized boxes
 visBoxes :: MVar [(Box, String)]
