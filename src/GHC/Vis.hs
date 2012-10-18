@@ -216,30 +216,15 @@ visMainThread = do
   onScroll canvas $ \e -> do
     state <- readIORef visState
 
-    -- rect = self.get_allocation()
-    -- x, y = pos
-    -- x -= 0.5*rect.width
-    -- y -= 0.5*rect.height
-    -- self.x += x / self.zoom_ratio - x / zoom_ratio
-    -- self.y += y / self.zoom_ratio - y / zoom_ratio
+    when (E.eventDirection e == ScrollUp) $ do
+      let newZoomRatio = zoomRatio state * zoomIncrement
+      newPos <- zoomImage canvas state newZoomRatio (mousePos state)
+      modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
 
-    -- TODO: Mouse must stay at same spot
-    E.Rectangle _ _ rw rh <- widgetGetAllocation canvas
-
-    let (x, y) = mousePos state
-        (oldPosX, oldPosY) = position state
-
-    when (E.eventDirection e == ScrollUp) $
-      modifyIORef visState (\s ->
-        let newZoomRatio = zoomRatio s * zoomIncrement
-            (newX, newY) = (oldPosX + x * zoomRatio s - x * newZoomRatio, oldPosY + y * zoomRatio s - y * newZoomRatio)
-        in s {zoomRatio = newZoomRatio, position = (newX, newY)})
-
-    when (E.eventDirection e == ScrollDown) $
-      modifyIORef visState (\s ->
-        let newZoomRatio = zoomRatio s / zoomIncrement
-            (newX, newY) = (oldPosX + x * zoomRatio s - x * newZoomRatio, oldPosY + y * zoomRatio s - y * newZoomRatio)
-        in s {zoomRatio = newZoomRatio, position = (newX, newY)})
+    when (E.eventDirection e == ScrollDown) $ do
+      let newZoomRatio = zoomRatio state / zoomIncrement
+      newPos <- zoomImage canvas state newZoomRatio (mousePos state)
+      modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
 
     widgetQueueDraw canvas
     return True
@@ -254,31 +239,35 @@ visMainThread = do
       modifyIORef visState (\s -> s {zoomRatio = zoomRatio s / zoomIncrement})
 
     when (E.eventKeyName e `elem` ["0", "Equal"]) $
-      modifyIORef visState (\s -> s {zoomRatio = 1, position = (0, 0)})
+      modifyIORef visState (\s -> s {zoomRatio = 1, position = (0, 0), realPos = (0,0)})
 
     when (E.eventKeyName e `elem` ["Left", "h", "a"]) $
       modifyIORef visState (\s ->
         let (x,y) = position s
             newX  = x + positionIncrement * zoomRatio s
-        in s {position = (newX, y)})
+            (rX,rY) = realPos s
+        in s {position = (newX, y), realPos = (rX + positionIncrement, rY)})
 
     when (E.eventKeyName e `elem` ["Right", "l", "d"]) $
       modifyIORef visState (\s ->
         let (x,y) = position s
             newX  = x - positionIncrement * zoomRatio s
-        in s {position = (newX, y)})
+            (rX,rY) = realPos s
+        in s {position = (newX, y), realPos = (rX - positionIncrement, rY)})
 
     when (E.eventKeyName e `elem` ["Up", "k", "w"]) $
       modifyIORef visState (\s ->
         let (x,y) = position s
             newY  = y + positionIncrement * zoomRatio s
-        in s {position = (x, newY)})
+            (rX,rY) = realPos s
+        in s {position = (x, newY), realPos = (rX, rY + positionIncrement)})
 
     when (E.eventKeyName e `elem` ["Down", "j", "s"]) $
       modifyIORef visState (\s ->
         let (x,y) = position s
             newY  = y - positionIncrement * zoomRatio s
-        in s {position = (x, newY)})
+            (rX,rY) = realPos s
+        in s {position = (x, newY), realPos = (rX, rY - positionIncrement)})
 
     widgetQueueDraw canvas
     return True
@@ -354,3 +343,27 @@ runCorrect :: (View -> f) -> IO f
 runCorrect f = do
   s <- readIORef visState
   return $ f $ views !! fromEnum (T.view s)
+
+zoomImage canvas s newZoomRatio mousePos@(x', y') = do
+  -- rect = self.get_allocation()
+  -- x, y = pos
+  -- x -= 0.5*rect.width
+  -- y -= 0.5*rect.height
+  -- self.x += x / self.zoom_ratio - x / zoom_ratio
+  -- self.y += y / self.zoom_ratio - y / zoom_ratio
+
+  -- TODO: Mouse must stay at same spot
+  E.Rectangle _ _ rw' rh' <- widgetGetAllocation canvas
+  let (rw, rh) = (fromIntegral rw', fromIntegral rh')
+  let (oldPosX, oldPosY) = position s
+
+  let i = positionIncrement
+  let (rx,ry) = realPos s
+  let (x,y) = (x'-rx,y'-ry)
+
+  putStrLn $ "position  " ++ (show $ position s)
+  putStrLn $ "zoomRatio " ++ (show $ zoomRatio s)
+  putStrLn $ "realPos   " ++ (show $ realPos s)
+
+  let newPos = (oldPosX + x * zoomRatio s - x * newZoomRatio, oldPosY + y * zoomRatio s - y * newZoomRatio)
+  return newPos
