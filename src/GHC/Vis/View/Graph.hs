@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes, ScopedTypeVariables #-}
+{-# LANGUAGE CPP, RankNTypes, ScopedTypeVariables #-}
 {- |
    Module      : GHC.Vis.View.Graph
    Copyright   : (c) Dennis Felsing
@@ -15,7 +15,9 @@ module GHC.Vis.View.Graph (
   )
   where
 
+#if __GLASGOW_HASKELL__ < 706
 import Prelude hiding (catch)
+#endif
 
 import Graphics.UI.Gtk hiding (Box, Signal, Rectangle, Object)
 import qualified Graphics.UI.Gtk as Gtk

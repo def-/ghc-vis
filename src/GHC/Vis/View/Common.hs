@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE CPP, ScopedTypeVariables #-}
 {- |
    Module      : GHC.Vis.View.Common
    Copyright   : (c) Dennis Felsing
@@ -15,7 +15,9 @@ module GHC.Vis.View.Common (
   )
   where
 
+#if __GLASGOW_HASKELL__ < 706
 import Prelude hiding (catch)
+#endif
 
 import Control.Concurrent
 import Control.DeepSeq

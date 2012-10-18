@@ -1,4 +1,4 @@
-{-# LANGUAGE MagicHash, DeriveDataTypeable, NoMonomorphismRestriction, RankNTypes #-}
+{-# LANGUAGE CPP, MagicHash, DeriveDataTypeable, NoMonomorphismRestriction, RankNTypes #-}
 
 {- |
    Module      : GHC.Vis.Internal
@@ -16,7 +16,9 @@ module GHC.Vis.Internal (
   )
   where
 
+#if __GLASGOW_HASKELL__ < 706
 import Prelude hiding (catch)
+#endif
 
 import GHC.Vis.Types
 import GHC.HeapView hiding (name, pkg, modl, fun, arrWords)

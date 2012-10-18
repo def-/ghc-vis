@@ -44,7 +44,11 @@ module GHC.Vis (
   )
   where
 
+#if __GLASGOW_HASKELL__ < 706
 import Prelude hiding (catch, error)
+#else
+import Prelude hiding (error)
+#endif
 
 import Graphics.UI.Gtk hiding (Box, Signal)
 import qualified Graphics.UI.Gtk.Gdk.Events as E
