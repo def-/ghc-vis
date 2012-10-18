@@ -392,13 +392,13 @@ parseInternal b (PAPClosure _ _ _ fun pl) = do
       sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "[" : tPtrs ++ [Unnamed "]"]
   return $ Function (infixFix name) : fPtr ++ sPtrs
 
---parseInternal b (APStackClosure _ fun pl) = do
---  name <- getSetName b
---  fPtr <- contParse fun
---  pPtrs <- mapM contParse $ reverse pl
---  let tPtrs = intercalate [Unnamed ","] pPtrs
---      sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "[" : tPtrs ++ [Unnamed "]"]
---  return $ Thunk (infixFix name) : fPtr ++ sPtrs
+parseInternal b (APStackClosure _ fun pl) = do
+  name <- getSetName b
+  fPtr <- contParse fun
+  pPtrs <- mapM contParse $ reverse pl
+  let tPtrs = intercalate [Unnamed ","] pPtrs
+      sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "[" : tPtrs ++ [Unnamed "]"]
+  return $ Thunk (infixFix name) : fPtr ++ sPtrs
 
 parseInternal _ (MVarClosure _ qHead qTail qValue)
    = do cHead <- liftM mbParens $ contParse qHead
@@ -523,8 +523,8 @@ showClosure APClosure{}
 showClosure PAPClosure{}
   = "PAP"
 
---showClosure APStackClosure{}
---  = "APStack"
+showClosure APStackClosure{}
+  = "APStack"
 
 showClosure BCOClosure{}
   = "BCO"
