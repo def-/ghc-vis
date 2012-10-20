@@ -1,5 +1,5 @@
 name:               ghc-vis
-version:            0.4
+version:            0.5
 license:            BSD3
 license-file:       LICENSE
 category:           GHC, Debug, Development
@@ -20,7 +20,7 @@ description:        Visualize live data structures in GHCi. Evaluation is not
                     how it can be used with GHCi's debugger:
                     <http://felsin9.de/nnis/ghc-vis/#combined-debugger>
 
-tested-with: GHC == 7.4.1, GHC == 7.4.2
+tested-with: GHC == 7.4.1, GHC == 7.4.2, GHC == 7.6.1
 data-files: ghci
 Extra-source-files: nonghci-test.hs
 
