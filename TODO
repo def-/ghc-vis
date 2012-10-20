@@ -1,4 +1,3 @@
-- Zooming
 - return $ MVarClosure itbl (ptrs !! 0) (ptrs !! 1) (ptrs !! 2)
   in HeapView sometimes fails at (ptrs !! 0) (primes example with byte-code)
 - Sometimes random hangs in ghc-vis?
