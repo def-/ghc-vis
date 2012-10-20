@@ -7,6 +7,7 @@
 
  -}
 module GHC.Vis.Types (
+  Point,
   DrawFunction,
   Signal(..),
   View(..),

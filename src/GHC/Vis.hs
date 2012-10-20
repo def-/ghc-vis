@@ -100,7 +100,10 @@ zoomIncrement :: Double
 zoomIncrement = 1.25
 
 positionIncrement :: Double
-positionIncrement = 100
+positionIncrement = 50
+
+bigPositionIncrement :: Double
+bigPositionIncrement = 200
 
 signalTimeout :: Int
 signalTimeout = 1000000
@@ -186,7 +189,7 @@ visMainThread = do
       let (oldX, oldY) = mousePos state
           (deltaX, deltaY) = (E.eventX e - oldX, E.eventY e - oldY)
           (oldPosX, oldPosY) = position state
-      modifyIORef visState (\s -> s {wasDragged = True, position = (oldPosX + deltaX, oldPosY + deltaY)})
+      modifyIORef visState (\s -> s {position = (oldPosX + deltaX, oldPosY + deltaY)})
       widgetQueueDraw canvas
     else
       runCorrect move >>= \f -> f canvas
@@ -195,7 +198,10 @@ visMainThread = do
 
   onButtonPress canvas $ \e -> do
     when (E.eventButton e == LeftButton && E.eventClick e == SingleClick) $ do
-      modifyIORef visState (\s -> s {dragging = True, wasDragged = False})
+      runCorrect click >>= \f -> f
+
+    when (E.eventButton e == RightButton && E.eventClick e == SingleClick) $ do
+      modifyIORef visState (\s -> s {dragging = True})
 
     when (E.eventButton e == MiddleButton && E.eventClick e == SingleClick) $ do
       modifyIORef visState (\s -> s {zoomRatio = 1, position = (0, 0)})
@@ -204,14 +210,8 @@ visMainThread = do
     return True
 
   onButtonRelease canvas $ \e -> do
-    putStrLn $ show $ E.eventButton e
-
-    when (E.eventButton e == LeftButton) $ do
-      state <- readIORef visState
-      cf <- runCorrect click
-
-      when (not $ wasDragged state) $ cf
-      modifyIORef visState (\s -> s {dragging = False, wasDragged = False})
+    when (E.eventButton e == RightButton) $
+      modifyIORef visState (\s -> s {dragging = False})
 
     return True
 
@@ -236,44 +236,80 @@ visMainThread = do
 
     state <- readIORef visState
 
-    when (E.eventKeyName e `elem` ["plus", "Page_Up", "Add"]) $ do
+    when (E.eventKeyName e `elem` ["plus", "Page_Up", "KP_Add"]) $ do
       let newZoomRatio = zoomRatio state * zoomIncrement
           (oldX, oldY) = position state
           newPos = (oldX*zoomIncrement, oldY*zoomIncrement)
       modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
 
-    when (E.eventKeyName e `elem` ["minus", "Page_Down", "Subtract"]) $ do
+    when (E.eventKeyName e `elem` ["minus", "Page_Down", "KP_Subtract"]) $ do
       let newZoomRatio = zoomRatio state / zoomIncrement
           (oldX, oldY) = position state
           newPos = (oldX/zoomIncrement, oldY/zoomIncrement)
       modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
 
-    when (E.eventKeyName e `elem` ["0", "Equal"]) $
+    when (E.eventKeyName e `elem` ["0", "equal"]) $
       modifyIORef visState (\s -> s {zoomRatio = 1, position = (0, 0)})
 
     when (E.eventKeyName e `elem` ["Left", "h", "a"]) $
       modifyIORef visState (\s ->
         let (x,y) = position s
-            newX  = x + positionIncrement * zoomRatio s
-        in s {position = (newX, y)}
+            newX  = x + positionIncrement
+        in s {position = (newX, y)})
 
     when (E.eventKeyName e `elem` ["Right", "l", "d"]) $
       modifyIORef visState (\s ->
         let (x,y) = position s
-            newX  = x - positionIncrement * zoomRatio s
-        in s {position = (newX, y)}
+            newX  = x - positionIncrement
+        in s {position = (newX, y)})
 
     when (E.eventKeyName e `elem` ["Up", "k", "w"]) $
       modifyIORef visState (\s ->
         let (x,y) = position s
-            newY  = y + positionIncrement * zoomRatio s
-        in s {position = (x, newY)}
+            newY  = y + positionIncrement
+        in s {position = (x, newY)})
 
     when (E.eventKeyName e `elem` ["Down", "j", "s"]) $
       modifyIORef visState (\s ->
         let (x,y) = position s
-            newY  = y - positionIncrement * zoomRatio s
-        in s {position = (x, newY)}
+            newY  = y - positionIncrement
+        in s {position = (x, newY)})
+
+    when (E.eventKeyName e `elem` ["H", "A"]) $
+      modifyIORef visState (\s ->
+        let (x,y) = position s
+            newX  = x + bigPositionIncrement
+        in s {position = (newX, y)})
+
+    when (E.eventKeyName e `elem` ["L", "D"]) $
+      modifyIORef visState (\s ->
+        let (x,y) = position s
+            newX  = x - bigPositionIncrement
+        in s {position = (newX, y)})
+
+    when (E.eventKeyName e `elem` ["K", "W"]) $
+      modifyIORef visState (\s ->
+        let (x,y) = position s
+            newY  = y + bigPositionIncrement
+        in s {position = (x, newY)})
+
+    when (E.eventKeyName e `elem` ["J", "S"]) $
+      modifyIORef visState (\s ->
+        let (x,y) = position s
+            newY  = y - bigPositionIncrement
+        in s {position = (x, newY)})
+
+    when (E.eventKeyName e `elem` ["space", "Return", "KP_Enter"]) $
+      runCorrect click >>= \f -> f
+
+    when (E.eventKeyName e `elem` ["v"]) $
+      put SwitchSignal
+
+    when (E.eventKeyName e `elem` ["c"]) $
+      put ClearSignal
+
+    when (E.eventKeyName e `elem` ["u"]) $
+      put UpdateSignal
 
     widgetQueueDraw canvas
     return True
@@ -350,21 +386,24 @@ runCorrect f = do
   s <- readIORef visState
   return $ f $ views !! fromEnum (T.view s)
 
-zoomImage canvas s newZoomRatio mousePos@(x', y') = do
-  -- rect = self.get_allocation()
-  -- x, y = pos
-  -- x -= 0.5*rect.width
-  -- y -= 0.5*rect.height
-  -- self.x += x / self.zoom_ratio - x / zoom_ratio
-  -- self.y += y / self.zoom_ratio - y / zoom_ratio
-
+zoomImage :: WidgetClass w1 => w1 -> State -> Double -> T.Point -> IO T.Point
+zoomImage _canvas s newZoomRatio _mousePos@(_x', _y') = do
   -- TODO: Mouse must stay at same spot
-  E.Rectangle _ _ rw' rh' <- widgetGetAllocation canvas
-  let (rw, rh) = (fromIntegral rw', fromIntegral rh')
+
+  --E.Rectangle _ _ rw' rh' <- widgetGetAllocation canvas
+  --let (rw, rh) = (fromIntegral rw', fromIntegral rh')
+  --let (x,y) = (x' - rw / 2, y' - rh / 2)
+
   let (oldPosX, oldPosY) = position s
+      zoom = newZoomRatio / zoomRatio s
+      newPos = (oldPosX * zoom, oldPosY * zoom)
 
-  let i = positionIncrement
-  let (x,y) = (x'-rx,y'-ry)
-
-  let newPos = (oldPosX + x * zoomRatio s - x * newZoomRatio, oldPosY + y * zoomRatio s - y * newZoomRatio)
   return newPos
+
+-- Zoom into mouse, but only working from (0,0)
+-- newPos = ( oldPosX + x * zoomRatio s - x * newZoomRatio
+--          , oldPosY + y * zoomRatio s - y * newZoomRatio )
+
+-- Zoom into center:
+-- newPos = ( oldPosX * zoomIncrement
+--          , oldPosY * zoomIncrement )
