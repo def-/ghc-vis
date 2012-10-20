@@ -186,7 +186,7 @@ visMainThread = do
       let (oldX, oldY) = mousePos state
           (deltaX, deltaY) = (E.eventX e - oldX, E.eventY e - oldY)
           (oldPosX, oldPosY) = position state
-      modifyIORef visState (\s -> s {position = (oldPosX + deltaX, oldPosY + deltaY)})
+      modifyIORef visState (\s -> s {wasDragged = True, position = (oldPosX + deltaX, oldPosY + deltaY)})
       widgetQueueDraw canvas
     else
       runCorrect move >>= \f -> f canvas
@@ -195,7 +195,7 @@ visMainThread = do
 
   onButtonPress canvas $ \e -> do
     when (E.eventButton e == LeftButton && E.eventClick e == SingleClick) $ do
-      modifyIORef visState (\s -> s {dragging = True})
+      modifyIORef visState (\s -> s {dragging = True, wasDragged = False})
 
     when (E.eventButton e == MiddleButton && E.eventClick e == SingleClick) $ do
       modifyIORef visState (\s -> s {zoomRatio = 1, position = (0, 0)})
@@ -206,10 +206,12 @@ visMainThread = do
   onButtonRelease canvas $ \e -> do
     putStrLn $ show $ E.eventButton e
 
-    cf <- runCorrect click
     when (E.eventButton e == LeftButton) $ do
-      modifyIORef visState (\s -> s {dragging = False})
-      cf
+      state <- readIORef visState
+      cf <- runCorrect click
+
+      when (not $ wasDragged state) $ cf
+      modifyIORef visState (\s -> s {dragging = False, wasDragged = False})
 
     return True
 
