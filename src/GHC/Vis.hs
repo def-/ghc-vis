@@ -197,10 +197,10 @@ visMainThread = do
     return True
 
   onButtonPress canvas $ \e -> do
-    when (E.eventButton e == LeftButton && E.eventClick e == SingleClick) $ do
-      runCorrect click >>= \f -> f
+    when (E.eventButton e == LeftButton && E.eventClick e == SingleClick) $
+      join $ runCorrect click
 
-    when (E.eventButton e == RightButton && E.eventClick e == SingleClick) $ do
+    when (E.eventButton e == RightButton && E.eventClick e == SingleClick) $
       modifyIORef visState (\s -> s {dragging = True})
 
     when (E.eventButton e == MiddleButton && E.eventClick e == SingleClick) $ do
@@ -232,7 +232,7 @@ visMainThread = do
     return True
 
   onKeyPress window $ \e -> do
-    putStrLn $ E.eventKeyName e
+    --putStrLn $ E.eventKeyName e
 
     state <- readIORef visState
 
@@ -300,7 +300,7 @@ visMainThread = do
         in s {position = (x, newY)})
 
     when (E.eventKeyName e `elem` ["space", "Return", "KP_Enter"]) $
-      runCorrect click >>= \f -> f
+      join $ runCorrect click
 
     when (E.eventKeyName e `elem` ["v"]) $
       put SwitchSignal
