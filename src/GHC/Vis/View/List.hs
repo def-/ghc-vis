@@ -131,13 +131,14 @@ draw s rw2 rh2 = do
       sh = sum (map (+ 30) pos) - 15
 
       (sx,sy) = (zoomRatio vS * min (rw / sw) (rh / sh), sx)
-      (ox,oy) = position vS
+      (ox2,oy2) = position vS
+      (ox,oy) = (ox2 - (zoomRatio vS - 1) * rw / 2, oy2 - (zoomRatio vS - 1) * rh / 2)
 
   translate ox oy
   scale sx sy
 
   let rpos = scanl (\a b -> a + b + 30) 30 pos
-  result <- mapM (drawEntry s maxNameWidth) (zip3 objs rpos names)
+  result <- mapM (drawEntry s maxNameWidth 0) (zip3 objs rpos names)
 
   return $ map (\(o, (x,y,w,h)) -> (o, (x*sx+ox,y*sy+oy,w*sx,h*sy))) $ concat result
 
@@ -187,10 +188,10 @@ updateObjects boxes = do
   let objs = zipWith (\(x,y) z -> (x,y,z)) boxes os
   modifyIORef state (\s -> s {objects = objs, hover = Nothing})
 
-drawEntry :: State -> Double -> ([VisObject], Double, String) -> Render [(String, Rectangle)]
-drawEntry s nameWidth (obj, pos, name) = do
+drawEntry :: State -> Double -> Double -> ([VisObject], Double, String) -> Render [(String, Rectangle)]
+drawEntry s nameWidth xPos (obj, pos, name) = do
   save
-  translate 0 pos
+  translate xPos pos
   moveTo 0 0
   drawBox s $ Unnamed name
   translate nameWidth 0
