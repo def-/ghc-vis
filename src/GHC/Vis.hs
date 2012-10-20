@@ -249,35 +249,31 @@ visMainThread = do
       modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
 
     when (E.eventKeyName e `elem` ["0", "Equal"]) $
-      modifyIORef visState (\s -> s {zoomRatio = 1, position = (0, 0), realPos = (0,0)})
+      modifyIORef visState (\s -> s {zoomRatio = 1, position = (0, 0)})
 
     when (E.eventKeyName e `elem` ["Left", "h", "a"]) $
       modifyIORef visState (\s ->
         let (x,y) = position s
             newX  = x + positionIncrement * zoomRatio s
-            (rX,rY) = realPos s
-        in s {position = (newX, y), realPos = (rX + positionIncrement, rY)})
+        in s {position = (newX, y)}
 
     when (E.eventKeyName e `elem` ["Right", "l", "d"]) $
       modifyIORef visState (\s ->
         let (x,y) = position s
             newX  = x - positionIncrement * zoomRatio s
-            (rX,rY) = realPos s
-        in s {position = (newX, y), realPos = (rX - positionIncrement, rY)})
+        in s {position = (newX, y)}
 
     when (E.eventKeyName e `elem` ["Up", "k", "w"]) $
       modifyIORef visState (\s ->
         let (x,y) = position s
             newY  = y + positionIncrement * zoomRatio s
-            (rX,rY) = realPos s
-        in s {position = (x, newY), realPos = (rX, rY + positionIncrement)})
+        in s {position = (x, newY)}
 
     when (E.eventKeyName e `elem` ["Down", "j", "s"]) $
       modifyIORef visState (\s ->
         let (x,y) = position s
             newY  = y - positionIncrement * zoomRatio s
-            (rX,rY) = realPos s
-        in s {position = (x, newY), realPos = (rX, rY - positionIncrement)})
+        in s {position = (x, newY)}
 
     widgetQueueDraw canvas
     return True
@@ -368,12 +364,7 @@ zoomImage canvas s newZoomRatio mousePos@(x', y') = do
   let (oldPosX, oldPosY) = position s
 
   let i = positionIncrement
-  let (rx,ry) = realPos s
   let (x,y) = (x'-rx,y'-ry)
-
-  putStrLn $ "position  " ++ (show $ position s)
-  putStrLn $ "zoomRatio " ++ (show $ zoomRatio s)
-  putStrLn $ "realPos   " ++ (show $ realPos s)
 
   let newPos = (oldPosX + x * zoomRatio s - x * newZoomRatio, oldPosY + y * zoomRatio s - y * newZoomRatio)
   return newPos
