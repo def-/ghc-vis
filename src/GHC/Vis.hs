@@ -234,11 +234,19 @@ visMainThread = do
   onKeyPress window $ \e -> do
     putStrLn $ E.eventKeyName e
 
-    when (E.eventKeyName e `elem` ["plus", "Page_Up", "Add"]) $
-      modifyIORef visState (\s -> s {zoomRatio = zoomRatio s * zoomIncrement})
+    state <- readIORef visState
 
-    when (E.eventKeyName e `elem` ["minus", "Page_Down", "Subtract"]) $
-      modifyIORef visState (\s -> s {zoomRatio = zoomRatio s / zoomIncrement})
+    when (E.eventKeyName e `elem` ["plus", "Page_Up", "Add"]) $ do
+      let newZoomRatio = zoomRatio state * zoomIncrement
+          (oldX, oldY) = position state
+          newPos = (oldX*zoomIncrement, oldY*zoomIncrement)
+      modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
+
+    when (E.eventKeyName e `elem` ["minus", "Page_Down", "Subtract"]) $ do
+      let newZoomRatio = zoomRatio state / zoomIncrement
+          (oldX, oldY) = position state
+          newPos = (oldX/zoomIncrement, oldY/zoomIncrement)
+      modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
 
     when (E.eventKeyName e `elem` ["0", "Equal"]) $
       modifyIORef visState (\s -> s {zoomRatio = 1, position = (0, 0), realPos = (0,0)})
