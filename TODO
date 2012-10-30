@@ -1,3 +1,10 @@
+- Add repository to cabal (also in xdot)
+
+- minimal view: like now
+- full view: Add Menu, close button, legend, info at start, help
+- interactively blend in and out:
+  either single cloures or in general for all closures of a specific type (pattern matching?)
+
 - return $ MVarClosure itbl (ptrs !! 0) (ptrs !! 1) (ptrs !! 2)
   in HeapView sometimes fails at (ptrs !! 0) (primes example with byte-code)
 - Sometimes random hangs in ghc-vis?
