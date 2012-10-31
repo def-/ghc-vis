@@ -54,6 +54,6 @@ Library
                      xdot >= 0.2
       Cpp-options: -DGRAPH_VIEW
 
---source-repository head
---    type:     darcs
---    location: http://
+source-repository head
+    type:     git
+    location: git://r0q.ath.cx/vis
