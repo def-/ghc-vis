@@ -6,6 +6,7 @@
 
 - minimal view: like now
 - full view: Add Menu, close button, legend, info at start, help
+  Maybe integrate GHCi with ghc-vis into a single window
 - interactively blend in and out:
   either single cloures or in general for all closures of a specific type (pattern matching?)
 
