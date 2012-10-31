@@ -28,6 +28,10 @@ flag graph
   Default: True
   Description: "Enable graph view using Graphviz"
 
+flag minimal
+  Default: False
+  Description: "Minimalistic ghc-vis: no decorations, no buttons, no legend"
+
 Library
   Exposed-modules: GHC.Vis
   Other-modules: GHC.Vis.Internal GHC.Vis.Types GHC.Vis.View.List GHC.Vis.View.Common
