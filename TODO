@@ -2,8 +2,6 @@
 
 - Graphviz, GTK still not working on 7.6.1...
 
-- Add repository to cabal (also in xdot)
-
 - minimal view: like now
 - full view: Add Menu, close button, legend, info at start, help
   Maybe integrate GHCi with ghc-vis into a single window
