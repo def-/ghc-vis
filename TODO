@@ -1,6 +1,8 @@
-- Bugreport Mac
+- List instead of Maybe for edge name, so that there can be :view a, let b = a, :view b
 
-- Graphviz, GTK still not working on 7.6.1...
+- Tests to detect when GHC changes in a way that makes ghc-vis unusable
+
+- Getting a reconstructed type as a String from GHCi would be enough?
 
 - minimal view: like now
 - full view: Add Menu, close button, legend, info at start, help
