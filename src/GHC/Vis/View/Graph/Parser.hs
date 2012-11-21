@@ -120,6 +120,7 @@ toViewableGraph cg = emap id $ nmap showClosure cg
 defaultVis :: (Graph gr) => gr String String -> DotGraph Node
 defaultVis = graphToDot nonClusteredParams
   -- Somehow (X11Color Transparency) is white, use (RGBA 0 0 0 0) instead
+  -- Ordering OutEdges is not strong enough to force edge ordering, might not look good anyway
   { globalAttributes = [GraphAttrs [BgColor [RGBA 0 0 0 0], FontName fontName, FontSize graphFontSize]]
   , fmtNode = \ (_,l) -> [toLabel l, FontName fontName, FontSize nodeFontSize]
   --, fmtNode = \ (_,l) -> [toLabel l, FontName fontName, FontSize nodeFontSize, Style [SItem Filled []], FillColor [RGBA 255 255 255 255], Color [RGBA 0 0 0 255]]
