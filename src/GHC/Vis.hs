@@ -34,7 +34,8 @@ example using ghc-vis outside of GHCi:
 >   putStrLn "End"
  -}
 module GHC.Vis (
-  visualization, -- TODO: Maybe rename to vis
+  vis,
+  fullVis,
   view,
   eval,
   switch,
@@ -50,7 +51,7 @@ import Prelude hiding (catch, error)
 import Prelude hiding (error)
 #endif
 
-import Graphics.UI.Gtk hiding (Box, Signal)
+import Graphics.UI.Gtk hiding (Box, Signal, get)
 import qualified Graphics.UI.Gtk.Gdk.Events as E
 
 import System.IO
@@ -78,6 +79,8 @@ import qualified GHC.Vis.View.Graph as Graph
 #endif
 
 import Graphics.Rendering.Cairo
+
+import Paths_ghc_vis as My
 
 views :: [View]
 views =
@@ -110,10 +113,15 @@ signalTimeout = 1000000
 
 -- | This is the main function. It's to be called from GHCi and launches a
 --   graphical window in a new thread.
-visualization :: IO ()
-visualization = do
+vis :: IO ()
+vis = do
   vr <- swapMVar visRunning True
   unless vr $ void $ forkIO visMainThread
+
+fullVis :: IO ()
+fullVis = do
+  vr <- swapMVar visRunning True
+  unless vr $ void $ forkIO fullVisMainThread
 
 -- | Add expressions with a name to the visualization window.
 view :: a -> String -> IO ()
@@ -140,9 +148,14 @@ clear = put ClearSignal
 -- | Export the current visualization view to a file, format depends on the
 --   file ending. Currently supported: svg, png, pdf, ps
 export :: String -> IO ()
-export filename = case mbDrawFn of
-  Right error -> putStrLn error
-  Left _ -> put $ ExportSignal ((\(Left x) -> x) mbDrawFn) filename
+export filename = export' filename >> return ()
+
+export' :: String -> IO (Maybe String)
+export' filename = case mbDrawFn of
+  Right error -> do putStrLn error
+                    return $ Just error
+  Left _ -> do put $ ExportSignal ((\(Left x) -> x) mbDrawFn) filename
+               return Nothing
 
   where mbDrawFn = case map toLower (reverse . take 4 . reverse $ filename) of
           ".svg"  -> Left withSVGSurface
@@ -173,6 +186,213 @@ visMainThread = do
   set window [ windowTitle := title
              , containerChild := canvas
              ]
+  (uncurry $ windowSetDefaultSize window) defaultSize
+
+  onExpose canvas $ const $ do
+    runCorrect redraw >>= \f -> f canvas
+    runCorrect move >>= \f -> f canvas
+    return True
+
+  onMotionNotify canvas False $ \e -> do
+    state <- readIORef visState
+    modifyIORef visState (\s -> s {mousePos = (E.eventX e, E.eventY e)})
+
+    if dragging state
+    then do
+      let (oldX, oldY) = mousePos state
+          (deltaX, deltaY) = (E.eventX e - oldX, E.eventY e - oldY)
+          (oldPosX, oldPosY) = position state
+      modifyIORef visState (\s -> s {position = (oldPosX + deltaX, oldPosY + deltaY)})
+      widgetQueueDraw canvas
+    else
+      runCorrect move >>= \f -> f canvas
+
+    return True
+
+  onButtonPress canvas $ \e -> do
+    when (E.eventButton e == LeftButton && E.eventClick e == SingleClick) $
+      join $ runCorrect click
+
+    when (E.eventButton e == RightButton && E.eventClick e == SingleClick) $
+      modifyIORef visState (\s -> s {dragging = True})
+
+    when (E.eventButton e == MiddleButton && E.eventClick e == SingleClick) $ do
+      modifyIORef visState (\s -> s {zoomRatio = 1, position = (0, 0)})
+      widgetQueueDraw canvas
+
+    return True
+
+  onButtonRelease canvas $ \e -> do
+    when (E.eventButton e == RightButton) $
+      modifyIORef visState (\s -> s {dragging = False})
+
+    return True
+
+  onScroll canvas $ \e -> do
+    state <- readIORef visState
+
+    when (E.eventDirection e == ScrollUp) $ do
+      let newZoomRatio = zoomRatio state * zoomIncrement
+      newPos <- zoomImage canvas state newZoomRatio (mousePos state)
+      modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
+
+    when (E.eventDirection e == ScrollDown) $ do
+      let newZoomRatio = zoomRatio state / zoomIncrement
+      newPos <- zoomImage canvas state newZoomRatio (mousePos state)
+      modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
+
+    widgetQueueDraw canvas
+    return True
+
+  onKeyPress window $ \e -> do
+    --putStrLn $ E.eventKeyName e
+
+    state <- readIORef visState
+
+    when (E.eventKeyName e `elem` ["plus", "Page_Up", "KP_Add"]) $ do
+      let newZoomRatio = zoomRatio state * zoomIncrement
+          (oldX, oldY) = position state
+          newPos = (oldX*zoomIncrement, oldY*zoomIncrement)
+      modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
+
+    when (E.eventKeyName e `elem` ["minus", "Page_Down", "KP_Subtract"]) $ do
+      let newZoomRatio = zoomRatio state / zoomIncrement
+          (oldX, oldY) = position state
+          newPos = (oldX/zoomIncrement, oldY/zoomIncrement)
+      modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
+
+    when (E.eventKeyName e `elem` ["0", "equal"]) $
+      modifyIORef visState (\s -> s {zoomRatio = 1, position = (0, 0)})
+
+    when (E.eventKeyName e `elem` ["Left", "h", "a"]) $
+      modifyIORef visState (\s ->
+        let (x,y) = position s
+            newX  = x + positionIncrement
+        in s {position = (newX, y)})
+
+    when (E.eventKeyName e `elem` ["Right", "l", "d"]) $
+      modifyIORef visState (\s ->
+        let (x,y) = position s
+            newX  = x - positionIncrement
+        in s {position = (newX, y)})
+
+    when (E.eventKeyName e `elem` ["Up", "k", "w"]) $
+      modifyIORef visState (\s ->
+        let (x,y) = position s
+            newY  = y + positionIncrement
+        in s {position = (x, newY)})
+
+    when (E.eventKeyName e `elem` ["Down", "j", "s"]) $
+      modifyIORef visState (\s ->
+        let (x,y) = position s
+            newY  = y - positionIncrement
+        in s {position = (x, newY)})
+
+    when (E.eventKeyName e `elem` ["H", "A"]) $
+      modifyIORef visState (\s ->
+        let (x,y) = position s
+            newX  = x + bigPositionIncrement
+        in s {position = (newX, y)})
+
+    when (E.eventKeyName e `elem` ["L", "D"]) $
+      modifyIORef visState (\s ->
+        let (x,y) = position s
+            newX  = x - bigPositionIncrement
+        in s {position = (newX, y)})
+
+    when (E.eventKeyName e `elem` ["K", "W"]) $
+      modifyIORef visState (\s ->
+        let (x,y) = position s
+            newY  = y + bigPositionIncrement
+        in s {position = (x, newY)})
+
+    when (E.eventKeyName e `elem` ["J", "S"]) $
+      modifyIORef visState (\s ->
+        let (x,y) = position s
+            newY  = y - bigPositionIncrement
+        in s {position = (x, newY)})
+
+    when (E.eventKeyName e `elem` ["space", "Return", "KP_Enter"]) $
+      join $ runCorrect click
+
+    when (E.eventKeyName e `elem` ["v"]) $
+      put SwitchSignal
+
+    when (E.eventKeyName e `elem` ["c"]) $
+      put ClearSignal
+
+    when (E.eventKeyName e `elem` ["u"]) $
+      put UpdateSignal
+
+    widgetQueueDraw canvas
+    return True
+
+  widgetShowAll window
+
+  reactThread <- forkIO $ react canvas window
+  --onDestroy window mainQuit -- Causes :r problems with multiple windows
+  onDestroy window (quit reactThread)
+
+  mainGUI
+  return ()
+
+myFileSave :: FileChooserDialog -> ResponseId -> IO ()
+myFileSave fcdialog response = do
+  case response of
+    ResponseOk -> do Just filename <- fileChooserGetFilename fcdialog
+                     mbError <- export' filename
+                     case mbError of
+                       Nothing -> return ()
+                       Just error -> do
+                         errorDialog <- messageDialogNew Nothing [] MessageError ButtonsOk error
+                         widgetShow errorDialog
+                         onResponse errorDialog $ const $ widgetHide errorDialog
+                         return ()
+    _ -> return ()
+  widgetHide fcdialog
+
+myNewFilter filter name dialog = do
+  filt <- fileFilterNew
+  fileFilterAddPattern filt filter
+  fileFilterSetName filt $ name ++ " (" ++ filter ++ ")"
+  fileChooserAddFilter dialog filt
+
+fullVisMainThread :: IO ()
+fullVisMainThread = do
+  initGUI
+
+  filename <- My.getDataFileName "data/main.ui"
+  builder <- builderNew
+  builderAddFromFile builder filename
+
+  let get :: forall cls . GObjectClass cls
+          => (GObject -> cls)
+          -> String
+          -> IO cls
+      get = builderGetObject builder
+
+  window <- get castToWindow "window"
+  canvas <- get castToDrawingArea "drawingarea"
+  saveDialog <- get castToFileChooserDialog "savedialog"
+  aboutDialog <- get castToAboutDialog "aboutdialog"
+
+  myNewFilter "*.pdf" "PDF" saveDialog
+  myNewFilter "*.svg" "SVG" saveDialog
+  myNewFilter "*.ps" "PostScript" saveDialog
+  myNewFilter "*.png" "PNG" saveDialog
+
+  onResponse saveDialog $ myFileSave saveDialog
+  onResponse aboutDialog $ const $ widgetHide aboutDialog
+
+  get castToMenuItem "clear"  >>= \item -> onActivateLeaf item clear
+  get castToMenuItem "switch" >>= \item -> onActivateLeaf item switch
+  get castToMenuItem "update" >>= \item -> onActivateLeaf item update
+  get castToMenuItem "export" >>= \item -> onActivateLeaf item $ widgetShow saveDialog
+  get castToMenuItem "quit"   >>= \item -> onActivateLeaf item $ widgetDestroy window
+  get castToMenuItem "about"  >>= \item -> onActivateLeaf item $ widgetShow aboutDialog
+
+  widgetModifyBg canvas StateNormal backgroundColor
+
   (uncurry $ windowSetDefaultSize window) defaultSize
 
   onExpose canvas $ const $ do

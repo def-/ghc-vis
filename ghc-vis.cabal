@@ -21,7 +21,7 @@ description:        Visualize live data structures in GHCi. Evaluation is not
                     <http://felsin9.de/nnis/ghc-vis/#combined-debugger>
 
 tested-with: GHC == 7.4.1, GHC == 7.4.2, GHC == 7.6.1
-data-files: ghci
+data-files: ghci data/main.ui
 Extra-source-files: nonghci-test.hs
 
 flag graph
@@ -34,7 +34,7 @@ flag minimal
 
 Library
   Exposed-modules: GHC.Vis
-  Other-modules: GHC.Vis.Internal GHC.Vis.Types GHC.Vis.View.List GHC.Vis.View.Common
+  Other-modules: GHC.Vis.Internal GHC.Vis.Types GHC.Vis.View.List GHC.Vis.View.Common Paths_ghc_vis
   Default-Language: Haskell2010
   Build-depends: base == 4.*,
                  mtl >= 2.0,
