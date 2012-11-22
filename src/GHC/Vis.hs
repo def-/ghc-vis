@@ -393,7 +393,7 @@ fullVisMainThread = do
 
   widgetModifyBg canvas StateNormal backgroundColor
 
-  (uncurry $ windowSetDefaultSize window) defaultSize
+  --(uncurry $ windowSetDefaultSize window) defaultSize
 
   onExpose canvas $ const $ do
     runCorrect redraw >>= \f -> f canvas

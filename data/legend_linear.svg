@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="488.88135"
+   height="254.60283"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.48.3.1 r9886"
+   sodipodi:docname="legend_linear.svg">
+  <defs
+     id="defs4" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.4"
+     inkscape:cx="145.2412"
+     inkscape:cy="71.305334"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     fit-margin-top="10"
+     fit-margin-left="10"
+     fit-margin-right="10"
+     fit-margin-bottom="10"
+     inkscape:window-width="718"
+     inkscape:window-height="884"
+     inkscape:window-x="720"
+     inkscape:window-y="14"
+     inkscape:window-maximized="0" />
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-246.47563,-63.350422)">
+    <g
+       transform="matrix(1.25,0,0,-1.25,256.47572,261.42618)"
+       inkscape:label="block"
+       id="g3012">
+      <g
+         id="g3014">
+        <path
+           id="path3016"
+           style="fill:#80ff80;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:1.60214996;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:10;stroke-opacity:1;stroke-dasharray:none"
+           d="m 0.801,43.704 0,-37.301 c 0,-2.211 1.793,-4.004 4.004,-4.004 l 42.886,0 c 2.211,0 4.004,1.793 4.004,4.004 l 0,37.301 c 0,2.215 -1.793,4.008 -4.004,4.008 l -42.886,0 c -2.211,0 -4.004,-1.793 -4.004,-4.008 z"
+           inkscape:connector-curvature="0" />
+        <path
+           id="path3018"
+           style="fill:none;stroke:#000000;stroke-width:1.60214996;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:10;stroke-opacity:1;stroke-dasharray:none"
+           d="m 0.801,25.056 50.894,0"
+           inkscape:connector-curvature="0" />
+        <text
+           id="text3020"
+           transform="matrix(1,0,0,-1,6.807475,28.835092)">
+          <tspan
+             id="tspan3022"
+             sodipodi:role="line"
+             y="0"
+             x="0 10.125589 28.582359"
+             style="font-size:16.02150154px;font-variant:normal;font-weight:normal;writing-mode:lr-tb;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;font-family:DejaVu Sans;-inkscape-font-specification:DejaVuSans">S#1</tspan>
+          <tspan
+             id="tspan3024"
+             sodipodi:role="line"
+             y="20.652918"
+             x="9.2587137 19.416346"
+             style="font-size:16.02150154px;font-variant:normal;font-weight:normal;writing-mode:lr-tb;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;font-family:DejaVu Sans;-inkscape-font-specification:DejaVuSans">b0</tspan>
+        </text>
+      </g>
+    </g>
+    <g
+       transform="matrix(1.25,0,0,-1.25,273.37009,189.72929)"
+       inkscape:label="function"
+       id="g3060">
+      <g
+         id="g3062">
+        <path
+           id="path3064"
+           style="fill:#ffff80;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:1.60826504;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:10;stroke-opacity:1;stroke-dasharray:none"
+           d="m 0.805,25.147 0,-18.722 c 0,-2.219 1.8,-4.02 4.019,-4.02 l 15.813,0 c 2.222,0 4.023,1.801 4.023,4.02 l 0,18.722 c 0,2.223 -1.801,4.024 -4.023,4.024 l -15.813,0 c -2.219,0 -4.019,-1.801 -4.019,-4.024 z"
+           inkscape:connector-curvature="0" />
+        <text
+           id="text3066"
+           transform="matrix(1,0,0,-1,4.823543,10.21773)">
+          <tspan
+             id="tspan3068"
+             sodipodi:role="line"
+             y="0"
+             x="0 5.6290526"
+             style="font-size:16.08300781px;font-variant:normal;font-weight:normal;writing-mode:lr-tb;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;font-family:DejaVu Sans;-inkscape-font-specification:DejaVuSans">f0</tspan>
+        </text>
+      </g>
+    </g>
+    <g
+       transform="matrix(1.25,0,0,-1.25,270.54259,309.95433)"
+       inkscape:label="link"
+       id="g3102">
+      <g
+         id="g3104">
+        <path
+           id="path3106"
+           style="fill:#8080ff;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:1.60826504;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:10;stroke-opacity:1;stroke-dasharray:none"
+           d="m 0.805,25.147 0,-18.722 c 0,-2.219 1.8,-4.02 4.019,-4.02 l 20.336,0 c 2.223,0 4.024,1.801 4.024,4.02 l 0,18.722 c 0,2.223 -1.801,4.024 -4.024,4.024 l -20.336,0 c -2.219,0 -4.019,-1.801 -4.019,-4.024 z"
+           inkscape:connector-curvature="0" />
+        <text
+           id="text3108"
+           transform="matrix(1,0,0,-1,4.824073,10.21773)">
+          <tspan
+             id="tspan3110"
+             sodipodi:role="line"
+             y="0"
+             x="0 10.116212"
+             style="font-size:16.08300781px;font-variant:normal;font-weight:normal;writing-mode:lr-tb;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;font-family:DejaVu Sans;-inkscape-font-specification:DejaVuSans">b0</tspan>
+        </text>
+      </g>
+    </g>
+    <g
+       id="g3146"
+       transform="matrix(1.25,0,0,-1.25,272.96947,141.20482)">
+      <path
+         inkscape:connector-curvature="0"
+         d="m 0.805,25.147 0,-18.722 c 0,-2.219 1.8,-4.02 4.019,-4.02 l 16.453,0 c 2.223,0 4.024,1.801 4.024,4.02 l 0,18.722 c 0,2.223 -1.801,4.024 -4.024,4.024 l -16.453,0 c -2.219,0 -4.019,-1.801 -4.019,-4.024 z"
+         style="fill:#ff8080;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:1.60826504;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:10;stroke-opacity:1;stroke-dasharray:none"
+         id="path3148" />
+      <text
+         transform="matrix(1,0,0,-1,4.823723,10.217731)"
+         id="text3150">
+        <tspan
+           style="font-size:16.08300781px;font-variant:normal;font-weight:normal;writing-mode:lr-tb;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;font-family:DejaVu Sans;-inkscape-font-specification:DejaVuSans"
+           x="0 6.2723732"
+           y="0"
+           sodipodi:role="line"
+           id="tspan3152">t0</tspan>
+      </text>
+    </g>
+    <g
+       id="g3188"
+       transform="matrix(1.25,0,0,-1.25,266.63856,92.67926)">
+      <text
+         transform="matrix(1,0,0,-1,-1.060159,1.827738)"
+         id="text3190">
+        <tspan
+           style="font-size:16.08300781px;font-variant:normal;font-weight:normal;writing-mode:lr-tb;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;font-family:DejaVu Sans;-inkscape-font-specification:DejaVuSans"
+           x="0 10.116212 28.547338"
+           y="0"
+           sodipodi:role="line"
+           id="tspan3192">S#1</tspan>
+      </text>
+    </g>
+    <text
+       sodipodi:linespacing="125%"
+       id="text3198"
+       y="88.621712"
+       x="345.71429"
+       style="font-size:20.10000038px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:DejaVu Sans;-inkscape-font-specification:DejaVu Sans"
+       xml:space="preserve"><tspan
+         y="88.621712"
+         x="345.71429"
+         id="tspan3200"
+         sodipodi:role="line">Data Constructor S# with argument 1</tspan></text>
+    <text
+       sodipodi:linespacing="125%"
+       id="text3202"
+       y="127.01498"
+       x="347.74588"
+       style="font-size:20.10000038px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:DejaVu Sans;-inkscape-font-specification:DejaVu Sans"
+       xml:space="preserve"><tspan
+         y="127.01498"
+         x="347.74588"
+         id="tspan3204"
+         sodipodi:role="line">Thunk (unevaluated expression)</tspan></text>
+    <text
+       sodipodi:linespacing="125%"
+       id="text3206"
+       y="177.48763"
+       x="345.71429"
+       style="font-size:20.10000038px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:DejaVu Sans;-inkscape-font-specification:DejaVu Sans"
+       xml:space="preserve"><tspan
+         y="177.48763"
+         x="345.71429"
+         id="tspan3208"
+         sodipodi:role="line">Function</tspan></text>
+    <text
+       sodipodi:linespacing="125%"
+       id="text3210"
+       y="236.57452"
+       x="346.36203"
+       style="font-size:20.10000038px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:DejaVu Sans;-inkscape-font-specification:DejaVu Sans"
+       xml:space="preserve"><tspan
+         y="236.57452"
+         x="346.36203"
+         id="tspan3212"
+         sodipodi:role="line">Same as S# 1, but with the name b0</tspan></text>
+    <text
+       sodipodi:linespacing="125%"
+       id="text3214"
+       y="295.7645"
+       x="347.52994"
+       style="font-size:20.10000038px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:DejaVu Sans;-inkscape-font-specification:DejaVu Sans"
+       xml:space="preserve"><tspan
+         y="295.7645"
+         x="347.52994"
+         id="tspan3216"
+         sodipodi:role="line">A link to the memory location of b0</tspan></text>
+  </g>
+</svg>
