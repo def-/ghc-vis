@@ -149,7 +149,7 @@ clear = put ClearSignal
 -- | Export the current visualization view to a file, format depends on the
 --   file ending. Currently supported: svg, png, pdf, ps
 export :: String -> IO ()
-export filename = export' filename >> return ()
+export filename = void $ export' filename
 
 export' :: String -> IO (Maybe String)
 export' filename = case mbDrawFn of
@@ -457,7 +457,7 @@ react canvas legendCanvas window = do
     Just signal -> do
       case signal of
         NewSignal x n  -> modifyMVar_ visBoxes (
-          \y -> if (x,n) `elem` y then return y else return $ y ++ [(x,n)])
+          \y -> return $ if (x,n) `elem` y then y else y ++ [(x,n)])
         ClearSignal    -> modifyMVar_ visBoxes (\_ -> return [])
         UpdateSignal   -> return ()
         SwitchSignal   -> doSwitch

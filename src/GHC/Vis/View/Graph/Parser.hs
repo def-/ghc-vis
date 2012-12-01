@@ -12,6 +12,8 @@ module GHC.Vis.View.Graph.Parser (
 )
 where
 
+import Data.List
+
 import Control.Monad
 
 import qualified Data.Text.Lazy as B
@@ -85,7 +87,7 @@ xDotParse as = do
       mbEdges xs (p,c) = return $ map (\b -> (p, boxPos b)) (allPtrs c) ++ xs
 
       boxPos :: Box -> Maybe Int
-      boxPos b = lookup b $ zip (map fst rhm) [0..]
+      boxPos b = elemIndex b $ map fst rhm
 
       bcoChildren :: [Box] -> IO [Int]
       bcoChildren [] = return []
