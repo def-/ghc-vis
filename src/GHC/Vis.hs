@@ -81,6 +81,9 @@ import qualified GHC.Vis.View.Graph as Graph
 import Graphics.Rendering.Cairo
 import Graphics.Rendering.Cairo.SVG
 
+import qualified Graphics.UI.SDL as SDL
+import Foreign.Ptr ( castPtr )
+
 import Paths_ghc_vis as My
 
 views :: [View]
