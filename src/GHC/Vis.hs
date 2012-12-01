@@ -35,7 +35,7 @@ example using ghc-vis outside of GHCi:
  -}
 module GHC.Vis (
   vis,
-  fullVis,
+  mvis,
   view,
   eval,
   switch,
@@ -79,12 +79,11 @@ import qualified GHC.Vis.View.Graph as Graph
 #endif
 
 import Graphics.Rendering.Cairo
+
+#ifdef FULL_WINDOW
 import Graphics.Rendering.Cairo.SVG
-
-import qualified Graphics.UI.SDL as SDL
-import Foreign.Ptr ( castPtr )
-
 import Paths_ghc_vis as My
+#endif
 
 views :: [View]
 views =
@@ -118,14 +117,18 @@ signalTimeout = 1000000
 -- | This is the main function. It's to be called from GHCi and launches a
 --   graphical window in a new thread.
 vis :: IO ()
+#ifdef FULL_WINDOW
 vis = do
   vr <- swapMVar visRunning True
   unless vr $ void $ forkIO visMainThread
+#else
+vis = mvis
+#endif
 
-fullVis :: IO ()
-fullVis = do
+mvis :: IO ()
+mvis = do
   vr <- swapMVar visRunning True
-  unless vr $ void $ forkIO fullVisMainThread
+  unless vr $ void $ forkIO mVisMainThread
 
 -- | Add expressions with a name to the visualization window.
 view :: a -> String -> IO ()
@@ -178,8 +181,8 @@ export' filename = case mbDrawFn of
 put :: Signal -> IO ()
 put s = void $ timeout signalTimeout $ putMVar visSignal s
 
-visMainThread :: IO ()
-visMainThread = do
+mVisMainThread :: IO ()
+mVisMainThread = do
   initGUI
   window <- windowNew
 
@@ -200,75 +203,6 @@ visMainThread = do
   dummy <- windowNew
 
   setupGUI window canvas dummy
-
-fullVisMainThread :: IO ()
-fullVisMainThread = do
-  initGUI
-
-  mainUIFile <- My.getDataFileName "data/main.ui"
-  builder <- builderNew
-  builderAddFromFile builder mainUIFile
-
-  let get :: forall cls . GObjectClass cls
-          => (GObject -> cls)
-          -> String
-          -> IO cls
-      get = builderGetObject builder
-
-  window       <- get castToWindow "window"
-  canvas       <- get castToDrawingArea "drawingarea"
-
-  saveDialog   <- get castToFileChooserDialog "savedialog"
-  aboutDialog  <- get castToAboutDialog "aboutdialog"
-
-  legendDialog <- get castToWindow "legenddialog"
-  legendCanvas <- get castToDrawingArea "legenddrawingarea"
-
-  newFilter "*.pdf" "PDF" saveDialog
-  newFilter "*.svg" "SVG" saveDialog
-  newFilter "*.ps" "PostScript" saveDialog
-  newFilter "*.png" "PNG" saveDialog
-
-  onResponse saveDialog $ myFileSave saveDialog
-  onResponse aboutDialog $ const $ widgetHide aboutDialog
-
-  onDelete saveDialog   $ const $ widgetHide saveDialog   >> return True
-  onDelete aboutDialog  $ const $ widgetHide aboutDialog  >> return True
-  onDelete legendDialog $ const $ widgetHide legendDialog >> return True
-
-  get castToMenuItem "clear"  >>= \item -> onActivateLeaf item clear
-  get castToMenuItem "switch" >>= \item -> onActivateLeaf item switch
-  get castToMenuItem "update" >>= \item -> onActivateLeaf item update
-  get castToMenuItem "export" >>= \item -> onActivateLeaf item $ widgetShow saveDialog
-  get castToMenuItem "quit"   >>= \item -> onActivateLeaf item $ widgetDestroy window
-  get castToMenuItem "about"  >>= \item -> onActivateLeaf item $ widgetShow aboutDialog
-  get castToMenuItem "legend" >>= \item -> onActivateLeaf item $ widgetShow legendDialog
-
-  widgetModifyBg canvas StateNormal backgroundColor
-  widgetModifyBg legendCanvas StateNormal backgroundColor
-
-  welcomeSVG <- My.getDataFileName "data/welcome.svg" >>= svgNewFromFile
-
-  legendListSVG  <- My.getDataFileName "data/legend_list.svg" >>= svgNewFromFile
-  legendGraphSVG <- My.getDataFileName "data/legend_graph.svg" >>= svgNewFromFile
-
-  onExpose canvas $ const $ do
-    boxes <- readMVar visBoxes
-
-    if null boxes
-    then renderSVGScaled canvas welcomeSVG
-    else do
-      runCorrect redraw >>= \f -> f canvas
-      runCorrect move >>= \f -> f canvas
-      return True
-
-  onExpose legendCanvas $ const $ do
-    state <- readIORef visState
-    renderSVGScaled legendCanvas $ case T.view state of
-      ListView  -> legendListSVG
-      GraphView -> legendGraphSVG
-
-  setupGUI window canvas legendCanvas
 
 setupGUI :: (WidgetClass w1, WidgetClass w2, WidgetClass w3) => w1 -> w2 -> w3 -> IO ()
 setupGUI window canvas legendCanvas = do
@@ -415,28 +349,6 @@ setupGUI window canvas legendCanvas = do
   mainGUI
   return ()
 
-myFileSave :: FileChooserDialog -> ResponseId -> IO ()
-myFileSave fcdialog response = do
-  case response of
-    ResponseOk -> do Just filename <- fileChooserGetFilename fcdialog
-                     mbError <- export' filename
-                     case mbError of
-                       Nothing -> return ()
-                       Just error -> do
-                         errorDialog <- messageDialogNew Nothing [] MessageError ButtonsOk error
-                         widgetShow errorDialog
-                         onResponse errorDialog $ const $ widgetHide errorDialog
-                         return ()
-    _ -> return ()
-  widgetHide fcdialog
-
-newFilter :: FileChooserClass fc => String -> String -> fc -> IO ()
-newFilter filterString name dialog = do
-  filt <- fileFilterNew
-  fileFilterAddPattern filt filterString
-  fileFilterSetName filt $ name ++ " (" ++ filterString ++ ")"
-  fileChooserAddFilter dialog filt
-
 quit :: ThreadId -> IO ()
 quit reactThread = do
   swapMVar visRunning False
@@ -515,6 +427,98 @@ zoomImage _canvas s newZoomRatio _mousePos@(_x', _y') = do
 
   return newPos
 
+#ifdef FULL_WINDOW
+visMainThread :: IO ()
+visMainThread = do
+  initGUI
+
+  mainUIFile <- My.getDataFileName "data/main.ui"
+  builder <- builderNew
+  builderAddFromFile builder mainUIFile
+
+  let get :: forall cls . GObjectClass cls
+          => (GObject -> cls)
+          -> String
+          -> IO cls
+      get = builderGetObject builder
+
+  window       <- get castToWindow "window"
+  canvas       <- get castToDrawingArea "drawingarea"
+
+  saveDialog   <- get castToFileChooserDialog "savedialog"
+  aboutDialog  <- get castToAboutDialog "aboutdialog"
+
+  legendDialog <- get castToWindow "legenddialog"
+  legendCanvas <- get castToDrawingArea "legenddrawingarea"
+
+  newFilter "*.pdf" "PDF" saveDialog
+  newFilter "*.svg" "SVG" saveDialog
+  newFilter "*.ps" "PostScript" saveDialog
+  newFilter "*.png" "PNG" saveDialog
+
+  onResponse saveDialog $ fileSave saveDialog
+  onResponse aboutDialog $ const $ widgetHide aboutDialog
+
+  onDelete saveDialog   $ const $ widgetHide saveDialog   >> return True
+  onDelete aboutDialog  $ const $ widgetHide aboutDialog  >> return True
+  onDelete legendDialog $ const $ widgetHide legendDialog >> return True
+
+  get castToMenuItem "clear"  >>= \item -> onActivateLeaf item clear
+  get castToMenuItem "switch" >>= \item -> onActivateLeaf item switch
+  get castToMenuItem "update" >>= \item -> onActivateLeaf item update
+  get castToMenuItem "export" >>= \item -> onActivateLeaf item $ widgetShow saveDialog
+  get castToMenuItem "quit"   >>= \item -> onActivateLeaf item $ widgetDestroy window
+  get castToMenuItem "about"  >>= \item -> onActivateLeaf item $ widgetShow aboutDialog
+  get castToMenuItem "legend" >>= \item -> onActivateLeaf item $ widgetShow legendDialog
+
+  widgetModifyBg canvas StateNormal backgroundColor
+  widgetModifyBg legendCanvas StateNormal backgroundColor
+
+  welcomeSVG <- My.getDataFileName "data/welcome.svg" >>= svgNewFromFile
+
+  legendListSVG  <- My.getDataFileName "data/legend_list.svg" >>= svgNewFromFile
+  legendGraphSVG <- My.getDataFileName "data/legend_graph.svg" >>= svgNewFromFile
+
+  onExpose canvas $ const $ do
+    boxes <- readMVar visBoxes
+
+    if null boxes
+    then renderSVGScaled canvas welcomeSVG
+    else do
+      runCorrect redraw >>= \f -> f canvas
+      runCorrect move >>= \f -> f canvas
+      return True
+
+  onExpose legendCanvas $ const $ do
+    state <- readIORef visState
+    renderSVGScaled legendCanvas $ case T.view state of
+      ListView  -> legendListSVG
+      GraphView -> legendGraphSVG
+
+  setupGUI window canvas legendCanvas
+
+fileSave :: FileChooserDialog -> ResponseId -> IO ()
+fileSave fcdialog response = do
+  case response of
+    ResponseOk -> do Just filename <- fileChooserGetFilename fcdialog
+                     mbError <- export' filename
+                     case mbError of
+                       Nothing -> return ()
+                       Just error -> do
+                         errorDialog <- messageDialogNew Nothing [] MessageError ButtonsOk error
+                         widgetShow errorDialog
+                         onResponse errorDialog $ const $ widgetHide errorDialog
+                         return ()
+    _ -> return ()
+  widgetHide fcdialog
+
+newFilter :: FileChooserClass fc => String -> String -> fc -> IO ()
+newFilter filterString name dialog = do
+  filt <- fileFilterNew
+  fileFilterAddPattern filt filterString
+  fileFilterSetName filt $ name ++ " (" ++ filterString ++ ")"
+  fileChooserAddFilter dialog filt
+
 renderSVGScaled :: (WidgetClass w) => w -> SVG -> IO Bool
 renderSVGScaled canvas svg = do
   E.Rectangle _ _ rw2 rh2 <- widgetGetAllocation canvas
@@ -532,7 +536,7 @@ renderSVGScaled canvas svg = do
     translate ox oy
     scale sx sy
     svgRender svg
-
+#endif
 
 -- Zoom into mouse, but only working from (0,0)
 -- newPos = ( oldPosX + x * zoomRatio s - x * newZoomRatio

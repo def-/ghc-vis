@@ -28,9 +28,9 @@ flag graph
   Default: True
   Description: "Enable graph view using Graphviz"
 
-flag minimal
-  Default: False
-  Description: "Minimalistic ghc-vis: no decorations, no buttons, no legend"
+flag full
+  Default: True
+  Description: "Full ghc-vis window: decorations, buttons, legend"
 
 Library
   Exposed-modules: GHC.Vis
@@ -54,8 +54,9 @@ Library
                      xdot >= 0.2
       Cpp-options: -DGRAPH_VIEW
 
-  if (!flag(minimal))
-      Build-depends: svgcairo >= 0.12.1.1
+  if flag(full)
+      Build-depends: svgcairo >= 0.12
+      Cpp-options: -DFULL_WINDOW
 
 source-repository head
     type:     git
