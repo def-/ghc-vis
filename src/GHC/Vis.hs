@@ -405,13 +405,35 @@ fullVisMainThread = do
   widgetModifyBg canvas StateNormal backgroundColor
   widgetModifyBg legendCanvas StateNormal backgroundColor
 
+  welcomeSVG <- My.getDataFileName "data/welcome.svg" >>= svgNewFromFile
+
   legendListSVG  <- My.getDataFileName "data/legend_list.svg" >>= svgNewFromFile
   legendGraphSVG <- My.getDataFileName "data/legend_graph.svg" >>= svgNewFromFile
 
   onExpose canvas $ const $ do
-    runCorrect redraw >>= \f -> f canvas
-    runCorrect move >>= \f -> f canvas
-    return True
+    boxes <- readMVar visBoxes
+
+    if null boxes
+    then do
+      E.Rectangle _ _ rw2 rh2 <- widgetGetAllocation canvas
+      win <- widgetGetDrawWindow canvas
+      renderWithDrawable win $ do
+        let (cx, cy) = svgGetSize welcomeSVG
+
+            rw = fromIntegral rw2
+            rh = fromIntegral rh2
+
+            -- Proportional scaling
+            (sx,sy) = (min (rw / fromIntegral cx) (rh / fromIntegral cy), sx)
+            (ox,oy) = (rw/2 - sx*(fromIntegral cx)/2, rh/2 - sy*(fromIntegral cy)/2)
+
+        translate ox oy
+        scale sx sy
+        svgRender welcomeSVG
+    else do
+      runCorrect redraw >>= \f -> f canvas
+      runCorrect move >>= \f -> f canvas
+      return True
 
   onExpose legendCanvas $ const $ do
     state <- readIORef visState
