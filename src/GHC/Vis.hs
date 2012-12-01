@@ -79,6 +79,7 @@ import qualified GHC.Vis.View.Graph as Graph
 #endif
 
 import Graphics.Rendering.Cairo
+import Graphics.Rendering.Cairo.SVG
 
 import Paths_ghc_vis as My
 
@@ -329,7 +330,8 @@ visMainThread = do
 
   widgetShowAll window
 
-  reactThread <- forkIO $ react canvas window
+  dummy <- windowNew
+  reactThread <- forkIO $ react canvas dummy window
   --onDestroy window mainQuit -- Causes :r problems with multiple windows
   onDestroy window (quit reactThread)
 
@@ -361,9 +363,9 @@ fullVisMainThread :: IO ()
 fullVisMainThread = do
   initGUI
 
-  filename <- My.getDataFileName "data/main.ui"
+  mainUIFile <- My.getDataFileName "data/main.ui"
   builder <- builderNew
-  builderAddFromFile builder filename
+  builderAddFromFile builder mainUIFile
 
   let get :: forall cls . GObjectClass cls
           => (GObject -> cls)
@@ -371,10 +373,14 @@ fullVisMainThread = do
           -> IO cls
       get = builderGetObject builder
 
-  window <- get castToWindow "window"
-  canvas <- get castToDrawingArea "drawingarea"
-  saveDialog <- get castToFileChooserDialog "savedialog"
-  aboutDialog <- get castToAboutDialog "aboutdialog"
+  window       <- get castToWindow "window"
+  canvas       <- get castToDrawingArea "drawingarea"
+
+  saveDialog   <- get castToFileChooserDialog "savedialog"
+  aboutDialog  <- get castToAboutDialog "aboutdialog"
+
+  legendDialog <- get castToWindow "legenddialog"
+  legendCanvas <- get castToDrawingArea "legenddrawingarea"
 
   myNewFilter "*.pdf" "PDF" saveDialog
   myNewFilter "*.svg" "SVG" saveDialog
@@ -384,21 +390,46 @@ fullVisMainThread = do
   onResponse saveDialog $ myFileSave saveDialog
   onResponse aboutDialog $ const $ widgetHide aboutDialog
 
+  onDelete saveDialog   $ const $ widgetHide saveDialog   >> return True
+  onDelete aboutDialog  $ const $ widgetHide aboutDialog  >> return True
+  onDelete legendDialog $ const $ widgetHide legendDialog >> return True
+
   get castToMenuItem "clear"  >>= \item -> onActivateLeaf item clear
   get castToMenuItem "switch" >>= \item -> onActivateLeaf item switch
   get castToMenuItem "update" >>= \item -> onActivateLeaf item update
   get castToMenuItem "export" >>= \item -> onActivateLeaf item $ widgetShow saveDialog
   get castToMenuItem "quit"   >>= \item -> onActivateLeaf item $ widgetDestroy window
   get castToMenuItem "about"  >>= \item -> onActivateLeaf item $ widgetShow aboutDialog
+  get castToMenuItem "legend" >>= \item -> onActivateLeaf item $ widgetShow legendDialog
 
   widgetModifyBg canvas StateNormal backgroundColor
+  widgetModifyBg legendCanvas StateNormal backgroundColor
 
-  --(uncurry $ windowSetDefaultSize window) defaultSize
+  legendListSVG  <- My.getDataFileName "data/legend_list.svg" >>= svgNewFromFile
+  legendGraphSVG <- My.getDataFileName "data/legend_graph.svg" >>= svgNewFromFile
 
   onExpose canvas $ const $ do
     runCorrect redraw >>= \f -> f canvas
     runCorrect move >>= \f -> f canvas
     return True
+
+  onExpose legendCanvas $ const $ do
+    state <- readIORef visState
+    E.Rectangle _ _ rw2 rh2 <- widgetGetAllocation legendCanvas
+    win <- widgetGetDrawWindow legendCanvas
+    renderWithDrawable win $ do
+      let svg = case T.view state of
+            ListView  -> legendListSVG
+            GraphView -> legendGraphSVG
+          (cx, cy) = svgGetSize svg
+
+          rw = 0.9 * fromIntegral rw2
+          rh = 0.9 * fromIntegral rh2
+
+          -- Proportional scaling
+          (sx,sy) = (min (rw / fromIntegral cx) (rh / fromIntegral cy), sx)
+      scale sx sy
+      svgRender svg
 
   onMotionNotify canvas False $ \e -> do
     state <- readIORef visState
@@ -536,7 +567,7 @@ fullVisMainThread = do
 
   widgetShowAll window
 
-  reactThread <- forkIO $ react canvas window
+  reactThread <- forkIO $ react canvas legendCanvas window
   --onDestroy window mainQuit -- Causes :r problems with multiple windows
   onDestroy window (quit reactThread)
 
@@ -548,8 +579,8 @@ quit reactThread = do
   swapMVar visRunning False
   killThread reactThread
 
-react :: (WidgetClass w1, WidgetClass w2) => w1 -> w2 -> IO b
-react canvas window = do
+react :: (WidgetClass w1, WidgetClass w2, WidgetClass w3) => w1 -> w2 -> w3 -> IO b
+react canvas legendCanvas window = do
   -- Timeout used to handle ghci reloads (:r)
   -- Reloads cause the visSignal to be reinitialized, but takeMVar is still
   -- waiting for the old one.  This solution is not perfect, but it works for
@@ -558,11 +589,11 @@ react canvas window = do
   case mbSignal of
     Nothing -> do
       running <- readMVar visRunning
-      if running then react canvas window else
+      if running then react canvas legendCanvas window else
         -- :r caused visRunning to be reset
         (do swapMVar visRunning True
             timeout signalTimeout (putMVar visSignal UpdateSignal)
-            react canvas window)
+            react canvas legendCanvas window)
     Just signal -> do
       case signal of
         NewSignal x n  -> modifyMVar_ visBoxes (
@@ -588,7 +619,8 @@ react canvas window = do
       runCorrect updateObjects >>= \f -> f boxes
 
       postGUISync $ widgetQueueDraw canvas
-      react canvas window
+      postGUISync $ widgetQueueDraw legendCanvas
+      react canvas legendCanvas window
 
 #ifdef GRAPH_VIEW
   where doSwitch = isGraphvizInstalled >>= \gvi -> if gvi

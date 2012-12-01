@@ -21,7 +21,7 @@ description:        Visualize live data structures in GHCi. Evaluation is not
                     <http://felsin9.de/nnis/ghc-vis/#combined-debugger>
 
 tested-with: GHC == 7.4.1, GHC == 7.4.2, GHC == 7.6.1
-data-files: ghci data/main.ui
+data-files: ghci data/main.ui data/intro.svg data/legend_graph.svg data/legend_list.svg
 Extra-source-files: nonghci-test.hs
 
 flag graph
@@ -53,6 +53,9 @@ Library
       Build-depends: graphviz >= 2999.14.1.0,
                      xdot >= 0.2
       Cpp-options: -DGRAPH_VIEW
+
+  if (!flag(minimal))
+      Build-depends: svgcairo >= 0.12.1.1
 
 source-repository head
     type:     git

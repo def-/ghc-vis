@@ -14,7 +14,7 @@
    id="svg2"
    version="1.1"
    inkscape:version="0.48.3.1 r9886"
-   sodipodi:docname="legend_linear.svg">
+   sodipodi:docname="legend_list.svg">
   <defs
      id="defs4" />
   <sodipodi:namedview
@@ -24,19 +24,19 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.4"
-     inkscape:cx="145.2412"
-     inkscape:cy="71.305334"
+     inkscape:zoom="5.6"
+     inkscape:cx="49.9475"
+     inkscape:cy="90.284758"
      inkscape:document-units="px"
-     inkscape:current-layer="layer1"
+     inkscape:current-layer="g3014"
      showgrid="false"
      fit-margin-top="10"
      fit-margin-left="10"
      fit-margin-right="10"
      fit-margin-bottom="10"
-     inkscape:window-width="718"
-     inkscape:window-height="884"
-     inkscape:window-x="720"
+     inkscape:window-width="1278"
+     inkscape:window-height="1008"
+     inkscape:window-x="0"
      inkscape:window-y="14"
      inkscape:window-maximized="0" />
   <metadata
@@ -47,7 +47,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -73,21 +73,29 @@
            d="m 0.801,25.056 50.894,0"
            inkscape:connector-curvature="0" />
         <text
-           id="text3020"
-           transform="matrix(1,0,0,-1,6.807475,28.835092)">
-          <tspan
-             id="tspan3022"
+           xml:space="preserve"
+           style="font-size:16.01600075px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:DejaVu Sans;-inkscape-font-specification:DejaVu Sans"
+           x="16.071358"
+           y="-8.1712036"
+           id="text5596"
+           sodipodi:linespacing="125%"
+           transform="scale(1,-1)"><tspan
              sodipodi:role="line"
-             y="0"
-             x="0 10.125589 28.582359"
-             style="font-size:16.02150154px;font-variant:normal;font-weight:normal;writing-mode:lr-tb;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;font-family:DejaVu Sans;-inkscape-font-specification:DejaVuSans">S#1</tspan>
-          <tspan
-             id="tspan3024"
+             id="tspan5598"
+             x="16.071358"
+             y="-8.1712036">b0</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-size:16.01600075px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:DejaVu Sans;-inkscape-font-specification:DejaVu Sans"
+           x="6.785646"
+           y="-28.83638"
+           id="text5592"
+           sodipodi:linespacing="125%"
+           transform="scale(1,-1)"><tspan
              sodipodi:role="line"
-             y="20.652918"
-             x="9.2587137 19.416346"
-             style="font-size:16.02150154px;font-variant:normal;font-weight:normal;writing-mode:lr-tb;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;font-family:DejaVu Sans;-inkscape-font-specification:DejaVuSans">b0</tspan>
-        </text>
+             id="tspan5594"
+             x="6.785646"
+             y="-28.83638">S# 1</tspan></text>
       </g>
     </g>
     <g
