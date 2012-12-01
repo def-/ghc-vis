@@ -51,7 +51,7 @@ import Prelude hiding (catch, error)
 import Prelude hiding (error)
 #endif
 
-import Graphics.UI.Gtk hiding (Box, Signal, get)
+import Graphics.UI.Gtk hiding (Box, Signal, get, response)
 import qualified Graphics.UI.Gtk.Gdk.Events as E
 
 import System.IO
@@ -353,10 +353,11 @@ myFileSave fcdialog response = do
     _ -> return ()
   widgetHide fcdialog
 
-myNewFilter filter name dialog = do
+newFilter :: FileChooserClass fc => String -> String -> fc -> IO ()
+newFilter filterString name dialog = do
   filt <- fileFilterNew
-  fileFilterAddPattern filt filter
-  fileFilterSetName filt $ name ++ " (" ++ filter ++ ")"
+  fileFilterAddPattern filt filterString
+  fileFilterSetName filt $ name ++ " (" ++ filterString ++ ")"
   fileChooserAddFilter dialog filt
 
 fullVisMainThread :: IO ()
@@ -382,10 +383,10 @@ fullVisMainThread = do
   legendDialog <- get castToWindow "legenddialog"
   legendCanvas <- get castToDrawingArea "legenddrawingarea"
 
-  myNewFilter "*.pdf" "PDF" saveDialog
-  myNewFilter "*.svg" "SVG" saveDialog
-  myNewFilter "*.ps" "PostScript" saveDialog
-  myNewFilter "*.png" "PNG" saveDialog
+  newFilter "*.pdf" "PDF" saveDialog
+  newFilter "*.svg" "SVG" saveDialog
+  newFilter "*.ps" "PostScript" saveDialog
+  newFilter "*.png" "PNG" saveDialog
 
   onResponse saveDialog $ myFileSave saveDialog
   onResponse aboutDialog $ const $ widgetHide aboutDialog
@@ -414,22 +415,7 @@ fullVisMainThread = do
     boxes <- readMVar visBoxes
 
     if null boxes
-    then do
-      E.Rectangle _ _ rw2 rh2 <- widgetGetAllocation canvas
-      win <- widgetGetDrawWindow canvas
-      renderWithDrawable win $ do
-        let (cx, cy) = svgGetSize welcomeSVG
-
-            rw = fromIntegral rw2
-            rh = fromIntegral rh2
-
-            -- Proportional scaling
-            (sx,sy) = (min (rw / fromIntegral cx) (rh / fromIntegral cy), sx)
-            (ox,oy) = (rw/2 - sx*(fromIntegral cx)/2, rh/2 - sy*(fromIntegral cy)/2)
-
-        translate ox oy
-        scale sx sy
-        svgRender welcomeSVG
+    then renderSVGScaled canvas welcomeSVG
     else do
       runCorrect redraw >>= \f -> f canvas
       runCorrect move >>= \f -> f canvas
@@ -437,21 +423,9 @@ fullVisMainThread = do
 
   onExpose legendCanvas $ const $ do
     state <- readIORef visState
-    E.Rectangle _ _ rw2 rh2 <- widgetGetAllocation legendCanvas
-    win <- widgetGetDrawWindow legendCanvas
-    renderWithDrawable win $ do
-      let svg = case T.view state of
-            ListView  -> legendListSVG
-            GraphView -> legendGraphSVG
-          (cx, cy) = svgGetSize svg
-
-          rw = 0.9 * fromIntegral rw2
-          rh = 0.9 * fromIntegral rh2
-
-          -- Proportional scaling
-          (sx,sy) = (min (rw / fromIntegral cx) (rh / fromIntegral cy), sx)
-      scale sx sy
-      svgRender svg
+    renderSVGScaled legendCanvas $ case T.view state of
+      ListView  -> legendListSVG
+      GraphView -> legendGraphSVG
 
   onMotionNotify canvas False $ \e -> do
     state <- readIORef visState
@@ -673,6 +647,25 @@ zoomImage _canvas s newZoomRatio _mousePos@(_x', _y') = do
       newPos = (oldPosX * zoom, oldPosY * zoom)
 
   return newPos
+
+renderSVGScaled :: (WidgetClass w) => w -> SVG -> IO Bool
+renderSVGScaled canvas svg = do
+  E.Rectangle _ _ rw2 rh2 <- widgetGetAllocation canvas
+  win <- widgetGetDrawWindow canvas
+  renderWithDrawable win $ do
+    let (cx2, cy2) = svgGetSize svg
+
+        (rw,rh) = (fromIntegral rw2, fromIntegral rh2)
+        (cx,cy) = (fromIntegral cx2, fromIntegral cy2)
+
+        -- Proportional scaling
+        (sx,sy) = (min (rw/cx) (rh/cy), sx)
+        (ox,oy) = (rw/2 - sx*cx/2, rh/2 - sy*cy/2)
+
+    translate ox oy
+    scale sx sy
+    svgRender svg
+
 
 -- Zoom into mouse, but only working from (0,0)
 -- newPos = ( oldPosX + x * zoomRatio s - x * newZoomRatio
