@@ -1,0 +1,47 @@
+Name: ghci-vis
+Version: 0.1
+Copyright: BSD3
+License: BSD3
+License-File: LICENSE
+-- Author: XXX
+Build-Type: Simple
+Cabal-Version: >= 1.6
+Maintainer: Dennis Felsing <dennis@felsin9.de>
+Category: Compilers/Interpreters
+Synopsis: An implementation of ghci for ghc-vis
+Description: None yet
+Homepage: http://felsin9.de/nnis/ghc-vis
+
+Executable ghci-vis
+  Main-is: Main.hs
+  Other-modules:  GhciVis.GhciMonad
+                  GhciVis.InteractiveUI
+                  GhciVis.GhciTags
+                  GhciVis.Main
+
+  Build-Depends: base       == 4.*,
+                 array      >= 0.4,
+                 bytestring >= 0.10,
+                 directory  >= 1.2,
+                 filepath   >= 1.3,
+                 process    >= 1.1
+  Build-Depends: mtl, ghc, transformers, haskeline
+
+  Hs-source-dirs: src/
+
+  if os(windows)
+      Build-Depends: Win32
+  else
+      Build-Depends: unix
+
+  Build-Depends: ghc-paths
+  cpp-Options: -DGHCI
+  ghc-options: -threaded
+
+  Extensions: CPP, MagicHash, UnboxedTuples, PatternGuards,
+              ForeignFunctionInterface, EmptyDataDecls,
+              TypeSynonymInstances, MultiParamTypeClasses,
+              FlexibleInstances, Rank2Types, ScopedTypeVariables,
+              DeriveDataTypeable
+
+  GHC-Options: -Wall -fno-warn-orphans -fno-warn-name-shadowing
