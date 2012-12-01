@@ -194,171 +194,9 @@ visMainThread = do
     runCorrect move >>= \f -> f canvas
     return True
 
-  onMotionNotify canvas False $ \e -> do
-    state <- readIORef visState
-    modifyIORef visState (\s -> s {mousePos = (E.eventX e, E.eventY e)})
-
-    if dragging state
-    then do
-      let (oldX, oldY) = mousePos state
-          (deltaX, deltaY) = (E.eventX e - oldX, E.eventY e - oldY)
-          (oldPosX, oldPosY) = position state
-      modifyIORef visState (\s -> s {position = (oldPosX + deltaX, oldPosY + deltaY)})
-      widgetQueueDraw canvas
-    else
-      runCorrect move >>= \f -> f canvas
-
-    return True
-
-  onButtonPress canvas $ \e -> do
-    when (E.eventButton e == LeftButton && E.eventClick e == SingleClick) $
-      join $ runCorrect click
-
-    when (E.eventButton e == RightButton && E.eventClick e == SingleClick) $
-      modifyIORef visState (\s -> s {dragging = True})
-
-    when (E.eventButton e == MiddleButton && E.eventClick e == SingleClick) $ do
-      modifyIORef visState (\s -> s {zoomRatio = 1, position = (0, 0)})
-      widgetQueueDraw canvas
-
-    return True
-
-  onButtonRelease canvas $ \e -> do
-    when (E.eventButton e == RightButton) $
-      modifyIORef visState (\s -> s {dragging = False})
-
-    return True
-
-  onScroll canvas $ \e -> do
-    state <- readIORef visState
-
-    when (E.eventDirection e == ScrollUp) $ do
-      let newZoomRatio = zoomRatio state * zoomIncrement
-      newPos <- zoomImage canvas state newZoomRatio (mousePos state)
-      modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
-
-    when (E.eventDirection e == ScrollDown) $ do
-      let newZoomRatio = zoomRatio state / zoomIncrement
-      newPos <- zoomImage canvas state newZoomRatio (mousePos state)
-      modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
-
-    widgetQueueDraw canvas
-    return True
-
-  onKeyPress window $ \e -> do
-    --putStrLn $ E.eventKeyName e
-
-    state <- readIORef visState
-
-    when (E.eventKeyName e `elem` ["plus", "Page_Up", "KP_Add"]) $ do
-      let newZoomRatio = zoomRatio state * zoomIncrement
-          (oldX, oldY) = position state
-          newPos = (oldX*zoomIncrement, oldY*zoomIncrement)
-      modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
-
-    when (E.eventKeyName e `elem` ["minus", "Page_Down", "KP_Subtract"]) $ do
-      let newZoomRatio = zoomRatio state / zoomIncrement
-          (oldX, oldY) = position state
-          newPos = (oldX/zoomIncrement, oldY/zoomIncrement)
-      modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
-
-    when (E.eventKeyName e `elem` ["0", "equal"]) $
-      modifyIORef visState (\s -> s {zoomRatio = 1, position = (0, 0)})
-
-    when (E.eventKeyName e `elem` ["Left", "h", "a"]) $
-      modifyIORef visState (\s ->
-        let (x,y) = position s
-            newX  = x + positionIncrement
-        in s {position = (newX, y)})
-
-    when (E.eventKeyName e `elem` ["Right", "l", "d"]) $
-      modifyIORef visState (\s ->
-        let (x,y) = position s
-            newX  = x - positionIncrement
-        in s {position = (newX, y)})
-
-    when (E.eventKeyName e `elem` ["Up", "k", "w"]) $
-      modifyIORef visState (\s ->
-        let (x,y) = position s
-            newY  = y + positionIncrement
-        in s {position = (x, newY)})
-
-    when (E.eventKeyName e `elem` ["Down", "j", "s"]) $
-      modifyIORef visState (\s ->
-        let (x,y) = position s
-            newY  = y - positionIncrement
-        in s {position = (x, newY)})
-
-    when (E.eventKeyName e `elem` ["H", "A"]) $
-      modifyIORef visState (\s ->
-        let (x,y) = position s
-            newX  = x + bigPositionIncrement
-        in s {position = (newX, y)})
-
-    when (E.eventKeyName e `elem` ["L", "D"]) $
-      modifyIORef visState (\s ->
-        let (x,y) = position s
-            newX  = x - bigPositionIncrement
-        in s {position = (newX, y)})
-
-    when (E.eventKeyName e `elem` ["K", "W"]) $
-      modifyIORef visState (\s ->
-        let (x,y) = position s
-            newY  = y + bigPositionIncrement
-        in s {position = (x, newY)})
-
-    when (E.eventKeyName e `elem` ["J", "S"]) $
-      modifyIORef visState (\s ->
-        let (x,y) = position s
-            newY  = y - bigPositionIncrement
-        in s {position = (x, newY)})
-
-    when (E.eventKeyName e `elem` ["space", "Return", "KP_Enter"]) $
-      join $ runCorrect click
-
-    when (E.eventKeyName e `elem` ["v"]) $
-      put SwitchSignal
-
-    when (E.eventKeyName e `elem` ["c"]) $
-      put ClearSignal
-
-    when (E.eventKeyName e `elem` ["u"]) $
-      put UpdateSignal
-
-    widgetQueueDraw canvas
-    return True
-
-  widgetShowAll window
-
   dummy <- windowNew
-  reactThread <- forkIO $ react canvas dummy window
-  --onDestroy window mainQuit -- Causes :r problems with multiple windows
-  onDestroy window (quit reactThread)
 
-  mainGUI
-  return ()
-
-myFileSave :: FileChooserDialog -> ResponseId -> IO ()
-myFileSave fcdialog response = do
-  case response of
-    ResponseOk -> do Just filename <- fileChooserGetFilename fcdialog
-                     mbError <- export' filename
-                     case mbError of
-                       Nothing -> return ()
-                       Just error -> do
-                         errorDialog <- messageDialogNew Nothing [] MessageError ButtonsOk error
-                         widgetShow errorDialog
-                         onResponse errorDialog $ const $ widgetHide errorDialog
-                         return ()
-    _ -> return ()
-  widgetHide fcdialog
-
-newFilter :: FileChooserClass fc => String -> String -> fc -> IO ()
-newFilter filterString name dialog = do
-  filt <- fileFilterNew
-  fileFilterAddPattern filt filterString
-  fileFilterSetName filt $ name ++ " (" ++ filterString ++ ")"
-  fileChooserAddFilter dialog filt
+  setupGUI window canvas dummy
 
 fullVisMainThread :: IO ()
 fullVisMainThread = do
@@ -427,6 +265,10 @@ fullVisMainThread = do
       ListView  -> legendListSVG
       GraphView -> legendGraphSVG
 
+  setupGUI window canvas legendCanvas
+
+setupGUI :: (WidgetClass w1, WidgetClass w2, WidgetClass w3) => w1 -> w2 -> w3 -> IO ()
+setupGUI window canvas legendCanvas = do
   onMotionNotify canvas False $ \e -> do
     state <- readIORef visState
     modifyIORef visState (\s -> s {mousePos = (E.eventX e, E.eventY e)})
@@ -569,6 +411,28 @@ fullVisMainThread = do
 
   mainGUI
   return ()
+
+myFileSave :: FileChooserDialog -> ResponseId -> IO ()
+myFileSave fcdialog response = do
+  case response of
+    ResponseOk -> do Just filename <- fileChooserGetFilename fcdialog
+                     mbError <- export' filename
+                     case mbError of
+                       Nothing -> return ()
+                       Just error -> do
+                         errorDialog <- messageDialogNew Nothing [] MessageError ButtonsOk error
+                         widgetShow errorDialog
+                         onResponse errorDialog $ const $ widgetHide errorDialog
+                         return ()
+    _ -> return ()
+  widgetHide fcdialog
+
+newFilter :: FileChooserClass fc => String -> String -> fc -> IO ()
+newFilter filterString name dialog = do
+  filt <- fileFilterNew
+  fileFilterAddPattern filt filterString
+  fileFilterSetName filt $ name ++ " (" ++ filterString ++ ")"
+  fileChooserAddFilter dialog filt
 
 quit :: ThreadId -> IO ()
 quit reactThread = do
