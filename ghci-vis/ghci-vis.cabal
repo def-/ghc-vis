@@ -12,36 +12,79 @@ Synopsis: An implementation of ghci for ghc-vis
 Description: None yet
 Homepage: http://felsin9.de/nnis/ghc-vis
 
+flag ghc-704
+    Description: for GHC 7.4
+
 Executable ghci-vis
   Main-is: Main.hs
-  Other-modules:  GhciVis.GhciMonad
-                  GhciVis.InteractiveUI
-                  GhciVis.GhciTags
-                  GhciVis.Main
+  if flag(ghc-704) {
+    Other-modules:  GhciVis704.GhciMonad
+                    GhciVis704.InteractiveUI
+                    GhciVis704.GhciTags
+                    GhciVis704.Main
 
-  Build-Depends: base       == 4.*,
-                 array      >= 0.4,
-                 bytestring >= 0.10,
-                 directory  >= 1.2,
-                 filepath   >= 1.3,
-                 process    >= 1.1
-  Build-Depends: mtl, ghc, transformers, haskeline
+    Build-Depends: base         == 4.*,
+                   array        >= 0.4,
+                   bytestring   >= 0.10,
+                   directory    >= 1.2,
+                   filepath     >= 1.3,
+                   process      >= 1.1,
+                   mtl          >= 2.1,
+                   transformers >= 0.3,
+                   haskeline    >= 0.7,
+                   ghc          >= 7.4
 
-  Hs-source-dirs: src/
+    Hs-source-dirs: src/
 
-  if os(windows)
-      Build-Depends: Win32
-  else
-      Build-Depends: unix
+    if os(windows)
+        Build-Depends: Win32
+    else
+        Build-Depends: unix
 
-  Build-Depends: ghc-paths
-  cpp-Options: -DGHCI
-  ghc-options: -threaded
+    Build-Depends: ghc-paths
+    cpp-Options: -DGHCI
+    ghc-options: -threaded
 
-  Extensions: CPP, MagicHash, UnboxedTuples, PatternGuards,
-              ForeignFunctionInterface, EmptyDataDecls,
-              TypeSynonymInstances, MultiParamTypeClasses,
-              FlexibleInstances, Rank2Types, ScopedTypeVariables,
-              DeriveDataTypeable
+    Extensions: CPP, MagicHash, UnboxedTuples, PatternGuards,
+                ForeignFunctionInterface, EmptyDataDecls,
+                TypeSynonymInstances, MultiParamTypeClasses,
+                FlexibleInstances, Rank2Types, ScopedTypeVariables,
+                DeriveDataTypeable
 
-  GHC-Options: -Wall -fno-warn-orphans -fno-warn-name-shadowing
+    GHC-Options: -Wall -fno-warn-orphans -fno-warn-name-shadowing
+  } else {
+    Other-modules:  GhciVis706.GhciMonad
+                    GhciVis706.InteractiveUI
+                    GhciVis706.GhciTags
+                    GhciVis706.Main
+
+    Build-Depends: base         == 4.*,
+                   array        >= 0.4,
+                   bytestring   >= 0.9,
+                   directory    >= 1.1,
+                   filepath     >= 1.3,
+                   process      >= 1.1,
+                   mtl          >= 2.1,
+                   transformers >= 0.3,
+                   haskeline    >= 0.7,
+                   ghc          >= 7.6
+
+    Hs-source-dirs: src/
+
+    if os(windows)
+        Build-Depends: Win32
+    else
+        Build-Depends: unix
+
+    Build-Depends: ghc-paths
+    cpp-Options: -DGHCI
+    ghc-options: -threaded
+
+    Extensions: CPP, MagicHash, UnboxedTuples, PatternGuards,
+                ForeignFunctionInterface, EmptyDataDecls,
+                TypeSynonymInstances, MultiParamTypeClasses,
+                FlexibleInstances, Rank2Types, ScopedTypeVariables,
+                DeriveDataTypeable
+
+    GHC-Options: -Wall -fno-warn-orphans -fno-warn-name-shadowing
+  }

@@ -7,7 +7,7 @@
 -----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
-module GhciVis.GhciTags (
+module GhciVis706.GhciTags (
   createCTagsWithLineNumbersCmd,
   createCTagsWithRegExesCmd,
   createETagsFileCmd
@@ -15,7 +15,7 @@ module GhciVis.GhciTags (
 
 import Exception
 import GHC
-import GhciVis.GhciMonad
+import GhciVis706.GhciMonad
 import Outputable
 
 -- ToDo: figure out whether we need these, and put something appropriate
