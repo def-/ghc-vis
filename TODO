@@ -4,10 +4,6 @@
 
 - Getting a reconstructed type as a String from GHCi would be enough?
 
-- minimal view: like now
-- full view: info at start, help
-  Legend: Add window, load correct SVG into window
-  Maybe integrate GHCi with ghc-vis into a single window
 - interactively blend in and out:
   either single cloures or in general for all closures of a specific type (pattern matching?)
 
