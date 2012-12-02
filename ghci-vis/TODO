@@ -1,7 +1,8 @@
 ghci-vis
 
-- Get it to compile
+- Register new commands
+  - Type reconstruction
 
-- No more :update
-
-- Type reconstruction
+- Register event handlers
+  - What events?
+  - No more :update
