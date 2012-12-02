@@ -8,7 +8,7 @@
 --
 -----------------------------------------------------------------------------
 
-module GhciVis706.Main (main) where
+module Eghci706.Main (main) where
 
 -- The official GHC API
 import qualified GHC
@@ -24,7 +24,7 @@ import HscMain          ( newHscEnv )
 import DriverPipeline   ( oneShot, compileFile )
 import DriverMkDepend   ( doMkDependHS )
 #ifdef GHCI
-import GhciVis706.InteractiveUI    ( interactiveUI, ghciWelcomeMsg, defaultGhciSettings )
+import Eghci706.InteractiveUI    ( interactiveUI, ghciWelcomeMsg, defaultGhciSettings )
 #endif
 
 

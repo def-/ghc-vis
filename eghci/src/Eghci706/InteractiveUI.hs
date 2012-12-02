@@ -9,7 +9,7 @@
 --
 -----------------------------------------------------------------------------
 
-module GhciVis706.InteractiveUI (
+module Eghci706.InteractiveUI (
         interactiveUI,
         GhciSettings(..),
         defaultGhciSettings,
@@ -18,9 +18,9 @@ module GhciVis706.InteractiveUI (
     ) where
 
 -- GHCi
-import qualified GhciVis706.GhciMonad as GhciMonad
-import GhciVis706.GhciMonad hiding ( args, runStmt )
-import GhciVis706.GhciTags
+import qualified Eghci706.GhciMonad as GhciMonad
+import Eghci706.GhciMonad hiding ( args, runStmt )
+import Eghci706.GhciTags
 import Debugger
 
 -- The GHC interface

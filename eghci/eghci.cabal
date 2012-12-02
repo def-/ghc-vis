@@ -1,4 +1,4 @@
-Name: ghci-vis
+Name: eghci
 Version: 0.1
 Copyright: BSD3
 License: BSD3
@@ -8,20 +8,20 @@ Build-Type: Simple
 Cabal-Version: >= 1.6
 Maintainer: Dennis Felsing <dennis@felsin9.de>
 Category: Compilers/Interpreters
-Synopsis: An implementation of ghci for ghc-vis
+Synopsis: Extensible GHCi
 Description: None yet
 Homepage: http://felsin9.de/nnis/ghc-vis
 
 flag ghc-704
     Description: for GHC 7.4
 
-Executable ghci-vis
+Executable eghci
   Main-is: Main.hs
   if flag(ghc-704) {
-    Other-modules:  GhciVis704.GhciMonad
-                    GhciVis704.InteractiveUI
-                    GhciVis704.GhciTags
-                    GhciVis704.Main
+    Other-modules:  Eghci704.GhciMonad
+                    Eghci704.InteractiveUI
+                    Eghci704.GhciTags
+                    Eghci704.Main
 
     Build-Depends: base         == 4.*,
                    array        >= 0.4,
@@ -53,10 +53,10 @@ Executable ghci-vis
 
     GHC-Options: -Wall -fno-warn-orphans -fno-warn-name-shadowing
   } else {
-    Other-modules:  GhciVis706.GhciMonad
-                    GhciVis706.InteractiveUI
-                    GhciVis706.GhciTags
-                    GhciVis706.Main
+    Other-modules:  Eghci706.GhciMonad
+                    Eghci706.InteractiveUI
+                    Eghci706.GhciTags
+                    Eghci706.Main
 
     Build-Depends: base         == 4.*,
                    array        >= 0.4,

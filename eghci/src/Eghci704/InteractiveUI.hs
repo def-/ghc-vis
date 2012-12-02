@@ -17,13 +17,13 @@
 --
 -----------------------------------------------------------------------------
 
-module GhciVis704.InteractiveUI ( interactiveUI, ghciWelcomeMsg ) where
+module Eghci704.InteractiveUI ( interactiveUI, ghciWelcomeMsg ) where
 
 #include "HsVersions.h"
 
 import qualified GhciMonad
-import GhciVis704.GhciMonad hiding ( runStmt )
-import GhciVis704.GhciTags
+import Eghci704.GhciMonad hiding ( runStmt )
+import Eghci704.GhciTags
 import Debugger
 
 -- The GHC interface
