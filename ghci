@@ -1,5 +1,6 @@
 :def vis    \_ -> return $ "GHC.Vis.vis"
 :def mvis   \_ -> return $ "GHC.Vis.mvis"
+:def svis   \_ -> return $ "GHC.Vis.svis"
 :def view   \x -> return $ "GHC.Vis.view (" ++ x ++ ") " ++ show x
 :def eval   \x -> return $ "GHC.Vis.eval \"" ++ x ++ "\""
 :def switch \_ -> return $ "GHC.Vis.switch"

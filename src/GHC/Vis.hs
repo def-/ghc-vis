@@ -36,6 +36,9 @@ example using ghc-vis outside of GHCi:
 module GHC.Vis (
   vis,
   mvis,
+#ifdef SDL_WINDOW
+  svis,
+#endif
   view,
   eval,
   switch,
@@ -85,6 +88,11 @@ import Graphics.Rendering.Cairo.SVG
 import Paths_ghc_vis as My
 #endif
 
+#ifdef SDL_WINDOW
+import qualified Graphics.UI.SDL as SDL
+import Foreign.Ptr ( castPtr )
+#endif
+
 views :: [View]
 views =
   View List.redraw List.click List.move List.updateObjects List.export :
@@ -114,6 +122,11 @@ bigPositionIncrement = 200
 signalTimeout :: Int
 signalTimeout = 1000000
 
+#ifdef SDL_WINDOW
+black = SDL.Pixel maxBound
+white = SDL.Pixel 0xFFFFFF
+#endif
+
 -- | This is the main function. It's to be called from GHCi and launches a
 --   graphical window in a new thread.
 vis :: IO ()
@@ -129,6 +142,13 @@ mvis :: IO ()
 mvis = do
   vr <- swapMVar visRunning True
   unless vr $ void $ forkIO mVisMainThread
+
+#ifdef SDL_WINDOW
+svis :: IO ()
+svis = do
+  vr <- swapMVar visRunning True
+  unless vr $ void $ forkIO sdlVisMainThread
+#endif
 
 -- | Add expressions with a name to the visualization window.
 view :: a -> String -> IO ()
@@ -203,6 +223,44 @@ mVisMainThread = do
   dummy <- windowNew
 
   setupGUI window canvas dummy
+
+#ifdef SDL_WINDOW
+sdlVisMainThread :: IO ()
+sdlVisMainThread = SDL.withInit [ SDL.InitVideo ] $ do
+  screen <- SDL.setVideoMode 600 600 32 [ SDL.Resizable ]
+
+  SDL.fillRect screen Nothing black
+
+  pixels <- fmap castPtr $ SDL.surfaceGetPixels screen
+
+  -- Here we test the first of the user facing functions added by the patch.
+  -- Be sure to use FORMATRGB24 so Cairo and SDL don't conflict about alpha
+  -- values. If you need to use alpha channel in your Cairo routines, consider
+  -- using an independent Cairo surface to buffer your alpha drawing to.
+  --renderWith canvas demo1
+
+  -- And here is the other new function for when you want to hide the
+  -- Cairo.Surface from the caller.
+
+  canvas <- createImageSurfaceForData pixels FormatRGB24 600 600 (600 * 4)
+
+  reactThread <- forkIO $ react2
+
+  let idle = do
+        e <- SDL.waitEvent
+        case e of
+          SDL.Quit -> quit reactThread
+          otherwise -> do
+            putStrLn "Updating"
+            s <- List.getState
+            SDL.fillRect screen Nothing white
+            boundingBoxes <- renderWith canvas $ List.draw s 600 600
+            List.updateBoundingBoxes boundingBoxes
+            SDL.flip screen
+            idle
+
+  idle
+#endif
 
 setupGUI :: (WidgetClass w1, WidgetClass w2, WidgetClass w3) => w1 -> w2 -> w3 -> IO ()
 setupGUI window canvas legendCanvas = do
@@ -342,7 +400,7 @@ setupGUI window canvas legendCanvas = do
 
   widgetShowAll window
 
-  reactThread <- forkIO $ react canvas legendCanvas window
+  reactThread <- forkIO $ react canvas legendCanvas
   --onDestroy window mainQuit -- Causes :r problems with multiple windows
   onDestroy window (quit reactThread)
 
@@ -354,8 +412,9 @@ quit reactThread = do
   swapMVar visRunning False
   killThread reactThread
 
-react :: (WidgetClass w1, WidgetClass w2, WidgetClass w3) => w1 -> w2 -> w3 -> IO b
-react canvas legendCanvas window = do
+#ifdef SDL_WINDOW
+react2 :: IO b
+react2 = do
   -- Timeout used to handle ghci reloads (:r)
   -- Reloads cause the visSignal to be reinitialized, but takeMVar is still
   -- waiting for the old one.  This solution is not perfect, but it works for
@@ -364,11 +423,66 @@ react canvas legendCanvas window = do
   case mbSignal of
     Nothing -> do
       running <- readMVar visRunning
-      if running then react canvas legendCanvas window else
+      if running then react2 else
         -- :r caused visRunning to be reset
         (do swapMVar visRunning True
             timeout signalTimeout (putMVar visSignal UpdateSignal)
-            react canvas legendCanvas window)
+            react2)
+    Just signal -> do
+      case signal of
+        NewSignal x n  -> modifyMVar_ visBoxes (
+          \y -> return $ if (x,n) `elem` y then y else y ++ [(x,n)])
+        ClearSignal    -> modifyMVar_ visBoxes (\_ -> return [])
+        UpdateSignal   -> return ()
+        SwitchSignal   -> doSwitch
+        ExportSignal d f -> catch (runCorrect exportView >>= \e -> e d f)
+          (\e -> do let err = show (e :: IOException)
+                    hPutStrLn stderr $ "Couldn't export to file \"" ++ f ++ "\": " ++ err
+                    return ())
+
+      boxes <- readMVar visBoxes
+      performGC -- TODO: Else Blackholes appear. Do we want this?
+                -- Blackholes stop our current thread and only resume after
+                -- they have been replaced with their result, thereby leading
+                -- to an additional element in the HeapMap we don't want.
+                -- Example for bad behaviour that would happen then:
+                -- λ> let xs = [1..42] :: [Int]
+                -- λ> let x = 17 :: Int
+                -- λ> let ys = [ y | y <- xs, y >= x ]
+
+      runCorrect updateObjects >>= \f -> f boxes
+
+      --postGUISync $ widgetQueueDraw canvas
+      --postGUISync $ widgetQueueDraw legendCanvas
+      react2
+
+#ifdef GRAPH_VIEW
+  where doSwitch = isGraphvizInstalled >>= \gvi -> if gvi
+          then modifyIORef visState (\s -> s {T.view = succN (T.view s), zoomRatio = 1, position = (0, 0)})
+          else putStrLn "Cannot switch view: Graphviz not installed"
+
+        succN GraphView = ListView
+        succN ListView = GraphView
+#else
+  where doSwitch = putStrLn "Cannot switch view: Graph view disabled at build"
+#endif
+#endif
+
+react :: (WidgetClass w1, WidgetClass w2) => w1 -> w2 -> IO b
+react canvas legendCanvas = do
+  -- Timeout used to handle ghci reloads (:r)
+  -- Reloads cause the visSignal to be reinitialized, but takeMVar is still
+  -- waiting for the old one.  This solution is not perfect, but it works for
+  -- now.
+  mbSignal <- timeout signalTimeout (takeMVar visSignal)
+  case mbSignal of
+    Nothing -> do
+      running <- readMVar visRunning
+      if running then react canvas legendCanvas else
+        -- :r caused visRunning to be reset
+        (do swapMVar visRunning True
+            timeout signalTimeout (putMVar visSignal UpdateSignal)
+            react canvas legendCanvas)
     Just signal -> do
       case signal of
         NewSignal x n  -> modifyMVar_ visBoxes (
@@ -395,7 +509,7 @@ react canvas legendCanvas window = do
 
       postGUISync $ widgetQueueDraw canvas
       postGUISync $ widgetQueueDraw legendCanvas
-      react canvas legendCanvas window
+      react canvas legendCanvas
 
 #ifdef GRAPH_VIEW
   where doSwitch = isGraphvizInstalled >>= \gvi -> if gvi

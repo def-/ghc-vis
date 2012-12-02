@@ -8,6 +8,11 @@
  -}
 module GHC.Vis.View.List (
   export,
+
+  getState,
+  draw,
+  updateBoundingBoxes,
+
   redraw,
   click,
   move,
@@ -90,6 +95,13 @@ redraw canvas = do
   Gtk.Rectangle _ _ rw2 rh2 <- widgetGetAllocation canvas
 
   boundingBoxes <- render canvas (draw s rw2 rh2)
+  modifyIORef state (\s' -> s' {bounds = boundingBoxes})
+
+getState :: IO State
+getState = readIORef state
+
+updateBoundingBoxes :: [(String, Rectangle)] -> IO ()
+updateBoundingBoxes boundingBoxes = do
   modifyIORef state (\s' -> s' {bounds = boundingBoxes})
 
 -- | Export the visualization to an SVG file
