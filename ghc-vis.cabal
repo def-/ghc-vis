@@ -33,7 +33,7 @@ flag full
   Description: "Full ghc-vis window: decorations, buttons, legend"
 
 flag sdl
-  Default: True
+  Default: False
   Description: "SDL window"
 
 Library
