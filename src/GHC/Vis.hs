@@ -138,12 +138,16 @@ vis = do
 vis = mvis
 #endif
 
+-- | A minimalistic version of ghc-vis, without window decorations, help and
+--   all that other stuff.
 mvis :: IO ()
 mvis = do
   vr <- swapMVar visRunning True
   unless vr $ void $ forkIO mVisMainThread
 
 #ifdef SDL_WINDOW
+-- | SDL version. Not properly working yet. Mainly for testing whether SDL
+--   works better than GTK on some platforms.
 svis :: IO ()
 svis = do
   vr <- swapMVar visRunning True

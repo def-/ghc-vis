@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE CPP, RankNTypes #-}
 {- |
    Module      : GHC.Vis.View.List
    Copyright   : (c) Dennis Felsing
@@ -9,9 +9,11 @@
 module GHC.Vis.View.List (
   export,
 
+#ifdef SDL_WINDOW
   getState,
   draw,
   updateBoundingBoxes,
+#endif
 
   redraw,
   click,
@@ -97,12 +99,14 @@ redraw canvas = do
   boundingBoxes <- render canvas (draw s rw2 rh2)
   modifyIORef state (\s' -> s' {bounds = boundingBoxes})
 
+#ifdef SDL_WINDOW
 getState :: IO State
 getState = readIORef state
 
 updateBoundingBoxes :: [(String, Rectangle)] -> IO ()
 updateBoundingBoxes boundingBoxes = do
   modifyIORef state (\s' -> s' {bounds = boundingBoxes})
+#endif
 
 -- | Export the visualization to an SVG file
 export :: DrawFunction -> String -> IO ()

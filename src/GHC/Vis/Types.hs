@@ -28,6 +28,7 @@ import qualified Control.Monad.State as MS
 import Graphics.UI.Gtk hiding (Box, Signal, Point)
 import Graphics.Rendering.Cairo
 
+-- | A simple Point
 type Point = (Double, Double)
 
 -- | A function to draw a cairo drawing to a file.
@@ -83,6 +84,7 @@ data PState = PState
   , heapMap' :: HeapMap
   }
 
+-- | The state of a printing operation
 type PrintState = MS.State PState
 
 -- | Simple representation of objects on the heap, so they can be arranged linearly
