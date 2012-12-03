@@ -63,7 +63,8 @@ Library
       Cpp-options: -DFULL_WINDOW
 
   if flag(sdl)
-      Build-depends: SDL >= 0.6
+      Build-depends: SDL >= 0.6,
+                     cairo >= 0.12.4
       Cpp-options: -DSDL_WINDOW
 
 source-repository head
