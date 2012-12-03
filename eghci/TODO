@@ -1,8 +1,0 @@
-ghci-vis
-
-- Register new commands
-  - Type reconstruction
-
-- Register event handlers
-  - What events?
-  - No more :update
