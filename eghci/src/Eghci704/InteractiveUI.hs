@@ -19,9 +19,7 @@
 
 module Eghci704.InteractiveUI ( interactiveUI, ghciWelcomeMsg ) where
 
-#include "HsVersions.h"
-
-import qualified GhciMonad
+import qualified Eghci704.GhciMonad as GhciMonad
 import Eghci704.GhciMonad hiding ( runStmt )
 import Eghci704.GhciTags
 import Debugger
@@ -99,6 +97,19 @@ import GHC.IO.Handle ( hFlushAll )
 import GHC.TopHandler
 
 import Data.IORef ( IORef, readIORef, writeIORef )
+
+-- copied from HsVersions.h
+
+#ifdef DEBUG
+#define ASSERT(e)      if (not (e)) then (assertPanic __FILE__ __LINE__) else
+#else
+#define ASSERT(e)      if False && (not (e)) then panic "ASSERT" else
+#endif
+
+#define GLOBAL_VAR(name,value,ty)  \
+{-# NOINLINE name #-};             \
+name :: IORef (ty);                \
+name = Util.global (value);
 
 -----------------------------------------------------------------------------
 
