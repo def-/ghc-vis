@@ -1,3 +1,5 @@
+- Weak-Ptrs to gray out closures which have been removed by garbage collection
+
 - List instead of Maybe for edge name, so that there can be :view a, let b = a, :view b
 
 - Tests to detect when GHC changes in a way that makes ghc-vis unusable
