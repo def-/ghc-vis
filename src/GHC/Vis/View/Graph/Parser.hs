@@ -15,6 +15,7 @@ where
 import Data.List
 
 import Control.Monad
+import Data.Functor
 
 import qualified Data.Text.Lazy as B
 
@@ -45,10 +46,6 @@ nodeFontSize = 24
 edgeFontSize :: Double
 edgeFontSize = 24
 
-foldlMaybe :: (a -> b -> Maybe a) -> a -> [b] -> Maybe a
-foldlMaybe f a bs =
-   foldr (\b g x -> f x b >>= g) Just bs a
-
 -- | Take the objects to be visualized and run them through @dot@ and extract
 --   the drawing operations that have to be exectued to show the graph of the
 --   heap map.
@@ -58,8 +55,8 @@ xDotParse as = do
 
   let nodes = zip [0..] $ map (\(_,(_,c)) -> c) rhm
       edges = do
-        mbe <- foldM mbEdges [] nodes
-        return $ foldlMaybe toLEdge [] mbe
+        mbe <- concat <$> mapM mbEdges nodes
+        return $ foldM toLEdge [] mbe
       -- Reversing it fixes the ordering of nodes in the graph. Should run
       -- through allPtrs and sort by order inside of all allPtrs lists.
       --
@@ -79,12 +76,12 @@ xDotParse as = do
       toLEdge xs (f, Just t) = Just $ (f,t,""):xs
       toLEdge xs _ = Just xs
 
-      mbEdges xs (p,BCOClosure _ _ _ bPtr _ _ _) = do
+      mbEdges (p,BCOClosure _ _ _ bPtr _ _ _) = do
         children <- bcoChildren [bPtr]
-        return $ map (\b -> (p, Just b)) children ++ xs
+        return $ map (\b -> (p, Just b)) children
       -- Using allPtrs and then filtering the closures not available in the
       -- heap map out emulates pointersToFollow without being in IO
-      mbEdges xs (p,c) = return $ map (\b -> (p, boxPos b)) (allPtrs c) ++ xs
+      mbEdges (p,c) = return $ map (\b -> (p, boxPos b)) (allPtrs c)
 
       boxPos :: Box -> Maybe Int
       boxPos b = elemIndex b $ map fst rhm
