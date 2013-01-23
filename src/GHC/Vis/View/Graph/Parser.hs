@@ -114,10 +114,10 @@ getBoxes hm = map (\(b,(_,_)) -> b) $ reverse hm
 
 -- Probably have to do some kind of fold over the graph to remove for example
 -- unwanted pointers
-toViewableGraph :: Gr (Closure, Int) (String, Int) -> Gr (String, Int) (String, Int)
-toViewableGraph cg = emap id $ nmap (first showClosure) cg
+toViewableGraph :: Gr (Closure, Int) (String, Int) -> Gr ([String], Int) (String, Int)
+toViewableGraph cg = emap id $ nmap (first showClosureFields) cg
 
-defaultVis :: (Graph gr) => gr (String, Int) (String, Int)-> DotGraph Node
+defaultVis :: (Graph gr) => gr ([String], Int) (String, Int)-> DotGraph Node
 defaultVis = graphToDot nonClusteredParams
   -- Somehow (X11Color Transparency) is white, use (RGBA 0 0 0 0) instead
   -- Ordering OutEdges is not strong enough to force edge ordering, might not look good anyway
@@ -135,16 +135,16 @@ defaultVis = graphToDot nonClusteredParams
   where
     {-
     All pointer origins below the constructor:
-    nodeLabel l 0 = Label $ RecordLabel [FieldLabel (B.pack l)]
+    nodeLabel l 0 = Label $ RecordLabel [FieldLabel (B.pack l) | l <- ls]
     nodeLabel l i = Label $ RecordLabel [
             FlipFields [
-                FieldLabel (B.pack l),
+                FlipFields [FieldLabel (B.pack l) | l <- ls] ++
                 FlipFields [PortName (PN (B.pack (show j))) | j <- [0..i-1]]
             ]]
     -}
     {-
     All pointer following the constructor on the right:
     -}
-    nodeLabel l i = Label $ RecordLabel $
-                FieldLabel (B.pack l):
+    nodeLabel ls i = Label $ RecordLabel $
+                [FieldLabel (B.pack l) | l <- ls] ++
                 [ PortName (PN (B.pack (show j))) | j <- [0..i-1]]

@@ -12,7 +12,8 @@ module GHC.Vis.Internal (
   parseBoxes,
   parseBoxesHeap,
   pointersToFollow2,
-  showClosure
+  showClosure,
+  showClosureFields
   )
   where
 
@@ -465,14 +466,17 @@ mbParens t = if needsParens
 
 -- | Textual representation of Heap objects, used in the graph visualization.
 showClosure :: Closure -> String
-showClosure (ConsClosure _ _ [dataArg] _ modl name) =
+showClosure = unwords . showClosureFields
+
+showClosureFields :: Closure -> [String]
+showClosureFields (ConsClosure _ _ [dataArg] _ modl name) =
  case (modl, name) of
     k | k `elem` [ ("GHC.Word", "W#")
                  , ("GHC.Word", "W8#")
                  , ("GHC.Word", "W16#")
                  , ("GHC.Word", "W32#")
                  , ("GHC.Word", "W64#")
-                 ] -> name ++ " " ++ show dataArg
+                 ] -> [name, show dataArg]
 
     k | k `elem` [ ("GHC.Integer.Type", "S#")
                  , ("GHC.Types", "I#")
@@ -480,80 +484,80 @@ showClosure (ConsClosure _ _ [dataArg] _ modl name) =
                  , ("GHC.Int", "I16#")
                  , ("GHC.Int", "I32#")
                  , ("GHC.Int", "I64#")
-                 ] -> name ++ " " ++ show ((fromIntegral :: Word -> Int) dataArg)
+                 ] -> [name, show ((fromIntegral :: Word -> Int) dataArg)]
 
-    ("GHC.Types", "C#") -> show . chr $ fromIntegral dataArg
+    ("GHC.Types", "C#") -> ["C#", [chr $ fromIntegral dataArg]]
 
-    ("GHC.Types", "D#") -> printf "D# %0.5f" (unsafeCoerce dataArg :: Double)
-    ("GHC.Types", "F#") -> printf "F# %0.5f" (unsafeCoerce dataArg :: Double)
+    ("GHC.Types", "D#") -> ["D#", printf "%0.5f" (unsafeCoerce dataArg :: Double)]
+    ("GHC.Types", "F#") -> ["F#", printf "%0.5f" (unsafeCoerce dataArg :: Double)]
 
     -- :m +GHC.Arr
     -- let b = array ((1,1),(3,2)) [((1,1),42),((1,2),23),((2,1),999),((2,2),1000),((3,1),1001),((3,2),1002)]
     -- b
     -- :view b
-    _ -> printf "%s %d" name dataArg
+    _ -> [name, show dataArg]
 
-showClosure (ConsClosure (StgInfoTable 1 3 _ 0) _ [_,0,0] _ "Data.ByteString.Internal" "PS")
-  = "ByteString 0 0"
+showClosureFields (ConsClosure (StgInfoTable 1 3 _ 0) _ [_,0,0] _ "Data.ByteString.Internal" "PS")
+  = ["ByteString","0","0"]
 
-showClosure (ConsClosure (StgInfoTable 1 3 _ 0) [_] [_,start,end] _ "Data.ByteString.Internal" "PS")
-  = printf "ByteString %d %d" start end
+showClosureFields (ConsClosure (StgInfoTable 1 3 _ 0) [_] [_,start,end] _ "Data.ByteString.Internal" "PS")
+  = ["ByteString",printf "%d" start,printf "%d" end]
 
-showClosure (ConsClosure (StgInfoTable 2 3 _ 1) [_,_] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
-  = printf "Chunk %d %d" start end
+showClosureFields (ConsClosure (StgInfoTable 2 3 _ 1) [_,_] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
+  = ["Chunk",printf "%d" start,printf "%d" end]
 
-showClosure (ConsClosure _ _ dArgs _ _ name)
-  = unwords $ name : map show dArgs
+showClosureFields (ConsClosure _ _ dArgs _ _ name)
+  = name : map show dArgs
 
 -- Reversed order of ptrs
-showClosure ThunkClosure{}
-  = "Thunk"
+showClosureFields ThunkClosure{}
+  = ["Thunk"]
 
-showClosure SelectorClosure{}
-  = "Selector"
+showClosureFields SelectorClosure{}
+  = ["Selector"]
 
 -- Probably should delete these from Graph
-showClosure IndClosure{}
-  = "Ind"
+showClosureFields IndClosure{}
+  = ["Ind"]
 
-showClosure BlackholeClosure{}
-  = "Blackhole"
+showClosureFields BlackholeClosure{}
+  = ["Blackhole"]
 
-showClosure APClosure{}
-  = "AP"
+showClosureFields APClosure{}
+  = ["AP"]
 
-showClosure PAPClosure{}
-  = "PAP"
+showClosureFields PAPClosure{}
+  = ["PAP"]
 
-showClosure APStackClosure{}
-  = "APStack"
+showClosureFields APStackClosure{}
+  = ["APStack"]
 
-showClosure BCOClosure{}
-  = "BCO"
+showClosureFields BCOClosure{}
+  = ["BCO"]
 
-showClosure (ArrWordsClosure _ _ arrWords)
-  = intercalate ",\n" $ map (printf "0x%x") arrWords
+showClosureFields (ArrWordsClosure _ _ arrWords)
+  = map (printf "0x%x") arrWords
 
-showClosure MutArrClosure{}
-  = "MutArr"
+showClosureFields MutArrClosure{}
+  = ["MutArr"]
 
-showClosure MutVarClosure{}
-  = "MutVar"
+showClosureFields MutVarClosure{}
+  = ["MutVar"]
 
-showClosure MVarClosure{}
-  = "MVar#"
+showClosureFields MVarClosure{}
+  = ["MVar#"]
 
-showClosure FunClosure{}
-  = "Fun"
+showClosureFields FunClosure{}
+  = ["Fun"]
 
-showClosure BlockingQueueClosure{}
-  = "BlockingQueue"
+showClosureFields BlockingQueueClosure{}
+  = ["BlockingQueue"]
 
-showClosure (OtherClosure (StgInfoTable _ _ cTipe _) _ _)
-  = show cTipe
+showClosureFields (OtherClosure (StgInfoTable _ _ cTipe _) _ _)
+  = [show cTipe]
 
-showClosure (UnsupportedClosure (StgInfoTable _ _ cTipe _))
-  = show cTipe
+showClosureFields (UnsupportedClosure (StgInfoTable _ _ cTipe _))
+  = [show cTipe]
 
 --showClosure c = "Missing pattern for " ++ show c
 
