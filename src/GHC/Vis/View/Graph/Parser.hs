@@ -14,8 +14,8 @@ where
 
 import Data.List
 import Data.Maybe
-
 import Data.Functor
+import Control.Arrow
 
 import qualified Data.Text.Lazy as B
 
@@ -53,8 +53,7 @@ xDotParse :: [(Box, String)] -> IO ([(Object Node, Operation)], [Box], Rectangle
 xDotParse as = do
   hm <- walkHeap as
 
-  let nodes = zip [0..] $ map (\(_,(_,c)) -> c) rhm
-      -- Reversing it fixes the ordering of nodes in the graph. Should run
+  let -- Reversing it fixes the ordering of nodes in the graph. Should run
       -- through allPtrs and sort by order inside of all allPtrs lists.
       --
       -- When building the graph directly out of [Box] instead of going
@@ -65,6 +64,12 @@ xDotParse as = do
       -- a way in graphviz to specify outgoing edge orientation after all?
       rhm = reverse hm
 
+      toLNode (_,(_,c@BCOClosure {bcoptrs = bPtr})) = do
+        children <- bcoChildren [bPtr]
+        return (c, length children)
+      toLNode (_,(_,c)) = do
+        return (c, length (allPtrs c))
+
       toLEdge (0, Just t, i) = if length rhm <= t
         then Nothing -- This might be able to happen, let's make sure it doesn't
         else case rhm !! t of
@@ -73,12 +78,12 @@ xDotParse as = do
       toLEdge (f, Just t, i) = Just (f,t,("",i))
       toLEdge _ = Nothing
 
-      mbEdges (p,BCOClosure _ _ _ bPtr _ _ _) = do
+      mbEdges (p,(BCOClosure _ _ _ bPtr _ _ _,_)) = do
         children <- bcoChildren [bPtr]
         return $ zipWith (\b i -> (p, Just b, i)) children [0..]
       -- Using allPtrs and then filtering the closures not available in the
       -- heap map out emulates pointersToFollow without being in IO
-      mbEdges (p,c) = return $ zipWith (\b i -> (p, boxPos b, i)) (allPtrs c) [0..]
+      mbEdges (p,(c,_)) = return $ zipWith (\b i -> (p, boxPos b, i)) (allPtrs c) [0..]
 
       boxPos :: Box -> Maybe Int
       boxPos b = elemIndex b $ map fst rhm
@@ -92,12 +97,13 @@ xDotParse as = do
         Just pos -> do children <- bcoChildren bs
                        return $ pos : children
 
+  nodes <- zip [0..] <$> mapM toLNode rhm
   mbe <- concat <$> mapM mbEdges nodes
   let edges = mapMaybe toLEdge mbe
 
   -- Convert a heap map, our internal data structure, to a graph that can be
   -- converted to a dot graph.
-  let buildGraph :: Gr Closure (String, Int)
+  let buildGraph :: Gr (Closure, Int) (String, Int)
       buildGraph = insEdges edges $ insNodes nodes empty
 
   xDot <- graphvizWithHandle Dot (defaultVis $ toViewableGraph buildGraph) XDot hGetDot
@@ -108,15 +114,15 @@ getBoxes hm = map (\(b,(_,_)) -> b) $ reverse hm
 
 -- Probably have to do some kind of fold over the graph to remove for example
 -- unwanted pointers
-toViewableGraph :: Gr Closure (String, Int) -> Gr String (String, Int)
-toViewableGraph cg = emap id $ nmap showClosure cg
+toViewableGraph :: Gr (Closure, Int) (String, Int) -> Gr (String, Int) (String, Int)
+toViewableGraph cg = emap id $ nmap (first showClosure) cg
 
-defaultVis :: (Graph gr) => gr String (String, Int)-> DotGraph Node
+defaultVis :: (Graph gr) => gr (String, Int) (String, Int)-> DotGraph Node
 defaultVis = graphToDot nonClusteredParams
   -- Somehow (X11Color Transparency) is white, use (RGBA 0 0 0 0) instead
   -- Ordering OutEdges is not strong enough to force edge ordering, might not look good anyway
   { globalAttributes = [GraphAttrs [BgColor [RGBA 0 0 0 0], FontName fontName, FontSize graphFontSize]]
-  , fmtNode = \ (_,l) -> [toLabel l, FontName fontName, FontSize nodeFontSize]
+  , fmtNode = \ (_,(l,i)) -> [toLabel l, FontName fontName, FontSize nodeFontSize]
   --, fmtNode = \ (_,l) -> [toLabel l, FontName fontName, FontSize nodeFontSize, Style [SItem Filled []], FillColor [RGBA 255 255 255 255], Color [RGBA 0 0 0 255]]
   --, fmtNode = \ (_,l) -> [toLabel l, FontName fontName, FontSize nodeFontSize, Shape PlainText]
   , fmtEdge = \ (_,_,(l,i)) -> [toLabel l, FontName fontName, FontSize edgeFontSize]
