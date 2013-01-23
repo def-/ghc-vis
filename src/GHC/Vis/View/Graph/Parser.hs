@@ -65,20 +65,20 @@ xDotParse as = do
       -- a way in graphviz to specify outgoing edge orientation after all?
       rhm = reverse hm
 
-      toLEdge (0, Just t) = if length rhm <= t
+      toLEdge (0, Just t, i) = if length rhm <= t
         then Nothing -- This might be able to happen, let's make sure it doesn't
         else case rhm !! t of
-          (_,(Just name, _)) -> Just (0,t,name)
-          (_,(Nothing, _))   -> Just (0,t,"")
-      toLEdge (f, Just t) = Just (f,t,"")
+          (_,(Just name, _)) -> Just (0,t,(name, i))
+          (_,(Nothing, _))   -> Just (0,t,("",i))
+      toLEdge (f, Just t, i) = Just (f,t,("",i))
       toLEdge _ = Nothing
 
       mbEdges (p,BCOClosure _ _ _ bPtr _ _ _) = do
         children <- bcoChildren [bPtr]
-        return $ map (\b -> (p, Just b)) children
+        return $ zipWith (\b i -> (p, Just b, i)) children [0..]
       -- Using allPtrs and then filtering the closures not available in the
       -- heap map out emulates pointersToFollow without being in IO
-      mbEdges (p,c) = return $ map (\b -> (p, boxPos b)) (allPtrs c)
+      mbEdges (p,c) = return $ zipWith (\b i -> (p, boxPos b, i)) (allPtrs c) [0..]
 
       boxPos :: Box -> Maybe Int
       boxPos b = elemIndex b $ map fst rhm
@@ -97,7 +97,7 @@ xDotParse as = do
 
   -- Convert a heap map, our internal data structure, to a graph that can be
   -- converted to a dot graph.
-  let buildGraph :: Gr Closure String
+  let buildGraph :: Gr Closure (String, Int)
       buildGraph = insEdges edges $ insNodes nodes empty
 
   xDot <- graphvizWithHandle Dot (defaultVis $ toViewableGraph buildGraph) XDot hGetDot
@@ -108,10 +108,10 @@ getBoxes hm = map (\(b,(_,_)) -> b) $ reverse hm
 
 -- Probably have to do some kind of fold over the graph to remove for example
 -- unwanted pointers
-toViewableGraph :: Gr Closure String -> Gr String String
+toViewableGraph :: Gr Closure (String, Int) -> Gr String (String, Int)
 toViewableGraph cg = emap id $ nmap showClosure cg
 
-defaultVis :: (Graph gr) => gr String String -> DotGraph Node
+defaultVis :: (Graph gr) => gr String (String, Int)-> DotGraph Node
 defaultVis = graphToDot nonClusteredParams
   -- Somehow (X11Color Transparency) is white, use (RGBA 0 0 0 0) instead
   -- Ordering OutEdges is not strong enough to force edge ordering, might not look good anyway
@@ -119,5 +119,5 @@ defaultVis = graphToDot nonClusteredParams
   , fmtNode = \ (_,l) -> [toLabel l, FontName fontName, FontSize nodeFontSize]
   --, fmtNode = \ (_,l) -> [toLabel l, FontName fontName, FontSize nodeFontSize, Style [SItem Filled []], FillColor [RGBA 255 255 255 255], Color [RGBA 0 0 0 255]]
   --, fmtNode = \ (_,l) -> [toLabel l, FontName fontName, FontSize nodeFontSize, Shape PlainText]
-  , fmtEdge = \ (_,_,l) -> [toLabel l, FontName fontName, FontSize edgeFontSize]
+  , fmtEdge = \ (_,_,(l,i)) -> [toLabel l, FontName fontName, FontSize edgeFontSize]
   }
