@@ -122,8 +122,29 @@ defaultVis = graphToDot nonClusteredParams
   -- Somehow (X11Color Transparency) is white, use (RGBA 0 0 0 0) instead
   -- Ordering OutEdges is not strong enough to force edge ordering, might not look good anyway
   { globalAttributes = [GraphAttrs [BgColor [RGBA 0 0 0 0], FontName fontName, FontSize graphFontSize]]
-  , fmtNode = \ (_,(l,i)) -> [toLabel l, FontName fontName, FontSize nodeFontSize]
+  , fmtNode = \ (_,(l,i)) -> [
+        nodeLabel l i,
+        Shape Record, FontName fontName, FontSize nodeFontSize]
   --, fmtNode = \ (_,l) -> [toLabel l, FontName fontName, FontSize nodeFontSize, Style [SItem Filled []], FillColor [RGBA 255 255 255 255], Color [RGBA 0 0 0 255]]
   --, fmtNode = \ (_,l) -> [toLabel l, FontName fontName, FontSize nodeFontSize, Shape PlainText]
-  , fmtEdge = \ (_,_,(l,i)) -> [toLabel l, FontName fontName, FontSize edgeFontSize]
+  , fmtEdge = \ (_,_,(l,i)) -> [
+        TailPort (LabelledPort (PN (B.pack (show i))) Nothing),
+        toLabel l,
+        FontName fontName, FontSize edgeFontSize]
   }
+  where
+    {-
+    All pointer origins below the constructor:
+    nodeLabel l 0 = Label $ RecordLabel [FieldLabel (B.pack l)]
+    nodeLabel l i = Label $ RecordLabel [
+            FlipFields [
+                FieldLabel (B.pack l),
+                FlipFields [PortName (PN (B.pack (show j))) | j <- [0..i-1]]
+            ]]
+    -}
+    {-
+    All pointer following the constructor on the right:
+    -}
+    nodeLabel l i = Label $ RecordLabel $
+                FieldLabel (B.pack l):
+                [ PortName (PN (B.pack (show j))) | j <- [0..i-1]]
