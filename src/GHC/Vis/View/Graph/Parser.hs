@@ -13,8 +13,8 @@ module GHC.Vis.View.Graph.Parser (
 where
 
 import Data.List
+import Data.Maybe
 
-import Control.Monad
 import Data.Functor
 
 import qualified Data.Text.Lazy as B
@@ -54,9 +54,6 @@ xDotParse as = do
   hm <- walkHeap as
 
   let nodes = zip [0..] $ map (\(_,(_,c)) -> c) rhm
-      edges = do
-        mbe <- concat <$> mapM mbEdges nodes
-        return $ foldM toLEdge [] mbe
       -- Reversing it fixes the ordering of nodes in the graph. Should run
       -- through allPtrs and sort by order inside of all allPtrs lists.
       --
@@ -68,13 +65,13 @@ xDotParse as = do
       -- a way in graphviz to specify outgoing edge orientation after all?
       rhm = reverse hm
 
-      toLEdge xs (0, Just t) = if length rhm <= t
+      toLEdge (0, Just t) = if length rhm <= t
         then Nothing -- This might be able to happen, let's make sure it doesn't
         else case rhm !! t of
-          (_,(Just name, _)) -> Just $ (0,t,name):xs
-          (_,(Nothing, _))   -> Just $ (0,t,""):xs
-      toLEdge xs (f, Just t) = Just $ (f,t,""):xs
-      toLEdge xs _ = Just xs
+          (_,(Just name, _)) -> Just (0,t,name)
+          (_,(Nothing, _))   -> Just (0,t,"")
+      toLEdge (f, Just t) = Just (f,t,"")
+      toLEdge _ = Nothing
 
       mbEdges (p,BCOClosure _ _ _ bPtr _ _ _) = do
         children <- bcoChildren [bPtr]
@@ -95,18 +92,16 @@ xDotParse as = do
         Just pos -> do children <- bcoChildren bs
                        return $ pos : children
 
-  es' <- edges
+  mbe <- concat <$> mapM mbEdges nodes
+  let edges = mapMaybe toLEdge mbe
 
-  case es' of
-    Nothing -> xDotParse as
-    Just es -> do
-      -- Convert a heap map, our internal data structure, to a graph that can be
-      -- converted to a dot graph.
-      let buildGraph :: Gr Closure String
-          buildGraph = insEdges es $ insNodes nodes empty
+  -- Convert a heap map, our internal data structure, to a graph that can be
+  -- converted to a dot graph.
+  let buildGraph :: Gr Closure String
+      buildGraph = insEdges edges $ insNodes nodes empty
 
-      xDot <- graphvizWithHandle Dot (defaultVis $ toViewableGraph buildGraph) XDot hGetDot
-      return (getOperations xDot, getBoxes hm, getSize xDot)
+  xDot <- graphvizWithHandle Dot (defaultVis $ toViewableGraph buildGraph) XDot hGetDot
+  return (getOperations xDot, getBoxes hm, getSize xDot)
 
 getBoxes :: HeapMap -> [Box]
 getBoxes hm = map (\(b,(_,_)) -> b) $ reverse hm
