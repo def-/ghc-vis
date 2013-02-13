@@ -468,7 +468,7 @@ mbParens t = if needsParens
 showClosure :: Closure -> String
 showClosure = unwords . showClosureFields
 
-showClosureFields :: Closure -> [String]
+showClosureFields :: GenClosure t -> [String]
 showClosureFields (ConsClosure _ _ [dataArg] _ modl name) =
  case (modl, name) of
     k | k `elem` [ ("GHC.Word", "W#")
