@@ -174,5 +174,5 @@ move canvas = do
 -- | Something might have changed on the heap, update the view.
 updateObjects :: [(Box, String)] -> IO ()
 updateObjects bs = do
-  (ops, bs', size) <- xDotParse bs
+  (ops, bs', _ , size) <- xDotParse bs
   modifyIORef state (\s -> s {operations = ops, boxes = bs', totalSize = size, hover = None})

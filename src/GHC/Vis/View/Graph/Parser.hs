@@ -14,14 +14,12 @@ where
 
 import Data.Maybe
 import Data.List
-import Data.Functor
-import Control.Monad
 
 import qualified Data.IntMap as M
 
 import qualified Data.Text.Lazy as B
 
-import Data.Graph.Inductive hiding (nodes, edges)
+import Data.Graph.Inductive hiding (nodes, edges, newNodes)
 
 import Data.GraphViz hiding (Ellipse, Polygon, parse)
 import Data.GraphViz.Attributes.Complete
@@ -50,7 +48,7 @@ edgeFontSize = 24
 -- | Take the objects to be visualized and run them through @dot@ and extract
 --   the drawing operations that have to be exectued to show the graph of the
 --   heap map.
-xDotParse :: [(Box, String)] -> IO ([(Object Node, Operation)], [WeakBox], Rectangle)
+xDotParse :: [(Box, String)] -> IO ([(Object Node, Operation)], [WeakBox], [(Object Node, Rectangle)], Rectangle)
 xDotParse as = do
   (HeapGraph hg, is) <- multiBuildHeapGraph 100 $ map fst as
 
@@ -64,16 +62,17 @@ xDotParse as = do
   let buildGraph :: Gr (HeapGraphEntry, Int) (String, Int)
       buildGraph = insEdges edges $ insNodes nodes empty
 
-  let newNodes = zip [-length as..] $ map (\(b,n) -> ([n], 0)) as
-  let newEdges = map (\(z,(b,n)) -> ((fromJust $ findIndex (\(a,_) -> a == b) as) - length as, n, (fromJust $ lookup b as, 0))) $ zip [-length as..] is
+  let newNodes = zip [-length as..] $ map (\(_,n) -> ([n], 0)) as
+  let newEdges = map (\(_,(b,n)) -> ((fromJust $ findIndex (\(a,_) -> a == b) as) - length as, n, (fromJust $ lookup b as, 0))) $ zip [-length as..] is
 
   let insertMore gr = insEdges newEdges $ insNodes newNodes gr
 
   xDot <- graphvizWithHandle Dot (defaultVis $ insertMore $ toViewableGraph buildGraph) XDot hGetDot
 
-  return (getOperations xDot, getBoxes hg, getSize xDot)
+  return (getOperations xDot, getBoxes (HeapGraph hg), getDimensions xDot, getSize xDot)
 
-getBoxes hg = map (\(HeapGraphEntry b _) -> b) $ M.elems hg
+getBoxes :: HeapGraph -> [WeakBox]
+getBoxes (HeapGraph hg) = map (\(HeapGraphEntry b _) -> b) $ M.elems hg
 
 -- Probably have to do some kind of fold over the graph to remove for example
 -- unwanted pointers
@@ -88,7 +87,7 @@ defaultVis = graphToDot nonClusteredParams
   , fmtNode = \(x,(l,i)) -> if x >= 0 then [
         --xLabel (B.pack "foo"),
         nodeLabel l i,
-        Shape MRecord, FontName fontName, FontSize nodeFontSize]
+        Shape Record, FontName fontName, FontSize nodeFontSize]
       -- x < 0: Invisible marker nodes
       else [Shape PointShape, Style [SItem Invisible []]]
   --, fmtNode = \ (_,l) -> [toLabel l, FontName fontName, FontSize nodeFontSize, Style [SItem Filled []], FillColor [RGBA 255 255 255 255], Color [RGBA 0 0 0 255]]
