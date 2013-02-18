@@ -35,7 +35,7 @@ import GHC.Vis.Internal
 import GHC.Vis.Types hiding (State, View(..))
 import GHC.Vis.View.Common
 
-import GHC.HeapView (Box)
+import GHC.HeapView (Box, multiBuildHeapGraph)
 
 type Rectangle = (Double, Double, Double, Double)
 
@@ -201,6 +201,9 @@ move canvas = do
 updateObjects :: [(Box, String)] -> IO ()
 updateObjects boxes = do
   os <- parseBoxes boxes
+  --(h, is) <- multiBuildHeapGraph 100 $ map fst boxes
+  -- This is wrong
+  --let os = visHeapGraph (zipWith (\(b,i) (b',n) -> (i,n)) is boxes) h
   let objs = zipWith (\(x,y) z -> (x,y,z)) boxes os
   modifyIORef state (\s -> s {objects = objs, hover = Nothing})
 

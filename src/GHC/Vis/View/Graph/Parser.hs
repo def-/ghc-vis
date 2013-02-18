@@ -45,6 +45,9 @@ nodeFontSize = 24
 edgeFontSize :: Double
 edgeFontSize = 24
 
+graphvizCommand :: GraphvizCommand
+graphvizCommand = Dot
+
 -- | Take the objects to be visualized and run them through @dot@ and extract
 --   the drawing operations that have to be exectued to show the graph of the
 --   heap map.
@@ -67,7 +70,7 @@ xDotParse as = do
 
   let insertMore gr = insEdges newEdges $ insNodes newNodes gr
 
-  xDot <- graphvizWithHandle Dot (defaultVis $ insertMore $ toViewableGraph buildGraph) XDot hGetDot
+  xDot <- graphvizWithHandle graphvizCommand (defaultVis $ insertMore $ toViewableGraph buildGraph) XDot hGetDot
 
   return (getOperations xDot, getBoxes (HeapGraph hg), getDimensions xDot, getSize xDot)
 

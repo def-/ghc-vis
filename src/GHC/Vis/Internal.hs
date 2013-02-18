@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, MagicHash, DeriveDataTypeable, NoMonomorphismRestriction, RankNTypes #-}
+{-# LANGUAGE CPP, MagicHash, DeriveDataTypeable, NoMonomorphismRestriction, RankNTypes, RecordWildCards #-}
 
 {- |
    Module      : GHC.Vis.Internal
@@ -11,6 +11,7 @@ module GHC.Vis.Internal (
   walkHeap,
   parseBoxes,
   parseBoxesHeap,
+  visHeapGraph,
   pointersToFollow2,
   showClosure,
   showClosureFields
@@ -22,7 +23,7 @@ import Prelude hiding (catch)
 #endif
 
 import GHC.Vis.Types
-import GHC.HeapView hiding (name, pkg, modl, fun, arrWords)
+import GHC.HeapView hiding (pkg, modl, fun, arrWords)
 
 import Control.Monad
 import Control.Monad.State hiding (State, fix)
@@ -30,6 +31,9 @@ import Control.Monad.State hiding (State, fix)
 import Data.Word
 import Data.Char
 import Data.List hiding (insert)
+import Data.Function
+
+import qualified Data.IntMap as M
 
 import Text.Printf
 import Unsafe.Coerce
@@ -42,6 +46,84 @@ import System.IO.Unsafe
 --   data structures which are too big and would take very long to visualize.
 maxHeapWalkDepth :: Int
 maxHeapWalkDepth = 100
+
+visHeapGraph :: [(HeapGraphIndex, String)] -> HeapGraph -> [[VisObject]]
+visHeapGraph bs (HeapGraph m) = map (\x -> [Unnamed $ ppRef 0 (Just x)]) $ map fst bs
+  where
+    bindings = boundMultipleTimes (HeapGraph m) (map fst bs)
+
+    bindingLetter i = case iToE i of
+        HeapGraphEntry _ c -> case c of 
+            ThunkClosure {..} -> 't'
+            SelectorClosure {..} -> 't'
+            APClosure {..} -> 't'
+            PAPClosure {..} -> 'f'
+            BCOClosure {..} -> 't'
+            FunClosure {..} -> 'f'
+            _ -> 'x'
+
+    ppBindingMap = M.fromList $
+        concat $
+        map (zipWith (\j (i,c) -> (i, [c] ++ show j)) [(1::Int)..]) $
+        groupBy ((==) `on` snd) $ 
+        sortBy (compare `on` snd)
+        [ (i, bindingLetter i) | i <- bindings ]
+
+    ppVar i = ppBindingMap M.! i
+    ppBinding i = ppVar i ++ " = " ++ ppEntry 0 (iToE i)
+
+    ppEntry prec e@(HeapGraphEntry _ c)
+        | Just s <- isString e = show s
+        | Just l <- isList e = "[" ++ intercalate "," (map (ppRef 0) l) ++ "]"
+        | otherwise = ppClosure ppRef prec c
+
+    ppRef _ Nothing = "..."
+    ppRef prec (Just i) | i `elem` bindings = ppVar i
+                        | otherwise = ppEntry prec (iToE i) 
+    iToE i = m M.! i
+
+    iToUnboundE i = if i `elem` bindings then Nothing else M.lookup i m
+
+    isList :: HeapGraphEntry -> Maybe ([Maybe HeapGraphIndex])
+    isList (HeapGraphEntry _ c) = 
+        if isNil c
+          then return []
+          else do
+            (h,t) <- isCons c
+            ti <- t
+            e <- iToUnboundE ti
+            t' <- isList e
+            return $ (:) h t'
+
+    isString :: HeapGraphEntry -> Maybe String
+    isString e = do
+        list <- isList e
+        -- We do not want to print empty lists as "" as we do not know that they
+        -- are really strings.
+        if (null list)
+            then Nothing
+            else mapM (isChar . (\(HeapGraphEntry _ c) -> c) <=< iToUnboundE <=< id) list
+
+isChar :: GenClosure b -> Maybe Char
+isChar (ConsClosure { name = "C#", dataArgs = [ch], ptrArgs = []}) = Just (chr (fromIntegral ch))
+isChar _ = Nothing
+
+isCons :: GenClosure b -> Maybe (b, b)
+isCons (ConsClosure { name = ":", dataArgs = [], ptrArgs = [h,t]}) = Just (h,t)
+isCons _ = Nothing
+
+isTup :: GenClosure b -> Maybe [b]
+isTup (ConsClosure { dataArgs = [], ..}) =
+    if length name >= 3 &&
+       head name == '(' && last name == ')' &&
+       all (==',') (tail (init name))
+    then Just ptrArgs else Nothing
+isTup _ = Nothing
+
+
+isNil :: GenClosure b -> Bool
+isNil (ConsClosure { name = "[]", dataArgs = [], ptrArgs = []}) = True
+isNil _ = False
 
 -- | Walk the heap for a list of objects to be visualized and their
 --   corresponding names.
@@ -70,7 +152,7 @@ generalParseBoxes ::
 generalParseBoxes f bs = do
   h <- walkHeapSimply bs
   h2 <- walkHeapWithBCO bs
-  return $ f (g bs) $ PState 0 0 0 h h2
+  return $ f (g bs) $ PState 1 1 1 h h2
   where g bs' = runMaybeT $ go bs'
         go ((b',_):b's) = do h <- lift $ gets heapMap'
                              (_,c) <- lookupT b' h
@@ -224,7 +306,7 @@ setName b = do PState ti fi bi h h2 <- lift get
                      APClosure{}    -> ('t' : show ti, ti+1, fi, bi)
                      FunClosure{}   -> ('f' : show fi, ti, fi+1, bi)
                      PAPClosure{}   -> ('f' : show fi, ti, fi+1, bi)
-                     _              -> ('b' : show bi, ti, fi, bi+1)
+                     _              -> ('x' : show bi, ti, fi, bi+1)
                    set (Nothing, closure) = (Just n, closure)
                    set _ = error "unexpected pattern"
                h' <- MaybeT $ return $ adjust set b h
