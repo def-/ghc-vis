@@ -31,6 +31,7 @@ import Control.Monad.State hiding (State, fix)
 import Data.Word
 import Data.Char
 import Data.List hiding (insert)
+import Data.Maybe
 import Data.Function
 
 import qualified Data.IntMap as M
@@ -124,6 +125,12 @@ isTup _ = Nothing
 isNil :: GenClosure b -> Bool
 isNil (ConsClosure { name = "[]", dataArgs = [], ptrArgs = []}) = True
 isNil _ = False
+
+-- | In the given HeapMap, list all indices that are used more than once. The
+-- second parameter adds external references, commonly @[heapGraphRoot]@.
+boundMultipleTimes :: HeapGraph -> [HeapGraphIndex] -> [HeapGraphIndex]
+boundMultipleTimes (HeapGraph m) roots = map head $ filter (not.null) $ map tail $ group $ sort $
+     roots ++ concatMap (\(HeapGraphEntry _ c) -> catMaybes (allPtrs c)) (M.elems m)
 
 -- | Walk the heap for a list of objects to be visualized and their
 --   corresponding names.
