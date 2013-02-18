@@ -53,7 +53,9 @@ graphvizCommand = Dot
 --   heap map.
 xDotParse :: [(Box, String)] -> IO ([(Object Node, Operation)], [WeakBox], [(Object Node, Rectangle)], Rectangle)
 xDotParse as = do
-  (HeapGraph hg, is) <- multiBuildHeapGraph 100 $ map fst as
+  (HeapGraph hg, is) <- multiBuildHeapGraph 100 $ zip [-length as..] $ map fst as
+
+  let ss = zip [-length as..] $ map snd as -- Names of the boxes
 
   let hgList = M.toList hg
 
@@ -66,7 +68,9 @@ xDotParse as = do
       buildGraph = insEdges edges $ insNodes nodes empty
 
   let newNodes = zip [-length as..] $ map (\(_,n) -> ([n], 0)) as
-  let newEdges = map (\(_,(b,n)) -> ((fromJust $ findIndex (\(a,_) -> a == b) as) - length as, n, (fromJust $ lookup b as, 0))) $ zip [-length as..] is
+  let newEdges = map (\(i,n) -> (i, n, (fromJust $ lookup i ss, 0))) is
+  -- is = [(-3, 0), (-2, 4), (-1, 10)]
+  --let newEdges = map (\(_,(b,n)) -> ((fromJust $ findIndex (\(a,_) -> a == b) as) - length as, n, (fromJust $ lookup b as, 0))) $ zip [-length as..] is
 
   let insertMore gr = insEdges newEdges $ insNodes newNodes gr
 
