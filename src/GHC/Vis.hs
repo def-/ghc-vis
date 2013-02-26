@@ -463,7 +463,7 @@ react2 = do
 #ifdef GRAPH_VIEW
   where doSwitch = isGraphvizInstalled >>= \gvi -> if gvi
           then modifyIORef visState (\s -> s {T.view = succN (T.view s), zoomRatio = 1, position = (0, 0)})
-          else putStrLn "Cannot switch view: Graphviz not installed"
+          else putStrLn "Cannot switch view: The Graphviz binary (dot) is not installed"
 
         succN GraphView = ListView
         succN ListView = GraphView
@@ -518,7 +518,7 @@ react canvas legendCanvas = do
 #ifdef GRAPH_VIEW
   where doSwitch = isGraphvizInstalled >>= \gvi -> if gvi
           then modifyIORef visState (\s -> s {T.view = succN (T.view s), zoomRatio = 1, position = (0, 0)})
-          else putStrLn "Cannot switch view: Graphviz not installed"
+          else putStrLn "Cannot switch view: The Graphviz binary (dot) is not installed"
 
         succN GraphView = ListView
         succN ListView = GraphView
