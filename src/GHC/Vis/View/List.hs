@@ -198,13 +198,13 @@ move canvas = do
   unless (oldHover == hover s) $ widgetQueueDraw canvas
 
 -- | Something might have changed on the heap, update the view.
-updateObjects :: [(Box, String)] -> IO ()
+updateObjects :: [NamedBox] -> IO ()
 updateObjects boxes = do
   os <- parseBoxes boxes
   --(h, is) <- multiBuildHeapGraph 100 $ map fst boxes
   -- This is wrong
   --let os = visHeapGraph (zipWith (\(b,i) (b',n) -> (i,n)) is boxes) h
-  let objs = zipWith (\(x,y) z -> (x,y,z)) boxes os
+  let objs = zipWith (\(Identifier y,x) z -> (x,y,z)) boxes os
   modifyIORef state (\s -> s {objects = objs, hover = Nothing})
 
 drawEntry :: State -> Double -> Double -> ([VisObject], Double, String) -> Render [(String, Rectangle)]

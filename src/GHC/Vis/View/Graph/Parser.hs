@@ -27,6 +27,7 @@ import Data.GraphViz.Commands.IO
 
 import GHC.HeapView hiding (name)
 import GHC.Vis.Internal
+import GHC.Vis.Types
 
 import Graphics.XDot.Types hiding (name, h, Style, Color)
 import Graphics.XDot.Parser
@@ -51,26 +52,24 @@ graphvizCommand = Dot
 -- | Take the objects to be visualized and run them through @dot@ and extract
 --   the drawing operations that have to be exectued to show the graph of the
 --   heap map.
-xDotParse :: [(Box, String)] -> IO ([(Object Node, Operation)], [WeakBox], [(Object Node, Rectangle)], Rectangle)
+xDotParse :: [NamedBox] -> IO ([(Object Node, Operation)], [Box], [(Object Node, Rectangle)], Rectangle)
 xDotParse as = do
-  (HeapGraph hg, is) <- multiBuildHeapGraph 100 $ zip [-length as..] $ map fst as
-
-  let ss = zip [-length as..] $ map snd as -- Names of the boxes
+  (HeapGraph hg, is) <- multiBuildHeapGraph 100 as
 
   let hgList = M.toList hg
 
-  let nodes = map (\(i,e@(HeapGraphEntry _ c)) -> (i, (e, length $ allPtrs c))) hgList
-  let edges = map (\(x,(y,z)) -> (x,z,("",y))) $ concat $ map (\(i, (HeapGraphEntry _ c)) -> zip (repeat i) (zip [0..] $ map fromJust $ filter isJust $ allPtrs c)) hgList
+  let nodes = map (\(i,e@(HeapGraphEntry _ c _ _)) -> (i, (e, length $ allPtrs c))) hgList
+  let edges = map (\(x,(y,z)) -> (x,z,("",y))) $ concat $ map (\(i, (HeapGraphEntry _ c _ _)) -> zip (repeat i) (zip [0..] $ map fromJust $ filter isJust $ allPtrs c)) hgList
 
   -- Convert a heap graph, our internal data structure, to a graph that can be
   -- converted to a dot graph.
-  let buildGraph :: Gr (HeapGraphEntry, Int) (String, Int)
+  let buildGraph :: Gr (HeapGraphEntry Identifier, Int) (String, Int)
       buildGraph = insEdges edges $ insNodes nodes empty
 
-  let newNodes = zip [-length as..] $ map (\(_,n) -> ([n], 0)) as
-  let newEdges = map (\(i,n) -> (i, n, (fromJust $ lookup i ss, 0))) is
-  -- is = [(-3, 0), (-2, 4), (-1, 10)]
-  --let newEdges = map (\(_,(b,n)) -> ((fromJust $ findIndex (\(a,_) -> a == b) as) - length as, n, (fromJust $ lookup b as, 0))) $ zip [-length as..] is
+  let ss = zip (map fst as) [-length as..] -- Identifiers of the boxes
+  let newNodes = map (\(Identifier n, i) -> (i, ([n], 0))) ss
+  let newEdges = map (\(d@(Identifier n), i) -> (fromJust $ lookup d ss, i, (n, 0))) is
+  -- is = [("x", 0), ("y", 4), ("foo", 10)]
 
   let insertMore gr = insEdges newEdges $ insNodes newNodes gr
 
@@ -78,19 +77,19 @@ xDotParse as = do
 
   return (getOperations xDot, getBoxes (HeapGraph hg), getDimensions xDot, getSize xDot)
 
-getBoxes :: HeapGraph -> [WeakBox]
-getBoxes (HeapGraph hg) = map (\(HeapGraphEntry b _) -> b) $ M.elems hg
+getBoxes :: HeapGraph a -> [Box]
+getBoxes (HeapGraph hg) = map (\(HeapGraphEntry b _ _ _) -> b) $ M.elems hg
 
 -- Probably have to do some kind of fold over the graph to remove for example
 -- unwanted pointers
-toViewableGraph :: Gr (HeapGraphEntry, Int) (String, Int) -> Gr ([String], Int) (String, Int)
-toViewableGraph cg = emap id $ nmap (\((HeapGraphEntry _ c), i) -> (showClosureFields c, i)) cg
+toViewableGraph :: Gr (HeapGraphEntry a, Int) (String, Int) -> Gr ([String], Int) (String, Int)
+toViewableGraph cg = emap id $ nmap (\((HeapGraphEntry _ c _ _), i) -> (showClosureFields c, i)) cg
 
 defaultVis :: (Graph gr) => gr ([String], Int) (String, Int) -> DotGraph Node
 defaultVis = graphToDot nonClusteredParams
   -- Somehow (X11Color Transparency) is white, use (RGBA 0 0 0 0) instead
   -- Ordering OutEdges is not strong enough to force edge ordering, might not look good anyway
-  { globalAttributes = [GraphAttrs [BgColor [RGBA 0 0 0 0], FontName fontName, FontSize graphFontSize]]
+  { globalAttributes = [GraphAttrs [BgColor [toWC $ RGBA 0 0 0 0], FontName fontName, FontSize graphFontSize]]
   , fmtNode = \(x,(l,i)) -> if x >= 0 then [
         --xLabel (B.pack "foo"),
         nodeLabel l i,
