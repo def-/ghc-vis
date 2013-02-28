@@ -44,8 +44,8 @@ visState :: IORef State
 visState = unsafePerformIO $ newIORef $ State (0, 0) ListView 1 (0, 0) False False
 
 -- | All the visualized boxes
-visBoxes :: MVar [(Box, String)]
-visBoxes = unsafePerformIO (newMVar [] :: IO (MVar [(Box, String)]))
+visBoxes :: MVar [NamedBox]
+visBoxes = unsafePerformIO (newMVar [] :: IO (MVar [NamedBox]))
 
 -- | Evaluate an object identified by a String.
 evaluate :: String -> IO ()

@@ -40,7 +40,7 @@ import Graphics.XDot.Viewer
 import Graphics.XDot.Types hiding (size, w, h)
 
 data State = State
-  { boxes      :: [WeakBox]
+  { boxes      :: [Box]
   , operations :: [(Object Int, Operation)]
   , totalSize  :: (Double, Double, Double, Double)
   , bounds     :: [(Object Int, (Double, Double, Double, Double))]
@@ -122,30 +122,26 @@ click = do
       void $ forkIO $ putMVar visSignal UpdateSignal
     _ -> return ()
 
-evaluate2 :: WeakBox -> IO ()
-evaluate2 wb = do
-  mbB <- derefWeakBox wb
-  case mbB of
-    Nothing -> return ()
-    Just b@(Box a) -> do
-      c <- getBoxedClosureData b
-      case c of
-        -- ghc: internal error: MUT_ARR_PTRS_FROZEN object entered!
-        -- (GHC version 7.4.2 for x86_64_unknown_linux)
-        -- Please report this as a GHC bug:  http://www.haskell.org/ghc/reportabug
-        --ArrWordsClosure _ _ _ -> return () -- Don't inspect ArrWords
-        --MutArrClosure _ _ _ _ -> return ()
-        --MVarClosure _ _ _ _ -> return ()
-        --_ -> a `seq` return ()
-        IndClosure{} -> a `seq` return ()
-        BlackholeClosure{} -> a `seq` return ()
-        FunClosure{} -> a `seq` return ()
-        ThunkClosure{} -> a `seq` return ()
-        APClosure{} -> a `seq` return ()
-        PAPClosure{} -> a `seq` return ()
-        _ -> return ()
-      `catch`
-        \(e :: SomeException) -> putStrLn $ "Caught exception while evaluating: " ++ show e
+evaluate2 :: Box -> IO ()
+evaluate2 b@(Box a) = do
+  c <- getBoxedClosureData b
+  case c of
+    -- ghc: internal error: MUT_ARR_PTRS_FROZEN object entered!
+    -- (GHC version 7.4.2 for x86_64_unknown_linux)
+    -- Please report this as a GHC bug:  http://www.haskell.org/ghc/reportabug
+    --ArrWordsClosure _ _ _ -> return () -- Don't inspect ArrWords
+    --MutArrClosure _ _ _ _ -> return ()
+    --MVarClosure _ _ _ _ -> return ()
+    --_ -> a `seq` return ()
+    IndClosure{} -> a `seq` return ()
+    BlackholeClosure{} -> a `seq` return ()
+    FunClosure{} -> a `seq` return ()
+    ThunkClosure{} -> a `seq` return ()
+    APClosure{} -> a `seq` return ()
+    PAPClosure{} -> a `seq` return ()
+    _ -> return ()
+  `catch`
+    \(e :: SomeException) -> putStrLn $ "Caught exception while evaluating: " ++ show e
 
 -- | Handle a mouse move. Causes an 'UpdateSignal' if the mouse is hovering a
 --   different object now, so the object gets highlighted and the screen
@@ -172,7 +168,7 @@ move canvas = do
   unless (oldHover == hover s) $ widgetQueueDraw canvas
 
 -- | Something might have changed on the heap, update the view.
-updateObjects :: [(Box, String)] -> IO ()
+updateObjects :: [NamedBox] -> IO ()
 updateObjects bs = do
   (ops, bs', _ , size) <- xDotParse bs
   modifyIORef state (\s -> s {operations = ops, boxes = bs', totalSize = size, hover = None})

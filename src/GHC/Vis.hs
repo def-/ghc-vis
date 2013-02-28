@@ -490,7 +490,7 @@ react canvas legendCanvas = do
     Just signal -> do
       case signal of
         NewSignal x n  -> modifyMVar_ visBoxes (
-          \y -> return $ if (x,n) `elem` y then y else y ++ [(x,n)])
+          \y -> return $ if (Identifier n, x) `elem` y then y else y ++ [(Identifier n, x)])
         ClearSignal    -> modifyMVar_ visBoxes (\_ -> return [])
         UpdateSignal   -> return ()
         SwitchSignal   -> doSwitch

@@ -13,6 +13,8 @@ module GHC.Vis.Types (
   View(..),
   ViewType(..),
   State(..),
+  Identifier(..),
+  NamedBox,
   HeapEntry,
   HeapMap,
   PState(..),
@@ -27,6 +29,8 @@ import qualified Control.Monad.State as MS
 
 import Graphics.UI.Gtk hiding (Box, Signal, Point)
 import Graphics.Rendering.Cairo
+
+import Data.Monoid (Monoid, mempty, mappend)
 
 -- | A simple Point
 type Point = (Double, Double)
@@ -46,7 +50,7 @@ data View = View
   { redraw        :: WidgetClass w => w -> IO ()
   , click         :: IO ()
   , move          :: WidgetClass w => w -> IO ()
-  , updateObjects :: [(Box, String)] -> IO ()
+  , updateObjects :: [NamedBox] -> IO ()
   , exportView    :: DrawFunction -> String -> IO ()
   }
 
@@ -64,6 +68,14 @@ data State = State
   , dragging   :: Bool     -- ^ Whether the mouse is dragging
   , wasDragged :: Bool     -- ^ Whether the mouse was actually dragged
   }
+
+newtype Identifier = Identifier String deriving Eq
+
+instance Monoid Identifier where
+  mempty = Identifier ""
+  Identifier a `mappend` Identifier b = Identifier $ a ++ ", " ++ b
+
+type NamedBox = (Identifier, Box)
 
 -- | An entry in a 'HeapMap', consisting of an identifier and a parsed GHC heap entry
 type HeapEntry =

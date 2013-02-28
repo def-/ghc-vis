@@ -43,18 +43,22 @@ import Control.Monad.Trans.Maybe
 
 import System.IO.Unsafe
 
+-- TODO: Remove
+instance Eq Box where
+  a == b = unsafePerformIO $ areBoxesEqual a b
+
 -- | Maximum depth which walkHeap recurses to. Prevents users from evaluating
 --   data structures which are too big and would take very long to visualize.
 maxHeapWalkDepth :: Int
 maxHeapWalkDepth = 100
 
-visHeapGraph :: [(HeapGraphIndex, String)] -> HeapGraph -> [[VisObject]]
+visHeapGraph :: [(HeapGraphIndex, String)] -> HeapGraph a -> [[VisObject]]
 visHeapGraph bs (HeapGraph m) = map (\x -> [Unnamed $ ppRef 0 (Just x)]) $ map fst bs
   where
     bindings = boundMultipleTimes (HeapGraph m) (map fst bs)
 
     bindingLetter i = case iToE i of
-        HeapGraphEntry _ c -> case c of 
+        HeapGraphEntry _ c _ _ -> case c of 
             ThunkClosure {..} -> 't'
             SelectorClosure {..} -> 't'
             APClosure {..} -> 't'
@@ -73,7 +77,7 @@ visHeapGraph bs (HeapGraph m) = map (\x -> [Unnamed $ ppRef 0 (Just x)]) $ map f
     ppVar i = ppBindingMap M.! i
     ppBinding i = ppVar i ++ " = " ++ ppEntry 0 (iToE i)
 
-    ppEntry prec e@(HeapGraphEntry _ c)
+    ppEntry prec e@(HeapGraphEntry _ c _ _)
         | Just s <- isString e = show s
         | Just l <- isList e = "[" ++ intercalate "," (map (ppRef 0) l) ++ "]"
         | otherwise = ppClosure ppRef prec c
@@ -85,8 +89,8 @@ visHeapGraph bs (HeapGraph m) = map (\x -> [Unnamed $ ppRef 0 (Just x)]) $ map f
 
     iToUnboundE i = if i `elem` bindings then Nothing else M.lookup i m
 
-    isList :: HeapGraphEntry -> Maybe ([Maybe HeapGraphIndex])
-    isList (HeapGraphEntry _ c) = 
+    isList :: HeapGraphEntry a -> Maybe ([Maybe HeapGraphIndex])
+    isList (HeapGraphEntry _ c _ _) = 
         if isNil c
           then return []
           else do
@@ -96,14 +100,14 @@ visHeapGraph bs (HeapGraph m) = map (\x -> [Unnamed $ ppRef 0 (Just x)]) $ map f
             t' <- isList e
             return $ (:) h t'
 
-    isString :: HeapGraphEntry -> Maybe String
+    isString :: HeapGraphEntry a -> Maybe String
     isString e = do
         list <- isList e
         -- We do not want to print empty lists as "" as we do not know that they
         -- are really strings.
         if (null list)
             then Nothing
-            else mapM (isChar . (\(HeapGraphEntry _ c) -> c) <=< iToUnboundE <=< id) list
+            else mapM (isChar . (\(HeapGraphEntry _ c _ _) -> c) <=< iToUnboundE <=< id) list
 
 isChar :: GenClosure b -> Maybe Char
 isChar (ConsClosure { name = "C#", dataArgs = [ch], ptrArgs = []}) = Just (chr (fromIntegral ch))
@@ -128,13 +132,13 @@ isNil _ = False
 
 -- | In the given HeapMap, list all indices that are used more than once. The
 -- second parameter adds external references, commonly @[heapGraphRoot]@.
-boundMultipleTimes :: HeapGraph -> [HeapGraphIndex] -> [HeapGraphIndex]
+boundMultipleTimes :: HeapGraph a -> [HeapGraphIndex] -> [HeapGraphIndex]
 boundMultipleTimes (HeapGraph m) roots = map head $ filter (not.null) $ map tail $ group $ sort $
-     roots ++ concatMap (\(HeapGraphEntry _ c) -> catMaybes (allPtrs c)) (M.elems m)
+     roots ++ concatMap (\(HeapGraphEntry _ c _ _) -> catMaybes (allPtrs c)) (M.elems m)
 
 -- | Walk the heap for a list of objects to be visualized and their
 --   corresponding names.
-parseBoxes :: [(Box, String)] -> IO [[VisObject]]
+parseBoxes :: [NamedBox] -> IO [[VisObject]]
 parseBoxes bs = do
   r <- generalParseBoxes evalState bs
   case r of
@@ -146,7 +150,7 @@ parseBoxes bs = do
 -- | Walk the heap for a list of objects to be visualized and their
 --   corresponding names. Also return the resulting 'HeapMap' and another
 --   'HeapMap' that does not contain BCO pointers.
-parseBoxesHeap :: [(Box, String)] -> IO ([[VisObject]], PState)
+parseBoxesHeap :: [NamedBox] -> IO ([[VisObject]], PState)
 parseBoxesHeap bs = do
   r <- generalParseBoxes runState bs
   case r of
@@ -155,13 +159,13 @@ parseBoxesHeap bs = do
 
 generalParseBoxes ::
      (PrintState (Maybe [[VisObject]]) -> PState -> b)
-  -> [(Box, String)] -> IO b
+  -> [NamedBox] -> IO b
 generalParseBoxes f bs = do
   h <- walkHeapSimply bs
   h2 <- walkHeapWithBCO bs
   return $ f (g bs) $ PState 1 1 1 h h2
   where g bs' = runMaybeT $ go bs'
-        go ((b',_):b's) = do h <- lift $ gets heapMap'
+        go ((_,b'):b's) = do h <- lift $ gets heapMap'
                              (_,c) <- lookupT b' h
                              r <- parseClosure b' c
                              rs <- go b's
@@ -210,41 +214,10 @@ insertObjects (Named name _) xs = [Named name xs]
 insertObjects (Unnamed _) xs = xs
 insertObjects _ _ = error "unexpected arguments"
 
--- | Recursively walk down the heap objects and return the resulting map. This
---   function recognizes loops and avoids them. Big data structures might still
---   be very slow.
-walkHeap :: [(Box, String)] -> IO HeapMap
-walkHeap = walkHeapGeneral Just pointersToFollow
-
--- | walkHeap, but without Top level names
-walkHeapSimply :: [(Box, String)] -> IO HeapMap
-walkHeapSimply = walkHeapGeneral (const Nothing) pointersToFollow
-
-walkHeapWithBCO :: [(Box, String)] -> IO HeapMap
-walkHeapWithBCO = walkHeapGeneral (const Nothing) pointersToFollow2
-
-walkHeapGeneral :: (String -> Maybe String) -> (Closure -> IO [Box]) -> [(Box, String)] -> IO HeapMap
-walkHeapGeneral topF p2fF bs = foldM (topNodes topF) [dummy] bs >>= \s -> foldM (startWalk p2fF) s bs
-  where topNodes hn l (b,n) = do -- Adds the top nodes without looking at their pointers
-          c' <- getBoxedClosureData b
-          return $ insert (b, (hn n, c')) l
-        startWalk p2f l (b,_) = do -- Ignores that the top nodes are already in the heap map
-          c' <- getBoxedClosureData b
-          p  <- p2f c'
-          foldM (step maxHeapWalkDepth p2f) l p
-        step depth p2f l b = case lookup b l of
-          Just _  -> return l
-          Nothing -> do
-            c' <- getBoxedClosureData b
-            p  <- p2f c'
-            if depth == 0 && not (null p)
-            then do
-              putStrLn "Warning: Maximum data structure depth reached, output is truncated"
-              return $ insert (b, (Nothing, maxDepthClosure)) l
-            else foldM (step (depth - 1) p2f) (insert (b, (Nothing, c')) l) p
-        dummy = (asBox (1 :: Integer),
-          (Nothing, ConsClosure (StgInfoTable 0 0 CONSTR 0) (map fst bs) [] "" "" ""))
-        maxDepthClosure = ConsClosure (StgInfoTable 0 0 CONSTR 0) [] [] "" "" "..."
+-- TODO: Remove
+walkHeap _ = return []
+walkHeapSimply _ = return []
+walkHeapWithBCO _ = return []
 
 -- We're not inspecting the BCOs and instead later looks which of its recursive
 -- children are still in the heap. Only those should be visualized.
@@ -277,7 +250,7 @@ pointersToFollow2 (MutArrClosure _ _ _ bPtrs) =
 pointersToFollow2 x = return $ allPtrs x
 
 -- walkHeap, but with a maximum depth
---walkHeapDepth :: [(Box, String)] -> IO HeapMap
+--walkHeapDepth :: [NamedBox] -> IO HeapMap
 --walkHeapDepth bs = foldM topNodes [dummy bs] bs >>= \s -> foldM goStart s bs
 --  where topNodes l (b,n) = do -- Adds the top nodes without looking at their pointers
 --            c' <- getBoxedClosureData b
