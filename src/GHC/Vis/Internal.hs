@@ -8,11 +8,8 @@
 
  -}
 module GHC.Vis.Internal (
-  walkHeap,
   parseBoxes,
   parseBoxesHeap,
-  visHeapGraph,
-  pointersToFollow2,
   showClosure,
   showClosureFields
   )
@@ -31,10 +28,6 @@ import Control.Monad.State hiding (State, fix)
 import Data.Word
 import Data.Char
 import Data.List hiding (insert)
-import Data.Maybe
-import Data.Function
-
-import qualified Data.IntMap as M
 
 import Text.Printf
 import Unsafe.Coerce
@@ -46,95 +39,6 @@ import System.IO.Unsafe
 -- TODO: Remove
 instance Eq Box where
   a == b = unsafePerformIO $ areBoxesEqual a b
-
--- | Maximum depth which walkHeap recurses to. Prevents users from evaluating
---   data structures which are too big and would take very long to visualize.
-maxHeapWalkDepth :: Int
-maxHeapWalkDepth = 100
-
-visHeapGraph :: [(HeapGraphIndex, String)] -> HeapGraph a -> [[VisObject]]
-visHeapGraph bs (HeapGraph m) = map (\x -> [Unnamed $ ppRef 0 (Just x)]) $ map fst bs
-  where
-    bindings = boundMultipleTimes (HeapGraph m) (map fst bs)
-
-    bindingLetter i = case iToE i of
-        HeapGraphEntry _ c _ _ -> case c of 
-            ThunkClosure {..} -> 't'
-            SelectorClosure {..} -> 't'
-            APClosure {..} -> 't'
-            PAPClosure {..} -> 'f'
-            BCOClosure {..} -> 't'
-            FunClosure {..} -> 'f'
-            _ -> 'x'
-
-    ppBindingMap = M.fromList $
-        concat $
-        map (zipWith (\j (i,c) -> (i, [c] ++ show j)) [(1::Int)..]) $
-        groupBy ((==) `on` snd) $ 
-        sortBy (compare `on` snd)
-        [ (i, bindingLetter i) | i <- bindings ]
-
-    ppVar i = ppBindingMap M.! i
-    ppBinding i = ppVar i ++ " = " ++ ppEntry 0 (iToE i)
-
-    ppEntry prec e@(HeapGraphEntry _ c _ _)
-        | Just s <- isString e = show s
-        | Just l <- isList e = "[" ++ intercalate "," (map (ppRef 0) l) ++ "]"
-        | otherwise = ppClosure ppRef prec c
-
-    ppRef _ Nothing = "..."
-    ppRef prec (Just i) | i `elem` bindings = ppVar i
-                        | otherwise = ppEntry prec (iToE i) 
-    iToE i = m M.! i
-
-    iToUnboundE i = if i `elem` bindings then Nothing else M.lookup i m
-
-    isList :: HeapGraphEntry a -> Maybe ([Maybe HeapGraphIndex])
-    isList (HeapGraphEntry _ c _ _) = 
-        if isNil c
-          then return []
-          else do
-            (h,t) <- isCons c
-            ti <- t
-            e <- iToUnboundE ti
-            t' <- isList e
-            return $ (:) h t'
-
-    isString :: HeapGraphEntry a -> Maybe String
-    isString e = do
-        list <- isList e
-        -- We do not want to print empty lists as "" as we do not know that they
-        -- are really strings.
-        if (null list)
-            then Nothing
-            else mapM (isChar . (\(HeapGraphEntry _ c _ _) -> c) <=< iToUnboundE <=< id) list
-
-isChar :: GenClosure b -> Maybe Char
-isChar (ConsClosure { name = "C#", dataArgs = [ch], ptrArgs = []}) = Just (chr (fromIntegral ch))
-isChar _ = Nothing
-
-isCons :: GenClosure b -> Maybe (b, b)
-isCons (ConsClosure { name = ":", dataArgs = [], ptrArgs = [h,t]}) = Just (h,t)
-isCons _ = Nothing
-
-isTup :: GenClosure b -> Maybe [b]
-isTup (ConsClosure { dataArgs = [], ..}) =
-    if length name >= 3 &&
-       head name == '(' && last name == ')' &&
-       all (==',') (tail (init name))
-    then Just ptrArgs else Nothing
-isTup _ = Nothing
-
-
-isNil :: GenClosure b -> Bool
-isNil (ConsClosure { name = "[]", dataArgs = [], ptrArgs = []}) = True
-isNil _ = False
-
--- | In the given HeapMap, list all indices that are used more than once. The
--- second parameter adds external references, commonly @[heapGraphRoot]@.
-boundMultipleTimes :: HeapGraph a -> [HeapGraphIndex] -> [HeapGraphIndex]
-boundMultipleTimes (HeapGraph m) roots = map head $ filter (not.null) $ map tail $ group $ sort $
-     roots ++ concatMap (\(HeapGraphEntry _ c _ _) -> catMaybes (allPtrs c)) (M.elems m)
 
 -- | Walk the heap for a list of objects to be visualized and their
 --   corresponding names.
@@ -215,25 +119,8 @@ insertObjects (Unnamed _) xs = xs
 insertObjects _ _ = error "unexpected arguments"
 
 -- TODO: Remove
-walkHeap _ = return []
 walkHeapSimply _ = return []
 walkHeapWithBCO _ = return []
-
--- We're not inspecting the BCOs and instead later looks which of its recursive
--- children are still in the heap. Only those should be visualized.
-pointersToFollow :: Closure -> IO [Box]
-pointersToFollow BCOClosure{} = return []
-
-pointersToFollow (MutArrClosure _ _ _ bPtrs) =
-  do cPtrs <- mapM getBoxedClosureData bPtrs
-     return $ fix $ zip bPtrs cPtrs
-  where fix ((_,ConsClosure _ _ _ _ "ByteCodeInstr" "BreakInfo"):_:_:xs) = fix xs
-        fix ((_,ConsClosure _ _ _ _ "ByteCodeInstr" "BreakInfo"):_:xs) = fix xs
-        fix ((_,ConsClosure _ _ _ _ "ByteCodeInstr" "BreakInfo"):xs) = fix xs
-        fix ((x,_):xs) = x : fix xs
-        fix [] = []
-
-pointersToFollow x = return $ allPtrs x
 
 -- | Follows 'GHC.HeapView.BCOClosure's, but not the debugging data structures
 --   (ByteCodeInstr.BreakInfo) of GHC.
@@ -268,11 +155,6 @@ pointersToFollow2 x = return $ allPtrs x
 --            foldM (\l b -> go l b (x-1)) (insert (b, (Nothing, c')) l) p
 
 -- Additional map operations
-insert :: (Box, HeapEntry) -> HeapMap -> HeapMap
-insert (b,x) xs = case find (\(c,_) -> c == b) xs of
-  Just _  -> xs
-  Nothing -> (b,x):xs
-
 adjust :: (HeapEntry -> HeapEntry) -> Box -> HeapMap -> Maybe HeapMap
 adjust f b h = do i <- findIndex (\(y,_) -> y == b) h
                   let (h1,(_,x):h2) = splitAt i h
