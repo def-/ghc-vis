@@ -69,11 +69,7 @@ data State = State
   , wasDragged :: Bool     -- ^ Whether the mouse was actually dragged
   }
 
-newtype Identifier = Identifier String deriving Eq
-
-instance Monoid Identifier where
-  mempty = Identifier ""
-  Identifier a `mappend` Identifier b = Identifier $ a ++ ", " ++ b
+type Identifier = [String]
 
 type NamedBox = (Identifier, Box)
 

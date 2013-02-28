@@ -29,6 +29,7 @@ import Control.Concurrent
 import Control.Monad
 
 import Data.IORef
+import Data.List
 import System.IO.Unsafe
 
 import GHC.Vis.Internal
@@ -204,7 +205,7 @@ updateObjects boxes = do
   --(h, is) <- multiBuildHeapGraph 100 $ map fst boxes
   -- This is wrong
   --let os = visHeapGraph (zipWith (\(b,i) (b',n) -> (i,n)) is boxes) h
-  let objs = zipWith (\(Identifier y,x) z -> (x,y,z)) boxes os
+  let objs = zipWith (\(y,x) z -> (x,intercalate ", " y,z)) boxes os
   modifyIORef state (\s -> s {objects = objs, hover = Nothing})
 
 drawEntry :: State -> Double -> Double -> ([VisObject], Double, String) -> Render [(String, Rectangle)]

@@ -26,7 +26,7 @@ import Data.GraphViz.Attributes.Complete
 import Data.GraphViz.Commands.IO
 
 import GHC.HeapView hiding (name)
-import GHC.Vis.Internal
+import GHC.Vis.Internal (showClosureFields)
 import GHC.Vis.Types
 
 import Graphics.XDot.Types hiding (name, h, Style, Color)
@@ -67,8 +67,8 @@ xDotParse as = do
       buildGraph = insEdges edges $ insNodes nodes empty
 
   let ss = zip (map fst as) [-length as..] -- Identifiers of the boxes
-  let newNodes = map (\(Identifier n, i) -> (i, ([n], 0))) ss
-  let newEdges = map (\(d@(Identifier n), i) -> (fromJust $ lookup d ss, i, (n, 0))) is
+  let newNodes = map (\(n, i) -> (i, ([intercalate ", " n], 0))) ss
+  let newEdges = map (\(d, i) -> (fromJust $ lookup d ss, i, (intercalate ", " d, 0))) is
   -- is = [("x", 0), ("y", 4), ("foo", 10)]
 
   let insertMore gr = insEdges newEdges $ insNodes newNodes gr
