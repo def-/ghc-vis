@@ -1,5 +1,5 @@
 name:               ghc-vis
-version:            0.6
+version:            0.6.1
 license:            BSD3
 license-file:       LICENSE
 category:           GHC, Debug, Development
@@ -49,7 +49,7 @@ Library
                  containers,
                  gtk == 0.12.*,
                  cairo == 0.12.*,
-                 ghc-heap-view >= 0.3.0.3
+                 ghc-heap-view == 0.5.*
   Hs-source-dirs: src/
   Ghc-options: -Wall -fno-warn-unused-do-bind
 
