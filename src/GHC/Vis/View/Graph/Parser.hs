@@ -105,7 +105,8 @@ convertGraph hg = appEndo (removeGarbage <> addNames <> addEdges <> addNodes) em
                      = allPtrs (hgeClosure hge)
 
     -- Adds the nodes and edges for the names
-    addNameList = zip [-1,-2..]
+    -- addNameList = zip [-1,-2..] -- Displays from right to left
+    addNameList = zip [-1,-2..] $ reverse
         [ (i,name)
         | (i, hge) <- M.toList hgm
         , name <- hgeData hge
