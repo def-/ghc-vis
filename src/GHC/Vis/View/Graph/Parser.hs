@@ -12,20 +12,22 @@ module GHC.Vis.View.Graph.Parser (
 )
 where
 
-import Data.Maybe
-import Data.List
+import Data.Monoid
 
+import qualified Data.Foldable as F
 import qualified Data.IntMap as M
+import qualified Data.IntSet as S
 
 import qualified Data.Text.Lazy as B
 
-import Data.Graph.Inductive hiding (nodes, edges, newNodes)
+import Data.Graph.Inductive hiding (edges, newNodes)
 
-import Data.GraphViz hiding (Ellipse, Polygon, parse)
+import Data.GraphViz hiding (toNode, Ellipse, Polygon, parse)
 import Data.GraphViz.Attributes.Complete
 import Data.GraphViz.Commands.IO
 
 import GHC.HeapView hiding (name)
+import GHC.Disassembler
 import GHC.Vis.Internal (showClosureFields)
 import GHC.Vis.Types
 
@@ -49,41 +51,83 @@ edgeFontSize = 24
 graphvizCommand :: GraphvizCommand
 graphvizCommand = Dot
 
+disassembleBCO :: HeapGraph a -> GenClosure (Maybe HeapGraphIndex) -> Maybe [BCI (Maybe HeapGraphIndex)]
+disassembleBCO (HeapGraph hgm) (BCOClosure {
+            instrs = Just theInstrs, literals = Just theLiterals, bcoptrs = Just theBcoptrs
+        }) = Just $ disassemble (mccPayload ptrsC) (arrWords litsC) 
+                          (toBytes (bytes opsC) (arrWords opsC))
+    where ptrsC = hgeClosure (hgm M.! theBcoptrs)
+          litsC = hgeClosure (hgm M.! theLiterals)
+          opsC = hgeClosure (hgm M.! theInstrs)
+disassembleBCO _ _ = Nothing
+
+-- | A generic algorithm to restrict a graph to the subgraph reachable by certain nodes
+reachableSubgraph :: DynGraph gr => [Node] => gr a b => gr a b
+reachableSubgraph roots graph = flip delNodes graph $
+    filter (`S.notMember` reachableNodes) $
+    nodes graph
+  where
+    trGraph = trc graph
+    reachableNodes = S.unions $ map (S.fromList . suc trGraph) roots
+
+
+-- | Converts a 'HeapGraph' to a fgl 'Gr', taking into account special
+-- representations for BCOs.
+convertGraph :: HeapGraph Identifier -> Gr ([String], Int) (String, Int)
+convertGraph hg = appEndo (removeGarbage <> addNames <> addEdges <> addNodes) empty
+  where
+    HeapGraph hgm = hg
+    
+    -- Adds nodes for every closure in the map
+    -- Special treatment for BCOs: Use the disassembler
+    addNodes = mconcat [
+        Endo (insNode (i, toNode hge))
+        | (i,hge) <- M.toList hgm
+        ]
+
+    toNode hge | Just byteCode <- disassembleBCO hg (hgeClosure hge)
+        -- Does not look nice this way, far too wide
+        -- = (map show byteCode, 0)
+        = (["BCO"], length (concatMap F.toList byteCode))
+               | otherwise
+        = (showClosureFields (hgeClosure hge), length $ allPtrs (hgeClosure hge))
+
+    -- Adds edges between the closurs, treating BCOs specially
+    addEdges = mconcat [
+        Endo (insEdge (i, t, ("",n)))
+        | (i, hge) <- M.toList hgm
+        , (t,n) <- toEdges hge
+        ]
+    toEdges hge = [ (t, n) | (Just t, n) <- zip myPtrs [0..] ]
+        where myPtrs | Just byteCode <- disassembleBCO hg (hgeClosure hge)
+                     = concatMap F.toList byteCode
+                     | otherwise
+                     = allPtrs (hgeClosure hge)
+
+    -- Adds the nodes and edges for the names
+    addNameList = zip [-1,-2..]
+        [ (i,name)
+        | (i, hge) <- M.toList hgm
+        , name <- hgeData hge
+        ]
+    addNames = mconcat $ map addName addNameList
+    addName (n,(i,name)) = Endo (insEdge (n, i, (name, 0))) <> Endo (insNode (n, ([""],0)))
+
+    -- Removes nodes not reachable by a named closure
+    removeGarbage = Endo (reachableSubgraph (map fst addNameList))
+
 -- | Take the objects to be visualized and run them through @dot@ and extract
 --   the drawing operations that have to be exectued to show the graph of the
 --   heap map.
 xDotParse :: [NamedBox] -> IO ([(Object Node, Operation)], [Box], [(Object Node, Rectangle)], Rectangle)
 xDotParse as = do
-  (HeapGraph hg, is) <- multiBuildHeapGraph 100 as
+  (hg, _) <- multiBuildHeapGraph 100 as
+  xDot <- graphvizWithHandle graphvizCommand (defaultVis $ convertGraph hg) XDot hGetDot
 
-  let hgList = M.toList hg
-
-  let nodes = map (\(i,e@(HeapGraphEntry _ c _ _)) -> (i, (e, length $ allPtrs c))) hgList
-  let edges = map (\(x,(y,z)) -> (x,z,("",y))) $ concat $ map (\(i, (HeapGraphEntry _ c _ _)) -> zip (repeat i) (zip [0..] $ map fromJust $ filter isJust $ allPtrs c)) hgList
-
-  -- Convert a heap graph, our internal data structure, to a graph that can be
-  -- converted to a dot graph.
-  let buildGraph :: Gr (HeapGraphEntry Identifier, Int) (String, Int)
-      buildGraph = insEdges edges $ insNodes nodes empty
-
-  let ss = zip (map fst as) [-length as..] -- Identifiers of the boxes
-  let newNodes = map (\(n, i) -> (i, ([intercalate ", " n], 0))) ss
-  let newEdges = map (\(d, i) -> (fromJust $ lookup d ss, i, (intercalate ", " d, 0))) is
-  -- is = [("x", 0), ("y", 4), ("foo", 10)]
-
-  let insertMore gr = insEdges newEdges $ insNodes newNodes gr
-
-  xDot <- graphvizWithHandle graphvizCommand (defaultVis $ insertMore $ toViewableGraph buildGraph) XDot hGetDot
-
-  return (getOperations xDot, getBoxes (HeapGraph hg), getDimensions xDot, getSize xDot)
+  return (getOperations xDot, getBoxes hg, getDimensions xDot, getSize xDot)
 
 getBoxes :: HeapGraph a -> [Box]
 getBoxes (HeapGraph hg) = map (\(HeapGraphEntry b _ _ _) -> b) $ M.elems hg
-
--- Probably have to do some kind of fold over the graph to remove for example
--- unwanted pointers
-toViewableGraph :: Gr (HeapGraphEntry a, Int) (String, Int) -> Gr ([String], Int) (String, Int)
-toViewableGraph cg = emap id $ nmap (\((HeapGraphEntry _ c _ _), i) -> (showClosureFields c, i)) cg
 
 defaultVis :: (Graph gr) => gr ([String], Int) (String, Int) -> DotGraph Node
 defaultVis = graphToDot nonClusteredParams
