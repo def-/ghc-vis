@@ -51,16 +51,6 @@ edgeFontSize = 24
 graphvizCommand :: GraphvizCommand
 graphvizCommand = Dot
 
-disassembleBCO :: HeapGraph a -> GenClosure (Maybe HeapGraphIndex) -> Maybe [BCI (Maybe HeapGraphIndex)]
-disassembleBCO (HeapGraph hgm) (BCOClosure {
-            instrs = Just theInstrs, literals = Just theLiterals, bcoptrs = Just theBcoptrs
-        }) = Just $ disassemble (mccPayload ptrsC) (arrWords litsC) 
-                          (toBytes (bytes opsC) (arrWords opsC))
-    where ptrsC = hgeClosure (hgm M.! theBcoptrs)
-          litsC = hgeClosure (hgm M.! theLiterals)
-          opsC = hgeClosure (hgm M.! theInstrs)
-disassembleBCO _ _ = Nothing
-
 -- | A generic algorithm to restrict a graph to the subgraph reachable by certain nodes
 reachableSubgraph :: DynGraph gr => [Node] => gr a b => gr a b
 reachableSubgraph roots graph = flip delNodes graph $
@@ -85,7 +75,9 @@ convertGraph hg = appEndo (removeGarbage <> addNames <> addEdges <> addNodes) em
         | (i,hge) <- M.toList hgm
         ]
 
-    toNode hge | Just byteCode <- disassembleBCO hg (hgeClosure hge)
+    deref = fmap $ hgeClosure . (M.!) hgm
+
+    toNode hge | Just byteCode <- disassembleBCO deref (hgeClosure hge)
         -- Does not look nice this way, far too wide
         -- = (map show byteCode, 0)
         = (["BCO"], length (concatMap F.toList byteCode))
@@ -99,7 +91,7 @@ convertGraph hg = appEndo (removeGarbage <> addNames <> addEdges <> addNodes) em
         , (t,n) <- toEdges hge
         ]
     toEdges hge = [ (t, n) | (Just t, n) <- zip myPtrs [0..] ]
-        where myPtrs | Just byteCode <- disassembleBCO hg (hgeClosure hge)
+        where myPtrs | Just byteCode <- disassembleBCO deref (hgeClosure hge)
                      = concatMap F.toList byteCode
                      | otherwise
                      = allPtrs (hgeClosure hge)
