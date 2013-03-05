@@ -60,5 +60,5 @@ evaluate identifier = do (_,HeapGraph m) <- printAll
 printAll :: IO (String, HeapGraph String)
 printAll = do
   bs <- readMVar visBoxes
-  (t, PState2{heapGraph = h}) <- parseBoxesHeap bs
+  (t, PState{heapGraph = h}) <- parseBoxesHeap bs
   return (show t, h)

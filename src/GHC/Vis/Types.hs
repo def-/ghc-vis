@@ -13,12 +13,9 @@ module GHC.Vis.Types (
   View(..),
   ViewType(..),
   State(..),
-  Identifier(..),
+  Identifier,
   NamedBox,
-  HeapEntry,
-  HeapMap,
   PState(..),
-  PState2(..),
   PrintState,
   VisObject(..)
   )
@@ -30,11 +27,6 @@ import qualified Control.Monad.State as MS
 
 import Graphics.UI.Gtk hiding (Box, Signal, Point)
 import Graphics.Rendering.Cairo
-
-import Data.Monoid (Monoid, mempty, mappend)
-
-import Data.IntMap (IntMap)
-import qualified Data.IntMap as IntMap
 
 -- | A simple Point
 type Point = (Double, Double)
@@ -77,26 +69,7 @@ type Identifier = [String]
 
 type NamedBox = (Identifier, Box)
 
--- | An entry in a 'HeapMap', consisting of an identifier and a parsed GHC heap entry
-type HeapEntry =
-  ( Maybe String
-  , Closure
-  )
--- | A map of heap objects.
---   We're using a slow, eq-based list instead of a proper map because
---   StableNames' hash values aren't stable enough
-type HeapMap   = [(Box, HeapEntry)]
-
--- | The second HeapMap includes BCO pointers, needed for list visualization
 data PState = PState
-  { tCounter :: Integer
-  , fCounter :: Integer
-  , bCounter :: Integer
-  , heapMap  :: HeapMap
-  , heapMap' :: HeapMap
-  }
-
-data PState2 = PState2
   { tCounter' :: Integer
   , fCounter' :: Integer
   , xCounter' :: Integer

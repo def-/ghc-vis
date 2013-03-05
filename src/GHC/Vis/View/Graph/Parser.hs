@@ -27,7 +27,6 @@ import Data.GraphViz.Attributes.Complete
 import Data.GraphViz.Commands.IO
 
 import GHC.HeapView hiding (name)
-import GHC.Disassembler
 import GHC.Vis.Internal (showClosureFields)
 import GHC.Vis.Types
 

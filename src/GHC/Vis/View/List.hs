@@ -36,7 +36,7 @@ import GHC.Vis.Internal
 import GHC.Vis.Types hiding (State, View(..))
 import GHC.Vis.View.Common
 
-import GHC.HeapView (Box, multiBuildHeapGraph)
+import GHC.HeapView (Box)
 
 type Rectangle = (Double, Double, Double, Double)
 
