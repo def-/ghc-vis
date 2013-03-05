@@ -87,17 +87,21 @@ correctObject i = do
 
 setName :: HeapGraphIndex -> PrintState String
 setName i = do
-  s@(PState ti fi xi _ (HeapGraph m)) <- get
-  let Just hge@(HeapGraphEntry{hgeClosure = c}) = M.lookup i m
-  let (name,newState) = case bindingLetter c of
-        't' -> ('t' : show ti, s{tCounter' = ti + 1})
-        'f' -> ('f' : show fi, s{fCounter' = fi + 1})
-        'x' -> ('x' : show xi, s{xCounter' = xi + 1})
-        _   -> error "Invalid letter"
+  n <- getName i
+  if null n
+  then do
+    s@(PState ti fi xi _ (HeapGraph m)) <- get
+    let Just hge@(HeapGraphEntry{hgeClosure = c}) = M.lookup i m
+    let (name,newState) = case bindingLetter c of
+          't' -> ('t' : show ti, s{tCounter' = ti + 1})
+          'f' -> ('f' : show fi, s{fCounter' = fi + 1})
+          'x' -> ('x' : show xi, s{xCounter' = xi + 1})
+          _   -> error "Invalid letter"
 
-  let m' = M.insert i (hge{hgeData = name}) m
-  put $ newState{heapGraph = HeapGraph m'}
-  return name
+    let m' = M.insert i (hge{hgeData = name}) m
+    put $ newState{heapGraph = HeapGraph m'}
+    return name
+  else return n
 
   where
     bindingLetter c = case c of
