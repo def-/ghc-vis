@@ -37,8 +37,8 @@ flag sdl
   Description: "SDL window"
 
 Library
-  Exposed-modules: GHC.Vis
-  Other-modules: GHC.Vis.Internal GHC.Vis.Types GHC.Vis.View.List GHC.Vis.View.Common Paths_ghc_vis
+  Exposed-modules: GHC.Vis GHC.Vis.Internal 
+  Other-modules: GHC.Vis.Types GHC.Vis.View.List GHC.Vis.View.Common Paths_ghc_vis
   Default-Language: Haskell2010
   Build-depends: base == 4.6.*,
                  mtl == 2.1.*,
@@ -46,7 +46,7 @@ Library
                  deepseq == 1.3.*,
                  text == 0.11.*,
                  transformers == 0.3.*,
-                 containers == 0.5.*,
+                 containers >= 0.4 && < 0.6,
                  gtk == 0.12.*,
                  cairo == 0.12.*,
                  ghc-heap-view == 0.5.*

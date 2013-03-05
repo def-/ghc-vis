@@ -9,6 +9,7 @@
  -}
 module GHC.Vis.Internal (
   parseBoxes,
+  parseBoxes2,
   parseBoxesHeap,
   showClosure,
   showClosureFields
@@ -27,7 +28,9 @@ import Control.Monad.State hiding (State, fix)
 
 import Data.Word
 import Data.Char
+import Data.Maybe (catMaybes)
 import Data.List hiding (insert)
+import qualified Data.IntMap as M
 
 import Text.Printf
 import Unsafe.Coerce
@@ -39,6 +42,38 @@ import System.IO.Unsafe
 -- TODO: Remove
 instance Eq Box where
   a == b = unsafePerformIO $ areBoxesEqual a b
+
+parseBoxes2 bs = do
+  (hg,starts) <- multiBuildHeapGraph 100 bs
+  return $ (hg, boundMultipleTimes hg $ map snd starts)
+
+--data Type = Thunk' | Link' | 
+--
+--data Info = Info { typ :: Type
+
+augment (HeapGraph m) = do
+    return bindings
+  where
+    bindings = boundMultipleTimes $ HeapGraph m
+
+    bindingLetter i = case hgeClosure (iToE i) of
+        ThunkClosure {..} -> 't'
+        SelectorClosure {..} -> 't'
+        APClosure {..} -> 't'
+        PAPClosure {..} -> 'f'
+        BCOClosure {..} -> 't'
+        FunClosure {..} -> 'f'
+        _ -> 'x'
+
+    iToE i = m M.! i
+
+  --where go hge = hge{hgeData = hgeData hge}
+
+-- | In the given HeapMap, list all indices that are used more than once. The
+-- second parameter adds external references, commonly @[heapGraphRoot]@.
+boundMultipleTimes :: HeapGraph a -> [HeapGraphIndex] -> [HeapGraphIndex]
+boundMultipleTimes (HeapGraph m) roots = map head $ filter (not.null) $ map tail $ group $ sort $
+     roots ++ concatMap (catMaybes . allPtrs . hgeClosure) (M.elems m)
 
 -- | Walk the heap for a list of objects to be visualized and their
 --   corresponding names.
