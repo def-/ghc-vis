@@ -9,7 +9,7 @@
  -}
 module GHC.Vis.Internal (
   parseBoxes,
-  parseBoxes2,
+  --parseBoxes2,
   parseBoxesHeap,
   showClosure,
   showClosureFields
@@ -43,20 +43,95 @@ import System.IO.Unsafe
 instance Eq Box where
   a == b = unsafePerformIO $ areBoxesEqual a b
 
-parseBoxes2 bs = do
-  (hg,starts) <- multiBuildHeapGraph 100 bs
-  return $ (hg, boundMultipleTimes hg $ map snd starts)
+parseBoxes = generalParseBoxes evalState
 
---data Type = Thunk' | Link' | 
+parseBoxesHeap = generalParseBoxes runState
+
+generalParseBoxes f bs = do
+  (hg@(HeapGraph m), starts) <- multiBuildHeapGraph 100 $ map (\(_,x) -> ("",x)) bs
+  --return $ (hg, boundMultipleTimes hg $ map snd starts)
+  --return bindings
+  let
+    --go ((_,b'):b's) = do h <- lift $ gets heapMap'
+    --                     (_,c) <- lookupT b' h
+    --                     r <- parseClosure b' c
+    --                     rs <- go b's
+    --                     return $ simplify r : rs
+    --
+    --go (n,i) = do let HeapGraphEntry{hgeClosure = c} = m M.! i
+    --              parseClosure2 c m
+
+    bindings = boundMultipleTimes hg $ map snd starts
+
+    iToE i = m M.! i
+
+    --parseClosure2 i = do
+    --  let HeapGraphEntry{hgeClosure = c} = m M.! i
+    --  PState2 ti fi xi bound <- get
+    --  let letter = bindingLetter c
+    --  case i `M.lookup` bound of
+    --    Just x -> return [Link $ letter : show x]
+    --    Nothing -> do
+    --      if i `elem` bindings
+    --      then do
+    --        put $ case letter of
+    --          't' -> PState2 (ti + 1) fi xi $ M.insert i ti bound
+    --          'f' -> PState2 ti (fi + 1) xi $ M.insert i fi bound
+    --          'x' -> PState2 ti fi (xi + 1) $ M.insert i xi bound
+    --        return []
+    --      else
+    --        return []
+
+  return $ f (mapM (\i -> parseClosure2 i >>= \r -> return $ simplify r) $ map snd starts) $ PState2 1 1 1 bindings hg
+
+--parseClosure2 bindings i = do
+--  HeapGraph m <- gets heapGraph
+--  name <- getName2 i
+--  if null name
+--  then do
+--    r <- parseInternal2 i
+--    case head r of
+--      (Unnamed _)
+--  else 
+--  return $ m M.! i
 --
---data Info = Info { typ :: Type
+--parseInternal2 i = return 0
 
-augment (HeapGraph m) = do
-    return bindings
+--parseClosure :: Box -> Closure -> MaybeT PrintState [VisObject]
+parseClosure2 i = do
+  bindings <- gets bindings
+  o <- correctObject2 bindings i
+  case o of
+    Link n -> return [Link n] -- Don't build infinite heaps
+    _      -> do HeapGraph m <- gets heapGraph
+                 l <- parseInternal2 i $ hgeClosure $ m M.! i
+                 return $ insertObjects o l
+
+--correctObject :: Box -> MaybeT PrintState VisObject
+correctObject2 bindings i = do
+  name <- getName2 i
+
+  if null name
+  then if i `elem` bindings then
+                 (do name <- setName2 i
+                     return $ Named name [])
+                 else return $ Unnamed ""
+  else return $ Link name
+
+setName2 i = do
+  state@(PState2 ti fi xi _ hg@(HeapGraph m)) <- get
+  let Just hge@(HeapGraphEntry{hgeClosure = c}) = M.lookup i m
+  let (name,newState) = case bindingLetter c of
+        't' -> ('t' : show ti, state{tCounter' = ti + 1})
+        'f' -> ('f' : show fi, state{fCounter' = fi + 1})
+        'x' -> ('x' : show xi, state{xCounter' = xi + 1})
+
+  let m' = M.insert i (hge{hgeData = name}) m
+  put $ newState{heapGraph = HeapGraph m'}
+  return name
+
   where
-    bindings = boundMultipleTimes $ HeapGraph m
-
-    bindingLetter i = case hgeClosure (iToE i) of
+    bindingLetter c = case c of
         ThunkClosure {..} -> 't'
         SelectorClosure {..} -> 't'
         APClosure {..} -> 't'
@@ -65,9 +140,9 @@ augment (HeapGraph m) = do
         FunClosure {..} -> 'f'
         _ -> 'x'
 
-    iToE i = m M.! i
-
-  --where go hge = hge{hgeData = hgeData hge}
+getName2 i = do
+  HeapGraph m <- gets heapGraph
+  return $ hgeData $ m M.! i
 
 -- | In the given HeapMap, list all indices that are used more than once. The
 -- second parameter adds external references, commonly @[heapGraphRoot]@.
@@ -77,39 +152,39 @@ boundMultipleTimes (HeapGraph m) roots = map head $ filter (not.null) $ map tail
 
 -- | Walk the heap for a list of objects to be visualized and their
 --   corresponding names.
-parseBoxes :: [NamedBox] -> IO [[VisObject]]
-parseBoxes bs = do
-  r <- generalParseBoxes evalState bs
-  case r of
-    Just x -> return x
-    _ -> do
-      putStrLn "Failure, trying again"
-      parseBoxes bs
+--parseBoxes :: [NamedBox] -> IO [[VisObject]]
+--parseBoxes bs = do
+--  r <- generalParseBoxes evalState bs
+--  case r of
+--    Just x -> return x
+--    _ -> do
+--      putStrLn "Failure, trying again"
+--      parseBoxes bs
 
 -- | Walk the heap for a list of objects to be visualized and their
 --   corresponding names. Also return the resulting 'HeapMap' and another
 --   'HeapMap' that does not contain BCO pointers.
-parseBoxesHeap :: [NamedBox] -> IO ([[VisObject]], PState)
-parseBoxesHeap bs = do
-  r <- generalParseBoxes runState bs
-  case r of
-    (Just x, y) -> return (x,y)
-    _ -> parseBoxesHeap bs
-
-generalParseBoxes ::
-     (PrintState (Maybe [[VisObject]]) -> PState -> b)
-  -> [NamedBox] -> IO b
-generalParseBoxes f bs = do
-  h <- walkHeapSimply bs
-  h2 <- walkHeapWithBCO bs
-  return $ f (g bs) $ PState 1 1 1 h h2
-  where g bs' = runMaybeT $ go bs'
-        go ((_,b'):b's) = do h <- lift $ gets heapMap'
-                             (_,c) <- lookupT b' h
-                             r <- parseClosure b' c
-                             rs <- go b's
-                             return $ simplify r : rs
-        go [] = return []
+--parseBoxesHeap :: [NamedBox] -> IO ([[VisObject]], PState)
+--parseBoxesHeap bs = do
+--  r <- generalParseBoxes runState bs
+--  case r of
+--    (Just x, y) -> return (x,y)
+--    _ -> parseBoxesHeap bs
+--
+--generalParseBoxes ::
+--     (PrintState (Maybe [[VisObject]]) -> PState -> b)
+--  -> [NamedBox] -> IO b
+--generalParseBoxes f bs = do
+--  h <- walkHeapSimply bs
+--  h2 <- walkHeapWithBCO bs
+--  return $ f (g bs) $ PState 1 1 1 h h2
+--  where g bs' = runMaybeT $ go bs'
+--        go ((_,b'):b's) = do h <- lift $ gets heapMap'
+--                             (_,c) <- lookupT b' h
+--                             r <- parseClosure b' c
+--                             rs <- go b's
+--                             return $ simplify r : rs
+--        go [] = return []
 
 lookupT :: Eq a => a -> [(a,b)] -> MaybeT PrintState b
 lookupT b' h = MaybeT $ return $ lookup b' h
@@ -236,6 +311,157 @@ countReferences b = do
   h <- gets heapMap'
   return $ sum $ map countR h
  where countR (_,(_,c)) = length $ filter (== b) $ allPtrs c
+
+parseInternal2 _ (ConsClosure _ [] [dataArg] _pkg modl name) =
+ return [Unnamed $ case (modl, name) of
+    k | k `elem` [ ("GHC.Word", "W#")
+                 , ("GHC.Word", "W8#")
+                 , ("GHC.Word", "W16#")
+                 , ("GHC.Word", "W32#")
+                 , ("GHC.Word", "W64#")
+                 ] -> name ++ " " ++ show dataArg
+
+    k | k `elem` [ ("GHC.Integer.Type", "S#")
+                 , ("GHC.Types", "I#")
+                 , ("GHC.Int", "I8#")
+                 , ("GHC.Int", "I16#")
+                 , ("GHC.Int", "I32#")
+                 , ("GHC.Int", "I64#")
+                 ] -> name ++ " " ++ show ((fromIntegral :: Word -> Int) dataArg)
+
+    ("GHC.Types", "C#") -> show . chr $ fromIntegral dataArg
+    --("GHC.Types", "C#") -> '\'' : (chr $ fromIntegral dataArg) : "'"
+
+    ("GHC.Types", "D#") -> printf "D# %0.5f" (unsafeCoerce dataArg :: Double)
+    ("GHC.Types", "F#") -> printf "F# %0.5f" (unsafeCoerce dataArg :: Double)
+
+    _ -> printf "%s %d" (infixFix name) dataArg
+  ]
+
+parseInternal2 _ (ConsClosure (StgInfoTable 1 3 _ _) _ [_,0,0] _ "Data.ByteString.Internal" "PS")
+  = return [Unnamed "ByteString 0 0"]
+
+parseInternal2 _ (ConsClosure (StgInfoTable 1 3 _ _) [bPtr] [_,start,end] _ "Data.ByteString.Internal" "PS")
+  = do cPtr  <- liftM mbParens $ contParse2 bPtr
+       return $ Unnamed (printf "ByteString %d %d " start end) : cPtr
+
+parseInternal2 _ (ConsClosure (StgInfoTable 2 3 _ _) [bPtr1,bPtr2] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
+  = do cPtr1 <- liftM mbParens $ contParse2 bPtr1
+       cPtr2 <- liftM mbParens $ contParse2 bPtr2
+       return $ Unnamed (printf "Chunk %d %d " start end) : cPtr1 ++ [Unnamed " "] ++ cPtr2
+
+parseInternal2 _ (ConsClosure (StgInfoTable 2 0 _ _) [bHead,bTail] [] _ "GHC.Types" ":")
+  = do cHead <- liftM mbParens $ contParse2 bHead
+       cTail <- liftM mbParens $ contParse2 bTail
+       return $ cHead ++ [Unnamed ":"] ++ cTail
+
+parseInternal2 _ (ConsClosure _ bPtrs dArgs _ _ name)
+  = do cPtrs <- mapM (liftM mbParens . contParse2) bPtrs
+       let tPtrs = intercalate [Unnamed " "] cPtrs
+       let sPtrs = if null tPtrs then [Unnamed ""] else Unnamed " " : tPtrs
+       return $ Unnamed (unwords $ infixFix name : map show dArgs) : sPtrs
+
+parseInternal2 _ (ArrWordsClosure _ _ arrWords)
+  = return $ intercalate [Unnamed ","] (map (\x -> [Unnamed (printf "0x%x" x)]) arrWords)
+
+parseInternal2 _ (IndClosure _ b)
+  = contParse2 b
+
+parseInternal2 _ (SelectorClosure _ b)
+  = contParse2 b
+
+parseInternal2 _ (BlackholeClosure _ b)
+  = contParse2 b
+
+parseInternal2 _ BlockingQueueClosure{}
+  = return [Unnamed "BlockingQueue"]
+
+parseInternal2 _ (OtherClosure (StgInfoTable _ _ cTipe _) _ _)
+  = return [Unnamed $ show cTipe]
+
+parseInternal2 _ (UnsupportedClosure (StgInfoTable _ _ cTipe _))
+  = return [Unnamed $ show cTipe]
+
+-- Reversed order of ptrs
+parseInternal2 b (ThunkClosure _ bPtrs args) = do
+  name <- setName2 b
+  cPtrs <- mapM contParse2 $ reverse bPtrs
+  let tPtrs = intercalate [Unnamed ","] cPtrs
+      sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "(" : tPtrs ++ [Unnamed ")"]
+      sArgs = Unnamed $ if null args then "" else show args
+  return $ Thunk (infixFix name) : sPtrs ++ [sArgs]
+
+parseInternal2 i (FunClosure _ bPtrs args) = do
+  name <- setName2 i
+  cPtrs <- mapM contParse2 $ reverse bPtrs
+  let tPtrs = intercalate [Unnamed ","] cPtrs
+      sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "(" : tPtrs ++ [Unnamed ")"]
+      sArgs = Unnamed $ if null args then "" else show args
+  return $ Function (infixFix name) : sPtrs ++ [sArgs]
+
+-- bPtrs here can currently point to Nothing, because else we might get infinite heaps
+parseInternal2 _ (MutArrClosure _ _ _ bPtrs)
+  -- = do cPtrs <- mutArrContParse2 bPtrs
+  = do cPtrs <- mapM contParse2 bPtrs
+       let tPtrs = intercalate [Unnamed ","] cPtrs
+       return $ if null tPtrs then [Unnamed ""] else Unnamed "(" : tPtrs ++ [Unnamed ")"]
+
+parseInternal2 _ (MutVarClosure _ b)
+  = do c <- contParse2 b
+       return $ Unnamed "MutVar " : c
+
+parseInternal2 i (BCOClosure _ _ _ bPtr _ _ _)
+  -- = do cPtrs <- bcoContParse2 [bPtr]
+  = do cPtrs <- mapM contParse2 [bPtr]
+       let tPtrs = intercalate [Unnamed ","] cPtrs
+       b <- gets bindings
+       return $ Unnamed "BCO" : tPtrs
+  -- = do case lookup b h of
+  --        Nothing -> c <- getBoxedClosureData bPtr
+  --        Just (_,c) -> p  <- parseClosure bPtr c
+  -- = do vs <- contParse bPtr
+  --      let ls = filter isExternal $ filter isLink vs
+
+  --          isLink (Link _) = True
+  --          isLink _ = False
+
+  --          isExternal (Link n) = all (notHasName n) vs
+
+  --          notHasName n (Named m _) = n /= m
+  --          notHasName n (Function m) = n /= m
+  --          notHasName _ _ = True
+  --      return vs
+
+parseInternal2 i (APClosure _ _ _ fun pl) = do
+  name <- setName2 i
+  fPtr <- contParse2 fun
+  pPtrs <- mapM contParse2 $ reverse pl
+  let tPtrs = intercalate [Unnamed ","] pPtrs
+      sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "[" : tPtrs ++ [Unnamed "]"]
+  return $ Thunk (infixFix name) : fPtr ++ sPtrs
+
+parseInternal2 i (PAPClosure _ _ _ fun pl) = do
+  name <- setName2 i
+  fPtr <- contParse2 fun
+  pPtrs <- mapM contParse2 $ reverse pl
+  let tPtrs = intercalate [Unnamed ","] pPtrs
+      sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "[" : tPtrs ++ [Unnamed "]"]
+  return $ Function (infixFix name) : fPtr ++ sPtrs
+
+parseInternal2 i (APStackClosure _ fun pl) = do
+  name <- setName2 i
+  fPtr <- contParse2 fun
+  pPtrs <- mapM contParse2 $ reverse pl
+  let tPtrs = intercalate [Unnamed ","] pPtrs
+      sPtrs = if null tPtrs then [Unnamed ""] else Unnamed "[" : tPtrs ++ [Unnamed "]"]
+  return $ Thunk (infixFix name) : fPtr ++ sPtrs
+
+parseInternal2 _ (MVarClosure _ qHead qTail qValue)
+   = do cHead <- liftM mbParens $ contParse2 qHead
+        cTail <- liftM mbParens $ contParse2 qTail
+        cValue <- liftM mbParens $ contParse2 qValue
+        return $ Unnamed "MVar#(" : cHead ++ [Unnamed ","] ++ cTail ++ [Unnamed ","] ++ cValue ++ [Unnamed ")"]
+
 
 parseInternal :: Box -> Closure -> MaybeT PrintState [VisObject]
 parseInternal _ (ConsClosure _ [] [dataArg] _pkg modl name) =
@@ -392,6 +618,11 @@ contParse :: Box -> MaybeT PrintState [VisObject]
 contParse b = do h <- lift $ gets heapMap
                  (_,c) <- lookupT b h
                  parseClosure b c
+
+--contParse :: Box -> MaybeT PrintState [VisObject]
+contParse2 Nothing = return []
+
+contParse2 (Just i) = parseClosure2 i
 
 -- It turned out that bcoContParse actually does go into an infinite loop, for
 -- example for this:

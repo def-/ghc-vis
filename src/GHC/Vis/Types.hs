@@ -18,6 +18,7 @@ module GHC.Vis.Types (
   HeapEntry,
   HeapMap,
   PState(..),
+  PState2(..),
   PrintState,
   VisObject(..)
   )
@@ -31,6 +32,9 @@ import Graphics.UI.Gtk hiding (Box, Signal, Point)
 import Graphics.Rendering.Cairo
 
 import Data.Monoid (Monoid, mempty, mappend)
+
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
 
 -- | A simple Point
 type Point = (Double, Double)
@@ -90,6 +94,14 @@ data PState = PState
   , bCounter :: Integer
   , heapMap  :: HeapMap
   , heapMap' :: HeapMap
+  }
+
+data PState2 = PState2
+  { tCounter' :: Integer
+  , fCounter' :: Integer
+  , xCounter' :: Integer
+  , bindings  :: [HeapGraphIndex]
+  , heapGraph :: HeapGraph String
   }
 
 -- | The state of a printing operation

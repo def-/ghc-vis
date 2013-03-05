@@ -23,6 +23,8 @@ import Control.Concurrent
 import Control.DeepSeq
 import Control.Exception hiding (evaluate)
 
+import qualified Data.IntMap as M
+
 import Data.IORef
 
 import System.IO.Unsafe
@@ -49,24 +51,14 @@ visBoxes = unsafePerformIO (newMVar [] :: IO (MVar [NamedBox]))
 
 -- | Evaluate an object identified by a String.
 evaluate :: String -> IO ()
-evaluate identifier = do (_,hm) <- printAll
-                         (show (map go hm) `deepseq` return ()) `catch`
+evaluate identifier = do (_,HeapGraph m) <- printAll
+                         (show (M.map go m) `deepseq` return ()) `catch`
                            \(e :: SomeException) -> putStrLn $ "Caught exception while evaluating: " ++ show e
-  where go (Box a,(Just n, y)) | n == identifier = seq a (Just n, y)
-                                 | otherwise = (Just n, y)
-        go (_,(x,y)) = (x,y)
+  where go hge@(HeapGraphEntry (Box a) _ _ n) | n == identifier = seq a hge
+                                              | otherwise = hge
 
---printOne :: a -> IO String
---printOne a = do
---  bs <- readMVar visBoxes
---  case findIndex (\(b,_) -> asBox a == b) bs of
---    Just pos -> do
---      t  <- parseBoxes bs
---      return $ show (t !! pos)
---    Nothing -> return "Add entry first"
-
-printAll :: IO (String, HeapMap)
+printAll :: IO (String, HeapGraph String)
 printAll = do
   bs <- readMVar visBoxes
-  (t, PState{heapMap = h}) <- parseBoxesHeap bs
+  (t, PState2{heapGraph = h}) <- parseBoxesHeap bs
   return (show t, h)
