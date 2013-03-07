@@ -113,7 +113,8 @@ click :: IO ()
 click = do
   s <- readIORef state
 
-  case hover s of
+  hm <- inHistoryMode
+  when (not hm) $ case hover s of
     -- This might fail when a click occurs during an update
     Node t -> unless (length (boxes s) <= t) $ do
       evaluate2 $ boxes s !! t
@@ -169,6 +170,6 @@ move canvas = do
 
 -- | Something might have changed on the heap, update the view.
 updateObjects :: [NamedBox] -> IO ()
-updateObjects bs = do
-  (ops, bs', _ , size) <- xDotParse bs
+updateObjects _boxes = do
+  (ops, bs', _ , size) <- xDotParse
   modifyIORef state (\s -> s {operations = ops, boxes = bs', totalSize = size, hover = None})

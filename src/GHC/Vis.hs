@@ -44,6 +44,7 @@ module GHC.Vis (
   switch,
   update,
   clear,
+  history,
   export
   )
   where
@@ -175,6 +176,10 @@ update = put UpdateSignal
 -- | Clear the visualization window, removing all expressions from it.
 clear :: IO ()
 clear = put ClearSignal
+
+-- | Change position in history
+history :: (Int -> Int) -> IO ()
+history = put . HistorySignal
 
 -- | Export the current visualization view to a file, format depends on the
 --   file ending. Currently supported: svg, png, pdf, ps
@@ -399,6 +404,12 @@ setupGUI window canvas legendCanvas = do
     when (E.eventKeyName e `elem` ["u"]) $
       put UpdateSignal
 
+    when (E.eventKeyName e `elem` ["comma", "bracketleft"]) $
+      put $ HistorySignal (+1)
+
+    when (E.eventKeyName e `elem` ["period", "bracketright"]) $
+      put $ HistorySignal (\x -> x - 1)
+
     widgetQueueDraw canvas
     return True
 
@@ -488,26 +499,40 @@ react canvas legendCanvas = do
             timeout signalTimeout (putMVar visSignal UpdateSignal)
             react canvas legendCanvas)
     Just signal -> do
-      case signal of
-        NewSignal x n  -> modifyMVar_ visBoxes (
-          \y -> return $ if ([n], x) `elem` y then y else y ++ [([n], x)])
-        ClearSignal    -> modifyMVar_ visBoxes (\_ -> return [])
-        UpdateSignal   -> return ()
-        SwitchSignal   -> doSwitch
-        ExportSignal d f -> catch (runCorrect exportView >>= \e -> e d f)
-          (\e -> do let err = show (e :: IOException)
-                    hPutStrLn stderr $ "Couldn't export to file \"" ++ f ++ "\": " ++ err
-                    return ())
+      doUpdate <- case signal of
+        NewSignal x n  -> do
+          modifyMVar_ visBoxes (\y -> return $ if ([n], x) `elem` y then y else y ++ [([n], x)])
+          return True
+        ClearSignal    -> do
+          modifyMVar_ visBoxes $ const $ return []
+          modifyMVar_ visHeapHistory $ const $ return (0, [])
+          return False
+        UpdateSignal   -> return True
+        SwitchSignal   -> doSwitch >> return False
+        HistorySignal f -> do
+          modifyMVar_ visHeapHistory (\(i,xs) -> return (max 0 (min (length xs - 1) (f i)), xs))
+          return False
+        ExportSignal d f -> do
+          catch (runCorrect exportView >>= \e -> e d f)
+            (\e -> do let err = show (e :: IOException)
+                      hPutStrLn stderr $ "Couldn't export to file \"" ++ f ++ "\": " ++ err
+                      return ())
+          return False
 
       boxes <- readMVar visBoxes
-      performGC -- TODO: Else Blackholes appear. Do we want this?
-                -- Blackholes stop our current thread and only resume after
-                -- they have been replaced with their result, thereby leading
-                -- to an additional element in the HeapMap we don't want.
-                -- Example for bad behaviour that would happen then:
-                -- λ> let xs = [1..42] :: [Int]
-                -- λ> let x = 17 :: Int
-                -- λ> let ys = [ y | y <- xs, y >= x ]
+
+      when doUpdate $ do
+        performGC -- TODO: Else Blackholes appear. Do we want this?
+                  -- Blackholes stop our current thread and only resume after
+                  -- they have been replaced with their result, thereby leading
+                  -- to an additional element in the HeapMap we don't want.
+                  -- Example for bad behaviour that would happen then:
+                  -- λ> let xs = [1..42] :: [Int]
+                  -- λ> let x = 17 :: Int
+                  -- λ> let ys = [ y | y <- xs, y >= x ]
+
+        x <- multiBuildHeapGraph 100 boxes
+        modifyMVar_ visHeapHistory (\(i,xs) -> return (i,x:xs))
 
       runCorrect updateObjects >>= \f -> f boxes
 
@@ -588,6 +613,8 @@ visMainThread = do
   get castToMenuItem "quit"   >>= \item -> onActivateLeaf item $ widgetDestroy window
   get castToMenuItem "about"  >>= \item -> onActivateLeaf item $ widgetShow aboutDialog
   get castToMenuItem "legend" >>= \item -> onActivateLeaf item $ widgetShow legendDialog
+  get castToMenuItem "timeback" >>= \item -> onActivateLeaf item $ history (+1)
+  get castToMenuItem "timeforward" >>= \item -> onActivateLeaf item $ history (\x -> x - 1)
 
   widgetModifyBg canvas StateNormal backgroundColor
   widgetModifyBg legendCanvas StateNormal backgroundColor

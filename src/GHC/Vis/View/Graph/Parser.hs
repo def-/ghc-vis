@@ -29,6 +29,7 @@ import Data.GraphViz.Commands.IO
 import GHC.HeapView hiding (name)
 import GHC.Vis.Internal (showClosureFields)
 import GHC.Vis.Types
+import GHC.Vis.View.Common
 
 import Graphics.XDot.Types hiding (name, h, Style, Color)
 import Graphics.XDot.Parser
@@ -111,9 +112,10 @@ convertGraph hg = appEndo (removeGarbage <> addNames <> addEdges <> addNodes) em
 -- | Take the objects to be visualized and run them through @dot@ and extract
 --   the drawing operations that have to be exectued to show the graph of the
 --   heap map.
-xDotParse :: [NamedBox] -> IO ([(Object Node, Operation)], [Box], [(Object Node, Rectangle)], Rectangle)
-xDotParse as = do
-  (hg, _) <- multiBuildHeapGraph 100 as
+xDotParse :: IO ([(Object Node, Operation)], [Box], [(Object Node, Rectangle)], Rectangle)
+xDotParse = do
+  --(hg, _) <- multiBuildHeapGraph 100 as
+  (hg, _) <- getHeapGraph
   xDot <- graphvizWithHandle graphvizCommand (defaultVis $ convertGraph hg) XDot hGetDot
 
   return (getOperations xDot, getBoxes hg, getDimensions xDot, getSize xDot)

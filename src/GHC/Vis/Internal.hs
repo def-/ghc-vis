@@ -8,9 +8,7 @@
 
  -}
 module GHC.Vis.Internal (
-  parseBoxes,
-  parseBoxesHeap,
-  showClosure,
+  parseClosure,
   showClosureFields
   )
   where
@@ -20,6 +18,7 @@ import Prelude hiding (catch)
 #endif
 
 import GHC.Vis.Types
+
 import GHC.HeapView hiding (pkg, modl, fun, arrWords)
 
 import Control.Monad
@@ -27,13 +26,11 @@ import Control.Monad.State hiding (State, fix)
 
 import Data.Word
 import Data.Char
-import Data.Maybe (catMaybes)
 import Data.List hiding (insert)
 import qualified Data.IntMap as M
 
 import Text.Printf
 import Unsafe.Coerce
-
 
 import System.IO.Unsafe
 
@@ -41,29 +38,7 @@ import System.IO.Unsafe
 instance Eq Box where
   a == b = unsafePerformIO $ areBoxesEqual a b
 
--- | Walk the heap for a list of objects to be visualized and their
---   corresponding names.
-parseBoxes :: [NamedBox] -> IO [[VisObject]]
-parseBoxes = generalParseBoxes evalState
-
--- | Walk the heap for a list of objects to be visualized and their
---   corresponding names. Also return the resulting 'HeapMap' and another
---   'HeapMap' that does not contain BCO pointers.
-parseBoxesHeap :: [NamedBox] -> IO ([[VisObject]], PState)
-parseBoxesHeap = generalParseBoxes runState
-
---generalParseBoxes ::
---     (PrintState (Maybe [[VisObject]]) -> PState -> b)
---  -> [NamedBox] -> IO b
-generalParseBoxes :: (PrintState [[VisObject]] -> PState -> b) -> [NamedBox] -> IO b
-generalParseBoxes f bs = do
-  (hg, starts) <- multiBuildHeapGraph 100 $ map (\(_,x) -> ("",x)) bs
-  let bindings = boundMultipleTimes hg $ map snd starts
-  let g i = do
-        r <- parseClosure i
-        return $ simplify r
-  return $ f (mapM (g . snd) starts) $ PState 1 1 1 bindings hg
-
+-- | Parse a closure to a list of VisObjects
 parseClosure :: HeapGraphIndex -> PrintState [VisObject]
 parseClosure i = do
   o <- correctObject i
@@ -117,21 +92,6 @@ getName :: HeapGraphIndex -> PrintState String
 getName i = do
   HeapGraph m <- gets heapGraph
   return $ hgeData $ m M.! i
-
--- | In the given HeapMap, list all indices that are used more than once. The
--- second parameter adds external references, commonly @[heapGraphRoot]@.
-boundMultipleTimes :: HeapGraph a -> [HeapGraphIndex] -> [HeapGraphIndex]
-boundMultipleTimes (HeapGraph m) roots = map head $ filter (not.null) $ map tail $ group $ sort $
-     roots ++ concatMap (catMaybes . allPtrs . hgeClosure) (M.elems m)
-
--- Pulls together multiple Unnamed objects to one
-simplify :: [VisObject] -> [VisObject]
-simplify [] = []
-simplify [Named a bs] = [Named a $ simplify bs]
-simplify [a] = [a]
-simplify (Unnamed a : Unnamed b : xs) = simplify $ Unnamed (a ++ b) : xs
-simplify (Named a bs : xs) = Named a (simplify bs) : simplify xs
-simplify (a:xs) = a : simplify xs
 
 insertObjects :: VisObject -> [VisObject] -> [VisObject]
 insertObjects _ xs@(Function _ : _) = xs
@@ -330,10 +290,10 @@ mbParens t = if needsParens
 --                go (Named _ os) = any go os
 --                go _ = False
 
--- | Textual representation of Heap objects, used in the graph visualization.
-showClosure :: Closure -> String
-showClosure = unwords . showClosureFields
+--showClosure :: Closure -> String
+--showClosure = unwords . showClosureFields
 
+-- | Textual representation of Heap objects, used in the graph visualization.
 showClosureFields :: GenClosure t -> [String]
 showClosureFields (ConsClosure _ _ [dataArg] _ modl name) =
  case (modl, name) of

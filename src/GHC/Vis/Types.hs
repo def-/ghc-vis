@@ -39,6 +39,7 @@ data Signal = NewSignal Box String -- ^ Add a new Box to be visualized
             | UpdateSignal         -- ^ Redraw
             | ClearSignal          -- ^ Remove all Boxes
             | SwitchSignal         -- ^ Switch to alternative view
+            | HistorySignal (Int -> Int) -- ^ Change position in history
             | ExportSignal DrawFunction String -- ^ Export the view to a file
 
 -- | All functions a view has to provide
@@ -65,10 +66,13 @@ data State = State
   , wasDragged :: Bool     -- ^ Whether the mouse was actually dragged
   }
 
+-- | Identifier of a closure
 type Identifier = [String]
 
+-- | A box and its identifier
 type NamedBox = (Identifier, Box)
 
+-- | Internal state of the list view generator
 data PState = PState
   { tCounter' :: Integer
   , fCounter' :: Integer

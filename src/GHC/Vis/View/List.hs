@@ -32,7 +32,6 @@ import Data.IORef
 import Data.List
 import System.IO.Unsafe
 
-import GHC.Vis.Internal
 import GHC.Vis.Types hiding (State, View(..))
 import GHC.Vis.View.Common
 
@@ -170,7 +169,8 @@ click :: IO ()
 click = do
   s <- readIORef state
 
-  case hover s of
+  hm <- inHistoryMode
+  when (not hm) $ case hover s of
      Just t -> do
        evaluate t
        -- Without forkIO it would hang indefinitely if some action is currently
@@ -201,7 +201,7 @@ move canvas = do
 -- | Something might have changed on the heap, update the view.
 updateObjects :: [NamedBox] -> IO ()
 updateObjects boxes = do
-  os <- parseBoxes boxes
+  os <- parseBoxes
   --(h, is) <- multiBuildHeapGraph 100 $ map fst boxes
   -- This is wrong
   --let os = visHeapGraph (zipWith (\(b,i) (b',n) -> (i,n)) is boxes) h
