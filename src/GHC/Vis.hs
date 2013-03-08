@@ -67,6 +67,8 @@ import Control.Exception hiding (evaluate)
 import Data.Char
 import Data.IORef
 
+import qualified Data.IntMap as M
+
 import System.Timeout
 import System.Mem
 
@@ -505,7 +507,7 @@ react canvas legendCanvas = do
           return True
         ClearSignal    -> do
           modifyMVar_ visBoxes $ const $ return []
-          modifyMVar_ visHeapHistory $ const $ return (0, [])
+          modifyMVar_ visHeapHistory $ const $ return (0, [(HeapGraph M.empty, [])])
           return False
         UpdateSignal   -> return True
         SwitchSignal   -> doSwitch >> return False

@@ -67,7 +67,7 @@ convertGraph :: HeapGraph Identifier -> Gr ([String], Int) (String, Int)
 convertGraph hg = appEndo (removeGarbage <> addNames <> addEdges <> addNodes) empty
   where
     HeapGraph hgm = hg
-    
+
     -- Adds nodes for every closure in the map
     -- Special treatment for BCOs: Use the disassembler
     addNodes = mconcat [

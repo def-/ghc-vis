@@ -61,7 +61,7 @@ visBoxes = unsafePerformIO (newMVar [] :: IO (MVar [NamedBox]))
 
 -- | All heap graphs since the last clear command
 visHeapHistory :: MVar (Int, [(HeapGraph Identifier, [(Identifier, HeapGraphIndex)])])
-visHeapHistory = unsafePerformIO (newMVar (0, []) :: IO (MVar (Int, [(HeapGraph Identifier, [(Identifier, HeapGraphIndex)])])))
+visHeapHistory = unsafePerformIO (newMVar (0, [(HeapGraph M.empty, [])]) :: IO (MVar (Int, [(HeapGraph Identifier, [(Identifier, HeapGraphIndex)])])))
 
 -- | Get the currently selected heap graph
 getHeapGraph :: IO (HeapGraph Identifier, [(Identifier, HeapGraphIndex)])
