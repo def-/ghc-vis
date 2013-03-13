@@ -75,32 +75,34 @@ export drawFn file = do
 
 draw :: State -> Int -> Int -> Render [(Object Int, Rectangle)]
 draw s rw2 rh2 = do
-  vS <- liftIO $ readIORef visState
+  if null $ boxes s then return []
+  else do
+    vS <- liftIO $ readIORef visState
 
-  -- Line widths don't count to size, let's add a bit
-  let rw = 0.97 * fromIntegral rw2
-      rh = 0.97 * fromIntegral rh2
+    -- Line widths don't count to size, let's add a bit
+    let rw = 0.97 * fromIntegral rw2
+        rh = 0.97 * fromIntegral rh2
 
-      ops = operations s
-      size@(_,_,sw,sh) = totalSize s
+        ops = operations s
+        size@(_,_,sw,sh) = totalSize s
 
-  -- Proportional scaling
-      (sx,sy) = (zoomRatio vS * min (rw / sw) (rh / sh), sx)
-      (ox1,oy1) = (0.5 * fromIntegral rw2, 0.5 * fromIntegral rh2)
-      (ox2,oy2) = position vS
-      (ox,oy) = (ox1 + ox2, oy1 + oy2)
+    -- Proportional scaling
+        (sx,sy) = (zoomRatio vS * min (rw / sw) (rh / sh), sx)
+        (ox1,oy1) = (0.5 * fromIntegral rw2, 0.5 * fromIntegral rh2)
+        (ox2,oy2) = position vS
+        (ox,oy) = (ox1 + ox2, oy1 + oy2)
 
-  translate ox oy
-  scale sx sy
+    translate ox oy
+    scale sx sy
 
-  result <- drawAll (hover s) size ops
+    result <- drawAll (hover s) size ops
 
-  return $ map (\(o, (x,y,w,h)) -> (o,
-    ( x * sx + ox -- Transformations to correct scaling and offset
-    , y * sy + oy
-    , w * sx
-    , h * sy
-    ))) result
+    return $ map (\(o, (x,y,w,h)) -> (o,
+      ( x * sx + ox -- Transformations to correct scaling and offset
+      , y * sy + oy
+      , w * sx
+      , h * sy
+      ))) result
 
 render :: WidgetClass w => w -> Render b -> IO b
 render canvas r = do
