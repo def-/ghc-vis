@@ -101,6 +101,8 @@ draw s rw2 rh2 = do
     let toObject Nothing  = None
         toObject (Just x) = Node x
 
+        -- TODO: Recurse down the graph and list all nodes which are not connected otherwise
+        -- TODO: Also remove Edges on the way
         hiddens = map (\b -> toObject $ elemIndex b (boxes s)) $ hidden s
 
     result <- drawAll (hover s) hiddens size ops
