@@ -98,9 +98,9 @@ import Foreign.Ptr ( castPtr )
 
 views :: [View]
 views =
-  View List.redraw List.click List.move List.updateObjects List.export :
+  View List.redraw List.click List.rightClick List.move List.updateObjects List.export :
 #ifdef GRAPH_VIEW
-  View Graph.redraw Graph.click Graph.move Graph.updateObjects Graph.export :
+  View Graph.redraw Graph.click Graph.rightClick Graph.move Graph.updateObjects Graph.export :
 #endif
   []
 
@@ -294,6 +294,9 @@ setupGUI window canvas legendCanvas = do
   onButtonPress canvas $ \e -> do
     when (E.eventButton e == LeftButton && E.eventClick e == SingleClick) $
       join $ runCorrect click
+
+    when (E.eventButton e == RightButton && E.eventClick e == DoubleClick) $
+      join $ runCorrect rightClick
 
     when (E.eventButton e == RightButton && E.eventClick e == SingleClick) $
       modifyIORef visState (\s -> s {dragging = True})
@@ -533,7 +536,7 @@ react canvas legendCanvas = do
                   -- λ> let x = 17 :: Int
                   -- λ> let ys = [ y | y <- xs, y >= x ]
 
-        x <- multiBuildHeapGraph 100 boxes
+        x <- multiBuildHeapGraph 10 boxes
         modifyMVar_ visHeapHistory (\(i,xs) -> return (i,x:xs))
 
       runCorrect updateObjects >>= \f -> f boxes

@@ -10,6 +10,7 @@ module GHC.Vis.View.Graph (
   export,
   redraw,
   click,
+  rightClick,
   move,
   updateObjects
   )
@@ -27,6 +28,7 @@ import Control.Concurrent
 import Control.Monad
 import Control.Exception
 
+import Data.List (elemIndex)
 import Data.IORef
 import System.IO.Unsafe
 
@@ -45,10 +47,11 @@ data State = State
   , totalSize  :: (Double, Double, Double, Double)
   , bounds     :: [(Object Int, (Double, Double, Double, Double))]
   , hover      :: Object Int
+  , hidden     :: [Box]
   }
 
 state :: IORef State
-state = unsafePerformIO $ newIORef $ State [] [] (0, 0, 1, 1) [] None
+state = unsafePerformIO $ newIORef $ State [] [] (0, 0, 1, 1) [] None []
 
 -- | Draw visualization to screen, called on every update or when it's
 --   requested from outside the program.
@@ -95,7 +98,12 @@ draw s rw2 rh2 = do
     translate ox oy
     scale sx sy
 
-    result <- drawAll (hover s) size ops
+    let toObject Nothing  = None
+        toObject (Just x) = Node x
+
+        hiddens = map (\b -> toObject $ elemIndex b (boxes s)) $ hidden s
+
+    result <- drawAll (hover s) hiddens size ops
 
     return $ map (\(o, (x,y,w,h)) -> (o,
       ( x * sx + ox -- Transformations to correct scaling and offset
@@ -125,6 +133,16 @@ click = do
       void $ forkIO $ putMVar visSignal UpdateSignal
     _ -> return ()
 
+rightClick :: IO ()
+rightClick = do
+  s <- readIORef state
+
+  case hover s of
+    Node t -> unless (length (boxes s) <= t) $ do
+      hide $ boxes s !! t
+      void $ forkIO $ putMVar visSignal UpdateSignal
+    _ -> return ()
+
 evaluate2 :: Box -> IO ()
 evaluate2 b@(Box a) = do
   c <- getBoxedClosureData b
@@ -145,6 +163,9 @@ evaluate2 b@(Box a) = do
     _ -> return ()
   `catch`
     \(e :: SomeException) -> putStrLn $ "Caught exception while evaluating: " ++ show e
+
+hide :: Box -> IO ()
+hide b@(Box a) = modifyIORef state $ \s' -> s' {hidden = b : hidden s'}
 
 -- | Handle a mouse move. Causes an 'UpdateSignal' if the mouse is hovering a
 --   different object now, so the object gets highlighted and the screen

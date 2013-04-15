@@ -46,6 +46,7 @@ data Signal = NewSignal Box String -- ^ Add a new Box to be visualized
 data View = View
   { redraw        :: WidgetClass w => w -> IO ()
   , click         :: IO ()
+  , rightClick    :: IO ()
   , move          :: WidgetClass w => w -> IO ()
   , updateObjects :: [NamedBox] -> IO ()
   , exportView    :: DrawFunction -> String -> IO ()
