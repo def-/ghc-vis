@@ -81,6 +81,7 @@ draw s rw2 rh2 = do
   if null $ boxes s then return []
   else do
     vS <- liftIO $ readIORef visState
+    hg <- liftIO $ getHeapGraph
 
     -- Line widths don't count to size, let's add a bit
     let rw = 0.97 * fromIntegral rw2
@@ -98,12 +99,16 @@ draw s rw2 rh2 = do
     translate ox oy
     scale sx sy
 
-    let toObject Nothing  = None
+    let removeNode b (hiddens, hg') = (newNode : hiddens, hg')
+          where newNode = toObject $ elemIndex b (boxes s)
+
+        toObject Nothing  = None
         toObject (Just x) = Node x
 
         -- TODO: Recurse down the graph and list all nodes which are not connected otherwise
         -- TODO: Also remove Edges on the way
-        hiddens = map (\b -> toObject $ elemIndex b (boxes s)) $ hidden s
+        (hiddens, _) = foldr removeNode ([], hg) (hidden s)
+        --hiddens = map (\b -> toObject $ elemIndex b (boxes s)) $ hidden s
 
     result <- drawAll (hover s) hiddens size ops
 
