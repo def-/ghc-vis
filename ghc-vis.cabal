@@ -1,5 +1,5 @@
 name:               ghc-vis
-version:            0.6.1
+version:            0.6.1.1
 license:            BSD3
 license-file:       LICENSE
 category:           GHC, Debug, Development
@@ -40,7 +40,7 @@ Library
   Exposed-modules: GHC.Vis
   Other-modules: GHC.Vis.Internal GHC.Vis.Types GHC.Vis.View.List GHC.Vis.View.Common Paths_ghc_vis
   Default-Language: Haskell2010
-  Build-depends: base == 4.6.*,
+  Build-depends: base >= 4.5 && < 4.7,
                  mtl >= 2.0 && < 2.2,
                  fgl == 5.4.*,
                  deepseq == 1.3.*,
