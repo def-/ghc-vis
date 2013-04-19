@@ -44,6 +44,7 @@ module GHC.Vis (
   switch,
   update,
   clear,
+  resetHidden,
   history,
   export
   )
@@ -178,6 +179,10 @@ update = put UpdateSignal
 -- | Clear the visualization window, removing all expressions from it.
 clear :: IO ()
 clear = put ClearSignal
+
+-- | Reset the hidden boxes
+resetHidden :: IO ()
+resetHidden = put ResetHiddenSignal
 
 -- | Change position in history
 history :: (Int -> Int) -> IO ()
@@ -406,6 +411,9 @@ setupGUI window canvas legendCanvas = do
     when (E.eventKeyName e `elem` ["c"]) $
       put ClearSignal
 
+    when (E.eventKeyName e `elem` ["C"]) $
+      put ResetHiddenSignal
+
     when (E.eventKeyName e `elem` ["u"]) $
       put UpdateSignal
 
@@ -510,7 +518,11 @@ react canvas legendCanvas = do
           return True
         ClearSignal    -> do
           modifyMVar_ visBoxes $ const $ return []
+          modifyMVar_ visHidden $ const $ return []
           modifyMVar_ visHeapHistory $ const $ return (0, [(HeapGraph M.empty, [])])
+          return False
+        ResetHiddenSignal -> do
+          modifyMVar_ visHidden $ const $ return []
           return False
         RedrawSignal   -> return False
         UpdateSignal   -> return True

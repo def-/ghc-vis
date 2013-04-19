@@ -39,6 +39,7 @@ data Signal = NewSignal Box String -- ^ Add a new Box to be visualized
             | UpdateSignal         -- ^ Update the view
             | RedrawSignal         -- ^ Redraw
             | ClearSignal          -- ^ Remove all Boxes
+            | ResetHiddenSignal    -- ^ Reset all hidden boxes
             | SwitchSignal         -- ^ Switch to alternative view
             | HistorySignal (Int -> Int) -- ^ Change position in history
             | ExportSignal DrawFunction String -- ^ Export the view to a file

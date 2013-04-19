@@ -28,7 +28,6 @@ import Control.Concurrent
 import Control.Monad
 import Control.Exception
 
-import Data.List (elemIndex)
 import Data.IORef
 import System.IO.Unsafe
 
@@ -47,11 +46,10 @@ data State = State
   , totalSize  :: (Double, Double, Double, Double)
   , bounds     :: [(Object Int, (Double, Double, Double, Double))]
   , hover      :: Object Int
-  , hidden     :: [Box]
   }
 
 state :: IORef State
-state = unsafePerformIO $ newIORef $ State [] [] (0, 0, 1, 1) [] None []
+state = unsafePerformIO $ newIORef $ State [] [] (0, 0, 1, 1) [] None
 
 -- | Draw visualization to screen, called on every update or when it's
 --   requested from outside the program.
@@ -81,7 +79,6 @@ draw s rw2 rh2 = do
   if null $ boxes s then return []
   else do
     vS <- liftIO $ readIORef visState
-    hg <- liftIO $ getHeapGraph
 
     -- Line widths don't count to size, let's add a bit
     let rw = 0.97 * fromIntegral rw2
@@ -91,24 +88,13 @@ draw s rw2 rh2 = do
         size@(_,_,sw,sh) = totalSize s
 
     -- Proportional scaling
-        (sx,sy) = (zoomRatio vS * min (rw / sw) (rh / sh), sx)
+        (sx,sy) = (min 1000 $ zoomRatio vS * min (rw / sw) (rh / sh), sx)
         (ox1,oy1) = (0.5 * fromIntegral rw2, 0.5 * fromIntegral rh2)
         (ox2,oy2) = position vS
         (ox,oy) = (ox1 + ox2, oy1 + oy2)
 
     translate ox oy
     scale sx sy
-
-    let removeNode b (hiddens, hg') = (newNode : hiddens, hg')
-          where newNode = toObject $ elemIndex b (boxes s)
-
-        toObject Nothing  = None
-        toObject (Just x) = Node x
-
-        -- TODO: Recurse down the graph and list all nodes which are not connected otherwise
-        -- TODO: Also remove Edges on the way
-        --(hiddens, _) = foldr removeNode ([], hg) (hidden s)
-        --hiddens = map (\b -> toObject $ elemIndex b (boxes s)) $ hidden s
 
     result <- drawAll (hover s) size ops
 
@@ -172,7 +158,7 @@ evaluate2 b@(Box a) = do
     \(e :: SomeException) -> putStrLn $ "Caught exception while evaluating: " ++ show e
 
 hide :: Box -> IO ()
-hide b@(Box a) = modifyIORef state $ \s' -> s' {hidden = b : hidden s'}
+hide b = modifyMVar_ visHidden (\hs -> return $ b : hs)
 
 -- | Handle a mouse move. Causes an 'UpdateSignal' if the mouse is hovering a
 --   different object now, so the object gets highlighted and the screen
@@ -201,8 +187,7 @@ move canvas = do
 -- | Something might have changed on the heap, update the view.
 updateObjects :: [NamedBox] -> IO ()
 updateObjects _boxes = do
-  s <- readIORef state
-
-  (ops, bs', _ , size) <- xDotParse $ hidden s
+  hidden <- readMVar visHidden
+  (ops, bs', _ , size) <- xDotParse $ hidden
 
   modifyIORef state (\s -> s {operations = ops, boxes = bs', totalSize = size, hover = None})

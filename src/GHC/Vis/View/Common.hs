@@ -11,6 +11,7 @@ module GHC.Vis.View.Common (
   visRunning,
   visState,
   visBoxes,
+  visHidden,
   visHeapHistory,
   getHeapGraph,
   inHistoryMode,
@@ -58,6 +59,10 @@ visState = unsafePerformIO $ newIORef $ State (0, 0) ListView 1 (0, 0) False Fal
 -- | All the visualized boxes
 visBoxes :: MVar [NamedBox]
 visBoxes = unsafePerformIO (newMVar [] :: IO (MVar [NamedBox]))
+
+-- | Hidden boxes
+visHidden :: MVar [Box]
+visHidden = unsafePerformIO (newMVar [] :: IO (MVar [Box]))
 
 -- | All heap graphs since the last clear command
 visHeapHistory :: MVar (Int, [(HeapGraph Identifier, [(Identifier, HeapGraphIndex)])])
