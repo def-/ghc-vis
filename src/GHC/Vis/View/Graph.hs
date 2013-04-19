@@ -107,10 +107,10 @@ draw s rw2 rh2 = do
 
         -- TODO: Recurse down the graph and list all nodes which are not connected otherwise
         -- TODO: Also remove Edges on the way
-        (hiddens, _) = foldr removeNode ([], hg) (hidden s)
+        --(hiddens, _) = foldr removeNode ([], hg) (hidden s)
         --hiddens = map (\b -> toObject $ elemIndex b (boxes s)) $ hidden s
 
-    result <- drawAll (hover s) hiddens size ops
+    result <- drawAll (hover s) size ops
 
     return $ map (\(o, (x,y,w,h)) -> (o,
       ( x * sx + ox -- Transformations to correct scaling and offset
@@ -147,7 +147,7 @@ rightClick = do
   case hover s of
     Node t -> unless (length (boxes s) <= t) $ do
       hide $ boxes s !! t
-      void $ forkIO $ putMVar visSignal UpdateSignal
+      void $ forkIO $ putMVar visSignal RedrawSignal
     _ -> return ()
 
 evaluate2 :: Box -> IO ()
@@ -201,5 +201,8 @@ move canvas = do
 -- | Something might have changed on the heap, update the view.
 updateObjects :: [NamedBox] -> IO ()
 updateObjects _boxes = do
-  (ops, bs', _ , size) <- xDotParse
+  s <- readIORef state
+
+  (ops, bs', _ , size) <- xDotParse $ hidden s
+
   modifyIORef state (\s -> s {operations = ops, boxes = bs', totalSize = size, hover = None})

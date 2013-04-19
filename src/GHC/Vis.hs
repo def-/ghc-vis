@@ -512,6 +512,7 @@ react canvas legendCanvas = do
           modifyMVar_ visBoxes $ const $ return []
           modifyMVar_ visHeapHistory $ const $ return (0, [(HeapGraph M.empty, [])])
           return False
+        RedrawSignal   -> return False
         UpdateSignal   -> return True
         SwitchSignal   -> doSwitch >> return False
         HistorySignal f -> do

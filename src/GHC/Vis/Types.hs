@@ -36,7 +36,8 @@ type DrawFunction = forall a. FilePath -> Double -> Double -> (Surface -> IO a) 
 
 -- | Signals that are sent to the GUI to signal changes
 data Signal = NewSignal Box String -- ^ Add a new Box to be visualized
-            | UpdateSignal         -- ^ Redraw
+            | UpdateSignal         -- ^ Update the view
+            | RedrawSignal         -- ^ Redraw
             | ClearSignal          -- ^ Remove all Boxes
             | SwitchSignal         -- ^ Switch to alternative view
             | HistorySignal (Int -> Int) -- ^ Change position in history

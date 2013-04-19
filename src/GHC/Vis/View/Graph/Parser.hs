@@ -109,16 +109,26 @@ convertGraph hg = appEndo (removeGarbage <> addNames <> addEdges <> addNodes) em
     -- Removes nodes not reachable by a named closure
     removeGarbage = Endo (reachableSubgraph (map fst addNameList))
 
+removeOld :: Eq a => [a] -> Maybe a -> Maybe a
+removeOld keys (Just x)
+  | x `elem` keys = Just x
+  | otherwise     = Nothing
+removeOld _ x = x
+
 -- | Take the objects to be visualized and run them through @dot@ and extract
 --   the drawing operations that have to be exectued to show the graph of the
 --   heap map.
-xDotParse :: IO ([(Object Node, Operation)], [Box], [(Object Node, Rectangle)], Rectangle)
-xDotParse = do
+xDotParse :: [Box] -> IO ([(Object Node, Operation)], [Box], [(Object Node, Rectangle)], Rectangle)
+xDotParse hidden = do
   --(hg, _) <- multiBuildHeapGraph 100 as
-  (hg, _) <- getHeapGraph
+  (HeapGraph hg'', _) <- getHeapGraph
+  let hg' = M.filter (\(HeapGraphEntry b _ _ _) -> not $ b `elem` hidden) hg''
+  let hg = HeapGraph $ M.map (\hge -> hge{hgeClosure = fmap (removeOld $ M.keys hg') (hgeClosure hge)}) hg'
+  --let hg = HeapGraph $ traverse removeOld hg'
+
   xDot <- graphvizWithHandle graphvizCommand (defaultVis $ convertGraph hg) XDot hGetDot
 
-  return (getOperations xDot, getBoxes hg, getDimensions xDot, getSize xDot)
+  return (getOperations xDot, getBoxes (HeapGraph hg''), getDimensions xDot, getSize xDot)
 
 getBoxes :: HeapGraph a -> [Box]
 getBoxes (HeapGraph hg) = map (\(HeapGraphEntry b _ _ _) -> b) $ M.elems hg
