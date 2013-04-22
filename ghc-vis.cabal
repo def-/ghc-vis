@@ -5,7 +5,7 @@ license-file:       LICENSE
 category:           GHC, Debug, Development
 cabal-version:      >= 1.10
 build-type:         Custom
-author:             Dennis Felsing <dennis@felsin9.de>
+author:             Dennis Felsing, Joachim Breitner
 maintainer:         Dennis Felsing <dennis@felsin9.de>
 homepage:           http://felsin9.de/nnis/ghc-vis
 copyright:          Dennis Felsing 2012
