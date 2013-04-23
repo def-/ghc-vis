@@ -169,6 +169,8 @@ move canvas = do
   oldS <- readIORef state
   let oldHover = hover oldS
 
+  -- TODO: Evaluation and Collapsing menu here
+
   modifyIORef state $ \s' -> (
     let (mx, my) = mousePos vs
         check (o, (x,y,w,h)) =

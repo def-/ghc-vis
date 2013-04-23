@@ -642,6 +642,9 @@ visMainThread = do
   legendListSVG  <- My.getDataFileName "data/legend_list.svg" >>= svgNewFromFile
   legendGraphSVG <- My.getDataFileName "data/legend_graph.svg" >>= svgNewFromFile
 
+  iconEvaluateSVG  <- My.getDataFileName "data/icon_evaluate.svg" >>= svgNewFromFile
+  iconCollapseSVG  <- My.getDataFileName "data/icon_collapse.svg" >>= svgNewFromFile
+
   onExpose canvas $ const $ do
     boxes <- readMVar visBoxes
 
@@ -651,6 +654,8 @@ visMainThread = do
       runCorrect redraw >>= \f -> f canvas
       runCorrect move >>= \f -> f canvas
       return True
+
+    renderHoverMenu canvas iconEvaluateSVG iconCollapseSVG
 
   onExpose legendCanvas $ const $ do
     state <- readIORef visState
@@ -700,6 +705,16 @@ renderSVGScaled canvas svg = do
     scale sx sy
     svgRender svg
 #endif
+
+renderHoverMenu :: (WidgetClass w) => w -> SVG -> SVG -> IO Bool
+renderHoverMenu canvas evaluateSVG collapseSVG = do
+  win <- widgetGetDrawWindow canvas
+  renderWithDrawable win $ do
+    --translate
+    --scale
+    svgRender evaluateSVG
+    translate 0 50
+    svgRender collapseSVG
 
 -- Zoom into mouse, but only working from (0,0)
 -- newPos = ( oldPosX + x * zoomRatio s - x * newZoomRatio
