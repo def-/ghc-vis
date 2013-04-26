@@ -44,7 +44,7 @@ module GHC.Vis (
   switch,
   update,
   clear,
-  resetHidden,
+  restore,
   history,
   export
   )
@@ -85,7 +85,7 @@ import Data.GraphViz.Commands
 import qualified GHC.Vis.View.Graph as Graph
 #endif
 
-import Graphics.Rendering.Cairo
+import Graphics.Rendering.Cairo hiding (restore)
 
 #ifdef FULL_WINDOW
 import Graphics.Rendering.Cairo.SVG
@@ -181,8 +181,8 @@ clear :: IO ()
 clear = put ClearSignal
 
 -- | Reset the hidden boxes
-resetHidden :: IO ()
-resetHidden = put ResetHiddenSignal
+restore :: IO ()
+restore = put RestoreSignal
 
 -- | Change position in history
 history :: (Int -> Int) -> IO ()
@@ -409,7 +409,7 @@ setupGUI window canvas legendCanvas = do
       put ClearSignal
 
     when (E.eventKeyName e `elem` ["C"]) $
-      put ResetHiddenSignal
+      put RestoreSignal
 
     when (E.eventKeyName e `elem` ["u"]) $
       put UpdateSignal
@@ -518,7 +518,7 @@ react canvas legendCanvas = do
           modifyMVar_ visHidden $ const $ return []
           modifyMVar_ visHeapHistory $ const $ return (0, [(HeapGraph M.empty, [])])
           return False
-        ResetHiddenSignal -> do
+        RestoreSignal -> do
           modifyMVar_ visHidden $ const $ return []
           return False
         RedrawSignal   -> return False
@@ -621,14 +621,15 @@ visMainThread = do
   onDelete aboutDialog  $ const $ widgetHide aboutDialog  >> return True
   onDelete legendDialog $ const $ widgetHide legendDialog >> return True
 
-  get castToMenuItem "clear"  >>= \item -> onActivateLeaf item clear
-  get castToMenuItem "switch" >>= \item -> onActivateLeaf item switch
-  get castToMenuItem "update" >>= \item -> onActivateLeaf item update
-  get castToMenuItem "export" >>= \item -> onActivateLeaf item $ widgetShow saveDialog
-  get castToMenuItem "quit"   >>= \item -> onActivateLeaf item $ widgetDestroy window
-  get castToMenuItem "about"  >>= \item -> onActivateLeaf item $ widgetShow aboutDialog
-  get castToMenuItem "legend" >>= \item -> onActivateLeaf item $ widgetShow legendDialog
-  get castToMenuItem "timeback" >>= \item -> onActivateLeaf item $ history (+1)
+  get castToMenuItem "clear"       >>= \item -> onActivateLeaf item clear
+  get castToMenuItem "switch"      >>= \item -> onActivateLeaf item switch
+  get castToMenuItem "restore"     >>= \item -> onActivateLeaf item restore
+  get castToMenuItem "update"      >>= \item -> onActivateLeaf item update
+  get castToMenuItem "export"      >>= \item -> onActivateLeaf item $ widgetShow saveDialog
+  get castToMenuItem "quit"        >>= \item -> onActivateLeaf item $ widgetDestroy window
+  get castToMenuItem "about"       >>= \item -> onActivateLeaf item $ widgetShow aboutDialog
+  get castToMenuItem "legend"      >>= \item -> onActivateLeaf item $ widgetShow legendDialog
+  get castToMenuItem "timeback"    >>= \item -> onActivateLeaf item $ history (+1)
   get castToMenuItem "timeforward" >>= \item -> onActivateLeaf item $ history (\x -> x - 1)
 
   widgetModifyBg canvas StateNormal backgroundColor
