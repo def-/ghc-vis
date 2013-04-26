@@ -28,6 +28,7 @@ import Control.Concurrent
 import Control.Monad
 import Control.Exception
 
+import Data.Maybe
 import Data.IORef
 import System.IO.Unsafe
 
@@ -40,16 +41,36 @@ import GHC.HeapView hiding (size)
 import Graphics.XDot.Viewer
 import Graphics.XDot.Types hiding (size, w, h)
 
+import Graphics.Rendering.Cairo.SVG
+import Paths_ghc_vis as My
+
+hoverIconWidth :: Double
+hoverIconWidth = 35
+
+hoverIconHeight :: Double
+hoverIconHeight = 17.5
+
+hoverIconSpace :: Double
+hoverIconSpace = 5
+
+data Icon = EvaluateIcon
+          | CollapseIcon
+          deriving Eq
+
+type Dimension = (Double, Double, Double, Double)
+
 data State = State
   { boxes      :: [Box]
   , operations :: [(Object Int, Operation)]
-  , totalSize  :: (Double, Double, Double, Double)
-  , bounds     :: [(Object Int, (Double, Double, Double, Double))]
+  , totalSize  :: Dimension
+  , bounds     :: [(Object Int, Dimension)]
+  , hoverIconBounds :: [(Object Int, [(Icon, Dimension)])]
   , hover      :: Object Int
+  , iconHover  :: Maybe (Object Int, Icon)
   }
 
 state :: IORef State
-state = unsafePerformIO $ newIORef $ State [] [] (0, 0, 1, 1) [] None
+state = unsafePerformIO $ newIORef $ State [] [] (0, 0, 1, 1) [] [] None Nothing
 
 -- | Draw visualization to screen, called on every update or when it's
 --   requested from outside the program.
@@ -58,9 +79,9 @@ redraw canvas = do
   s <- readIORef state
   Gtk.Rectangle _ _ rw2 rh2 <- widgetGetAllocation canvas
 
-  boundingBoxes <- render canvas (draw s rw2 rh2)
+  (bbs, hibbs) <- render canvas (draw s rw2 rh2)
 
-  modifyIORef state (\s' -> s' {bounds = boundingBoxes})
+  modifyIORef state (\s' -> s' {bounds = bbs, hoverIconBounds = hibbs})
 
 -- | Export the visualization to an SVG file
 export :: DrawFunction -> String -> IO ()
@@ -74,9 +95,9 @@ export drawFn file = do
 
   return ()
 
-draw :: State -> Int -> Int -> Render [(Object Int, Rectangle)]
+--draw :: State -> Int -> Int -> Render [(Object Int, Rectangle)]
 draw s rw2 rh2 = do
-  if null $ boxes s then return []
+  if null $ boxes s then return ([], [])
   else do
     vS <- liftIO $ readIORef visState
 
@@ -98,17 +119,54 @@ draw s rw2 rh2 = do
 
     result <- drawAll (hover s) size ops
 
-    return $ map (\(o, (x,y,w,h)) -> (o,
-      ( x * sx + ox -- Transformations to correct scaling and offset
-      , y * sy + oy
-      , w * sx
-      , h * sy
-      ))) result
+    case hover s of
+      Node n -> do
+        let Just (x,y,w,h) = lookup (Node n) result
+
+        translate (x + w + hoverIconSpace) y
+        drawHoverMenu $ iconHover s
+      _      -> return True
+
+    let transform (o, (x,y,w,h)) = (o,
+          ( x * sx + ox -- Transformations to correct scaling and offset
+          , y * sy + oy
+          , w * sx
+          , h * sy
+          ))
+
+    let toHoverIconBounds (o, (x,y,w,h)) = (o, map transform
+          [ (EvaluateIcon, (x+w, y, hoverIconWidth + hoverIconSpace, hoverIconHeight))
+          , (CollapseIcon, (x+w, y+hoverIconHeight, hoverIconWidth + hoverIconSpace, hoverIconHeight))
+          ])
+
+    return (map transform result, map toHoverIconBounds result)
 
 render :: WidgetClass w => w -> Render b -> IO b
 render canvas r = do
   win <- widgetGetDrawWindow canvas
   renderWithDrawable win r
+
+--drawHoverMenu :: (WidgetClass w) => w -> SVG -> SVG -> Render Bool
+drawHoverMenu x = do
+  --win <- widgetGetDrawWindow canvas
+  --renderWithDrawable win $ do
+    --translate
+    --scale
+  iconEvaluateSVG <- liftIO $ My.getDataFileName "data/icon_evaluate.svg" >>= svgNewFromFile
+  iconCollapseSVG <- liftIO $ My.getDataFileName "data/icon_collapse.svg" >>= svgNewFromFile
+
+  hoverEvaluateSVG <- liftIO $ My.getDataFileName "data/hover_evaluate.svg" >>= svgNewFromFile
+  hoverCollapseSVG <- liftIO $ My.getDataFileName "data/hover_collapse.svg" >>= svgNewFromFile
+
+  svgRender $ case x of
+    Just (obj, EvaluateIcon) -> hoverEvaluateSVG
+    _                        -> iconEvaluateSVG
+
+  translate 0 hoverIconHeight
+
+  svgRender $ case x of
+    Just (obj, CollapseIcon) -> hoverCollapseSVG
+    _                        -> iconCollapseSVG
 
 -- | Handle a mouse click. If an object was clicked an 'UpdateSignal' is sent
 --   that causes the object to be evaluated and the screen to be updated.
@@ -117,13 +175,24 @@ click = do
   s <- readIORef state
 
   hm <- inHistoryMode
-  when (not hm) $ case hover s of
-    -- This might fail when a click occurs during an update
-    Node t -> unless (length (boxes s) <= t) $ do
+  when (not hm) $ case iconHover s of
+    Nothing -> case hover s of
+      -- This might fail when a click occurs during an update
+      Node t -> unless (length (boxes s) <= t) $ do
+        evaluate2 $ boxes s !! t
+        -- Without forkIO it would hang indefinitely if some action is currently
+        -- executed
+        void $ forkIO $ putMVar visSignal UpdateSignal
+      _ -> return ()
+
+    Just (Node t, EvaluateIcon) -> unless (length (boxes s) <= t) $ do
       evaluate2 $ boxes s !! t
-      -- Without forkIO it would hang indefinitely if some action is currently
-      -- executed
       void $ forkIO $ putMVar visSignal UpdateSignal
+
+    Just (Node t, CollapseIcon) -> unless (length (boxes s) <= t) $ do
+      hide $ boxes s !! t
+      void $ forkIO $ putMVar visSignal RedrawSignal
+
     _ -> return ()
 
 rightClick :: IO ()
@@ -169,22 +238,40 @@ move canvas = do
   oldS <- readIORef state
   let oldHover = hover oldS
 
-  -- TODO: Evaluation and Collapsing menu here
+      (mx, my) = mousePos vs
 
-  modifyIORef state $ \s' -> (
-    let (mx, my) = mousePos vs
-        check (o, (x,y,w,h)) =
-          if x <= mx && mx <= x + w &&
-             y <= my && my <= y + h
-          then o else None
+      check (o, (x,y,w,h)) =
+        if x <= mx && mx <= x + w &&
+           y <= my && my <= y + h
+        then o else None
 
-        validOne (None:xs) = validOne xs
-        validOne (x:_) = x
-        validOne _ = None
-    in s' {hover = validOne $ map check (bounds oldS)}
-    )
-  s <- readIORef state
-  unless (oldHover == hover s) $ widgetQueueDraw canvas
+      check2 (o, (x,y,w,h)) =
+        if x <= mx && mx <= x + w &&
+           y <= my && my <= y + h
+        then Just o else Nothing
+
+      validOne (None:xs) = validOne xs
+      validOne (x:_) = x
+      validOne _ = None
+
+      validOne2 (Nothing:xs) = validOne2 xs
+      validOne2 (Just x:_) = Just x
+      validOne2 _ = Nothing
+
+  let iconHov = case oldHover of
+        Node n -> validOne2 $ map check2 $ fromJust $ lookup (Node n) $ hoverIconBounds oldS
+        _      -> Nothing
+
+  case iconHov of
+    Just i -> do
+      let ih = Just (oldHover, i)
+      modifyIORef state $ \s' -> s' {iconHover = ih}
+      unless (iconHover oldS == ih) $ widgetQueueDraw canvas
+
+    Nothing -> do
+      let h = validOne $ map check $ bounds oldS
+      modifyIORef state $ \s' -> s' {hover = h, iconHover = Nothing}
+      unless (oldHover == h) $ widgetQueueDraw canvas
 
 -- | Something might have changed on the heap, update the view.
 updateObjects :: [NamedBox] -> IO ()
