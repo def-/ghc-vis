@@ -17,7 +17,6 @@ module GHC.Vis.View.List (
 
   redraw,
   click,
-  rightClick,
   move,
   updateObjects
   )
@@ -178,9 +177,6 @@ click = do
        -- executed
        void $ forkIO $ putMVar visSignal UpdateSignal
      _ -> return ()
-
-rightClick :: IO ()
-rightClick = return ()
 
 -- | Handle a mouse move. Causes an 'UpdateSignal' if the mouse is hovering a
 --   different object now, so the object gets highlighted and the screen

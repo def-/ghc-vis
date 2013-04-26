@@ -10,7 +10,6 @@ module GHC.Vis.View.Graph (
   export,
   redraw,
   click,
-  rightClick,
   move,
   updateObjects
   )
@@ -57,14 +56,12 @@ data Icon = EvaluateIcon
           | CollapseIcon
           deriving Eq
 
-type Dimension = (Double, Double, Double, Double)
-
 data State = State
   { boxes      :: [Box]
   , operations :: [(Object Int, Operation)]
-  , totalSize  :: Dimension
-  , bounds     :: [(Object Int, Dimension)]
-  , hoverIconBounds :: [(Object Int, [(Icon, Dimension)])]
+  , totalSize  :: Rectangle
+  , bounds     :: [(Object Int, Rectangle)]
+  , hoverIconBounds :: [(Object Int, [(Icon, Rectangle)])]
   , hover      :: Object Int
   , iconHover  :: Maybe (Object Int, Icon)
   }
@@ -95,7 +92,7 @@ export drawFn file = do
 
   return ()
 
---draw :: State -> Int -> Int -> Render [(Object Int, Rectangle)]
+draw :: State -> Int -> Int -> Render ([(Object Int, Rectangle)], [(Object Int, [(Icon, Rectangle)])])
 draw s rw2 rh2 = do
   if null $ boxes s then return ([], [])
   else do
@@ -121,32 +118,32 @@ draw s rw2 rh2 = do
 
     case hover s of
       Node n -> do
-        let Just (x,y,w,h) = lookup (Node n) result
+        let Just (x,y,w,_h) = lookup (Node n) result
 
         translate (x + w + hoverIconSpace) y
         drawHoverMenu $ iconHover s
       _      -> return True
 
-    let transform (o, (x,y,w,h)) = (o,
+    let trafo (o, (x,y,w,h)) = (o,
           ( x * sx + ox -- Transformations to correct scaling and offset
           , y * sy + oy
           , w * sx
           , h * sy
           ))
 
-    let toHoverIconBounds (o, (x,y,w,h)) = (o, map transform
+    let toHoverIconBounds (o, (x,y,w,_h)) = (o, map trafo
           [ (EvaluateIcon, (x+w, y, hoverIconWidth + hoverIconSpace, hoverIconHeight))
           , (CollapseIcon, (x+w, y+hoverIconHeight, hoverIconWidth + hoverIconSpace, hoverIconHeight))
           ])
 
-    return (map transform result, map toHoverIconBounds result)
+    return (map trafo result, map toHoverIconBounds result)
 
 render :: WidgetClass w => w -> Render b -> IO b
 render canvas r = do
   win <- widgetGetDrawWindow canvas
   renderWithDrawable win r
 
---drawHoverMenu :: (WidgetClass w) => w -> SVG -> SVG -> Render Bool
+drawHoverMenu :: Maybe (t, Icon) -> Render Bool
 drawHoverMenu x = do
   --win <- widgetGetDrawWindow canvas
   --renderWithDrawable win $ do
@@ -159,14 +156,14 @@ drawHoverMenu x = do
   hoverCollapseSVG <- liftIO $ My.getDataFileName "data/hover_collapse.svg" >>= svgNewFromFile
 
   svgRender $ case x of
-    Just (obj, EvaluateIcon) -> hoverEvaluateSVG
-    _                        -> iconEvaluateSVG
+    Just (_, EvaluateIcon) -> hoverEvaluateSVG
+    _                      -> iconEvaluateSVG
 
   translate 0 hoverIconHeight
 
   svgRender $ case x of
-    Just (obj, CollapseIcon) -> hoverCollapseSVG
-    _                        -> iconCollapseSVG
+    Just (_, CollapseIcon) -> hoverCollapseSVG
+    _                      -> iconCollapseSVG
 
 -- | Handle a mouse click. If an object was clicked an 'UpdateSignal' is sent
 --   that causes the object to be evaluated and the screen to be updated.
@@ -178,32 +175,24 @@ click = do
   when (not hm) $ case iconHover s of
     Nothing -> case hover s of
       -- This might fail when a click occurs during an update
-      Node t -> unless (length (boxes s) <= t) $ do
-        evaluate2 $ boxes s !! t
-        -- Without forkIO it would hang indefinitely if some action is currently
-        -- executed
-        void $ forkIO $ putMVar visSignal UpdateSignal
+      Node t -> evaluateClick s t
       _ -> return ()
 
-    Just (Node t, EvaluateIcon) -> unless (length (boxes s) <= t) $ do
-      evaluate2 $ boxes s !! t
-      void $ forkIO $ putMVar visSignal UpdateSignal
-
-    Just (Node t, CollapseIcon) -> unless (length (boxes s) <= t) $ do
-      hide $ boxes s !! t
-      void $ forkIO $ putMVar visSignal RedrawSignal
-
+    Just (Node t, EvaluateIcon) -> evaluateClick s t
+    Just (Node t, CollapseIcon) -> collapseClick s t
     _ -> return ()
 
-rightClick :: IO ()
-rightClick = do
-  s <- readIORef state
+evaluateClick :: State -> Int -> IO ()
+evaluateClick s t = unless (length (boxes s) <= t) $ do
+  evaluate2 $ boxes s !! t
+  -- Without forkIO it would hang indefinitely if some action is currently
+  -- executed
+  void $ forkIO $ putMVar visSignal UpdateSignal
 
-  case hover s of
-    Node t -> unless (length (boxes s) <= t) $ do
-      hide $ boxes s !! t
-      void $ forkIO $ putMVar visSignal RedrawSignal
-    _ -> return ()
+collapseClick :: State -> Int -> IO ()
+collapseClick s t = unless (length (boxes s) <= t) $ do
+  hide $ boxes s !! t
+  void $ forkIO $ putMVar visSignal RedrawSignal
 
 evaluate2 :: Box -> IO ()
 evaluate2 b@(Box a) = do
