@@ -6,6 +6,7 @@
 :def switch \_ -> return $ "GHC.Vis.switch"
 :def update \_ -> return $ "GHC.Vis.update"
 :def clear  \_ -> return $ "GHC.Vis.clear"
+:def restore \_ -> return $ "GHC.Vis.restore"
 :def timeBack \_ -> return $ "GHC.Vis.history (+1)"
 :def timeForward \_ -> return $ "GHC.Vis.history (\\x -> x - 1)"
 :def export \x -> return $ "GHC.Vis.export " ++ show x
