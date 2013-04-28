@@ -69,6 +69,15 @@ data State = State
 state :: IORef State
 state = unsafePerformIO $ newIORef $ State [] [] (0, 0, 1, 1) [] [] None Nothing
 
+iconEvaluateSVG :: SVG
+iconEvaluateSVG = unsafePerformIO $ My.getDataFileName "data/icon_evaluate.svg" >>= svgNewFromFile
+iconCollapseSVG :: SVG
+iconCollapseSVG = unsafePerformIO $ My.getDataFileName "data/icon_collapse.svg" >>= svgNewFromFile
+hoverEvaluateSVG :: SVG
+hoverEvaluateSVG = unsafePerformIO $ My.getDataFileName "data/hover_evaluate.svg" >>= svgNewFromFile
+hoverCollapseSVG :: SVG
+hoverCollapseSVG = unsafePerformIO $ My.getDataFileName "data/hover_collapse.svg" >>= svgNewFromFile
+
 -- | Draw visualization to screen, called on every update or when it's
 --   requested from outside the program.
 redraw :: WidgetClass w => w -> IO ()
@@ -145,16 +154,6 @@ render canvas r = do
 
 drawHoverMenu :: Maybe (t, Icon) -> Render Bool
 drawHoverMenu x = do
-  --win <- widgetGetDrawWindow canvas
-  --renderWithDrawable win $ do
-    --translate
-    --scale
-  iconEvaluateSVG <- liftIO $ My.getDataFileName "data/icon_evaluate.svg" >>= svgNewFromFile
-  iconCollapseSVG <- liftIO $ My.getDataFileName "data/icon_collapse.svg" >>= svgNewFromFile
-
-  hoverEvaluateSVG <- liftIO $ My.getDataFileName "data/hover_evaluate.svg" >>= svgNewFromFile
-  hoverCollapseSVG <- liftIO $ My.getDataFileName "data/hover_collapse.svg" >>= svgNewFromFile
-
   svgRender $ case x of
     Just (_, EvaluateIcon) -> hoverEvaluateSVG
     _                      -> iconEvaluateSVG
