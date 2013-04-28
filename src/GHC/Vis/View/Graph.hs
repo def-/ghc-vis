@@ -54,7 +54,7 @@ hoverIconSpace = 5
 
 data Icon = EvaluateIcon
           | CollapseIcon
-          deriving Eq
+          deriving (Show, Eq)
 
 data State = State
   { boxes      :: [Box]
@@ -260,7 +260,7 @@ move canvas = do
     Nothing -> do
       let h = validOne $ map check $ bounds oldS
       modifyIORef state $ \s' -> s' {hover = h, iconHover = Nothing}
-      unless (oldHover == h) $ widgetQueueDraw canvas
+      unless (oldHover == h && iconHover oldS == Nothing) $ widgetQueueDraw canvas
 
 -- | Something might have changed on the heap, update the view.
 updateObjects :: [NamedBox] -> IO ()
