@@ -43,12 +43,13 @@ data State = State
   { objects :: [(Box, String, [VisObject])]
   , bounds  :: [(String, Rectangle)]
   , hover   :: Maybe String
+  , totalSize :: Rectangle
   }
 
 type RGB = (Double, Double, Double)
 
 state :: IORef State
-state = unsafePerformIO $ newIORef $ State [] [] Nothing
+state = unsafePerformIO $ newIORef $ State [] [] Nothing (0, 0, 1, 1)
 
 layout' :: IORef (Maybe PangoLayout)
 layout' = unsafePerformIO $ newIORef Nothing
@@ -96,8 +97,8 @@ redraw canvas = do
   s <- readIORef state
   Gtk.Rectangle _ _ rw2 rh2 <- widgetGetAllocation canvas
 
-  boundingBoxes <- render canvas (draw s rw2 rh2)
-  modifyIORef state (\s' -> s' {bounds = boundingBoxes})
+  (size, boundingBoxes) <- render canvas (draw s rw2 rh2)
+  modifyIORef state (\s' -> s' {totalSize = size, bounds = boundingBoxes})
 
 #ifdef SDL_WINDOW
 getState :: IO State
@@ -113,15 +114,14 @@ export :: DrawFunction -> String -> IO ()
 export drawFn file = do
   s <- readIORef state
 
-  drawFn file (fromIntegral xSize) (fromIntegral ySize)
-    (\surface -> renderWith surface (draw s xSize ySize))
+  let (_, _, xSize, ySize) = totalSize s
+
+  drawFn file xSize ySize
+    (\surface -> renderWith surface (draw s 0 0))
 
   return ()
 
-  where xSize = 500 :: Int
-        ySize = 500 :: Int
-
-draw :: State -> Int -> Int -> Render [(String, Rectangle)]
+draw :: State -> Int -> Int -> Render (Rectangle, [(String, Rectangle)])
 draw s rw2 rh2 = do
   let os = objects s
       objs  = map (\(_,_,x) -> x) os
@@ -151,12 +151,13 @@ draw s rw2 rh2 = do
       (ox,oy) = (ox2 - (zoomRatio vS - 1) * rw / 2, oy2 - (zoomRatio vS - 1) * rh / 2)
 
   translate ox oy
-  scale sx sy
+  unless (rw2 == 0 || rh2 == 0) $
+    scale sx sy
 
   let rpos = scanl (\a b -> a + b + 30) 30 pos
   result <- mapM (drawEntry s maxNameWidth 0) (zip3 objs rpos names)
 
-  return $ map (\(o, (x,y,w,h)) -> (o, (x*sx+ox,y*sy+oy,w*sx,h*sy))) $ concat result
+  return ((0, 0, sw, sh), map (\(o, (x,y,w,h)) -> (o, (x*sx+ox,y*sy+oy,w*sx,h*sy))) $ concat result)
 
 render :: WidgetClass w => w -> Render b -> IO b
 render canvas r = do
