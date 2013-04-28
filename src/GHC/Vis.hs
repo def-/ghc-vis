@@ -67,6 +67,7 @@ import Control.Exception hiding (evaluate)
 
 import Data.Char
 import Data.IORef
+import Data.Version
 
 import qualified Data.IntMap as M
 
@@ -610,6 +611,8 @@ visMainThread = do
   newFilter "*.svg" "SVG" saveDialog
   newFilter "*.ps" "PostScript" saveDialog
   newFilter "*.png" "PNG" saveDialog
+
+  set aboutDialog [aboutDialogVersion := showVersion My.version]
 
   onResponse saveDialog $ fileSave saveDialog
   onResponse aboutDialog $ const $ widgetHide aboutDialog
