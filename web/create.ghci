@@ -1,0 +1,218 @@
+:script ../ghci
+
+:vis
+:switch
+
+let ones = [1,1..]
+let {at 0 (x:xs) = x; at n (x:xs) = at (n-1) xs}
+at 1 ones
+Control.Concurrent.threadDelay 1000000
+:view ones
+Control.Concurrent.threadDelay 1000000
+:export intro1-1.svg
+at 2 ones
+Control.Concurrent.threadDelay 1000000
+:update
+Control.Concurrent.threadDelay 1000000
+:export intro1-2.svg
+at 3 ones
+Control.Concurrent.threadDelay 1000000
+:update
+Control.Concurrent.threadDelay 1000000
+:export intro1-3.svg
+
+:clear
+let ones' = 1 : ones'
+at 1 ones'
+Control.Concurrent.threadDelay 1000000
+:view ones'
+Control.Concurrent.threadDelay 1000000
+:export intro2.svg
+
+:clear
+:switch
+let a = [1..3]
+:view a
+let b = cycle a
+:view b
+Control.Concurrent.threadDelay 1000000
+:view "foo" ++ "bar"
+Control.Concurrent.threadDelay 1000000
+:export 1.svg
+Control.Concurrent.threadDelay 1000000
+:eval t2
+Control.Concurrent.threadDelay 1000000
+:export 2.svg
+Control.Concurrent.threadDelay 1000000
+:switch
+Control.Concurrent.threadDelay 1000000
+:export 3.svg
+a !! 2
+Control.Concurrent.threadDelay 1000000
+:update
+Control.Concurrent.threadDelay 1000000
+:export 4.svg
+
+:clear
+let a = "foo"
+let b = a++a
+head b
+:view a
+Control.Concurrent.threadDelay 1000000
+:view b
+Control.Concurrent.threadDelay 1000000
+:export 0.svg
+
+:clear
+let f = 0 : 1 : zipWith (+) f (tail f)
+f !! 2
+Control.Concurrent.threadDelay 1000000
+:view f
+Control.Concurrent.threadDelay 1000000
+:export fib1.svg
+f !! 3
+Control.Concurrent.threadDelay 1000000
+:update
+Control.Concurrent.threadDelay 1000000
+:export fib2.svg
+f !! 4
+Control.Concurrent.threadDelay 1000000
+:update
+Control.Concurrent.threadDelay 1000000
+:export fib3.svg
+
+Control.Concurrent.threadDelay 1000000
+:set -fbyte-code
+:l Sieve
+Control.Concurrent.threadDelay 1000000
+head primes
+:switch
+Control.Concurrent.threadDelay 1000000
+:view primes
+Control.Concurrent.threadDelay 1000000
+:export interpreted.svg
+
+Control.Concurrent.threadDelay 1000000
+:set -fobject-code
+:l Sieve
+Control.Concurrent.threadDelay 1000000
+head primes
+:switch
+Control.Concurrent.threadDelay 1000000
+:view primes
+Control.Concurrent.threadDelay 1000000
+:export compiled.svg
+
+:clear
+let l = [1,2,3]
+:view l
+let l2 = 4:l
+:view l2
+let x = l ++ l2
+:view x
+let y = id (:) () y
+:view y
+Control.Concurrent.threadDelay 1000000
+:eval t2
+Control.Concurrent.threadDelay 1000000
+:export 6.svg
+Control.Concurrent.threadDelay 1000000
+:switch
+Control.Concurrent.threadDelay 1000000
+:export 5.svg
+
+:clear
+data BinaryTree = BT BinaryTree Int BinaryTree | Leaf
+let x = BT (BT (BT Leaf 1 (BT Leaf 2 Leaf)) 3 (BT (BT Leaf 4 (BT Leaf 5 Leaf)) 6 Leaf)) 7 Leaf
+:switch
+:view x
+Control.Concurrent.threadDelay 1000000
+:eval t1
+Control.Concurrent.threadDelay 1000000
+:export bt.svg
+
+Control.Concurrent.threadDelay 1000000
+:l dll.hs
+Control.Concurrent.threadDelay 1000000
+let x = mkDList [1..4]
+:switch
+:view x
+:eval t1
+:eval t1
+:eval t1
+:eval t1
+:eval t1
+Control.Concurrent.threadDelay 1000000
+:eval t1
+Control.Concurrent.threadDelay 1000000
+:export dll.svg
+
+Control.Concurrent.threadDelay 1000000
+:l dll2.hs
+Control.Concurrent.threadDelay 1000000
+let x = mkDList [1..4]
+:switch
+:view x
+:eval t1
+:eval t1
+:eval t1
+:eval t1
+:eval t1
+:eval t1
+:eval t1
+:eval t1
+:eval t1
+:eval t1
+:eval t2
+:eval t3
+:eval t4
+:eval t5
+:eval t3
+:eval t3
+:eval t3
+:eval t3
+:eval t1
+:eval t1
+:eval t6
+Control.Concurrent.threadDelay 1000000
+:eval t7
+Control.Concurrent.threadDelay 1000000
+:export dll2.svg
+
+Control.Concurrent.threadDelay 1000000
+:l dfa
+Control.Concurrent.threadDelay 1000000
+:switch
+Control.Concurrent.threadDelay 1000000
+:view dom18
+Control.Concurrent.threadDelay 1000000
+:export dfa.svg
+
+:clear
+:view (Data.IntMap.fromList $ zip [1..10] [1..])
+:eval t1
+Control.Concurrent.threadDelay 1000000
+:eval t1
+Control.Concurrent.threadDelay 1000000
+:export intmap.svg
+
+:clear
+let a = Data.ByteString.pack [0x44,0x45,0x46]
+let b = Data.ByteString.append a a
+a
+:view a
+Control.Concurrent.threadDelay 1000000
+:view b
+Control.Concurrent.threadDelay 1000000
+:export bytestring.svg
+
+:clear
+let b = GHC.Arr.array ((1,1),(3,2)) [((1,1),42),((1,2),23),((2,1),999),((2,2),1000),((3,1),1001),((3,2),1002)]
+b
+Control.Concurrent.threadDelay 1000000
+:view b
+Control.Concurrent.threadDelay 1000000
+:export array.svg
+
+Control.Concurrent.threadDelay 1000000
+:quit
