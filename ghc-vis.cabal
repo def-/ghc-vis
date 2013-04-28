@@ -37,8 +37,8 @@ flag full
 --  Description: "SDL window"
 
 Library
-  Exposed-modules: GHC.Vis GHC.Vis.Internal 
-  Other-modules: GHC.Vis.Types GHC.Vis.View.List GHC.Vis.View.Common Paths_ghc_vis
+  Exposed-modules: GHC.Vis
+  Other-modules: GHC.Vis.Internal GHC.Vis.Types GHC.Vis.View.List GHC.Vis.View.Common Paths_ghc_vis
   Default-Language: Haskell2010
   Build-depends: base >= 4.5 && < 4.7,
                  mtl >= 2.0 && < 2.2,
