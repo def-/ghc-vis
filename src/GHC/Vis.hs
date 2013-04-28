@@ -590,9 +590,8 @@ visMainThread :: IO ()
 visMainThread = do
   initGUI
 
-  mainUIFile <- My.getDataFileName "data/main.ui"
   builder <- builderNew
-  builderAddFromFile builder mainUIFile
+  builderAddFromFile builder =<< My.getDataFileName "data/main.ui"
 
   let get :: forall cls . GObjectClass cls
           => (GObject -> cls)
