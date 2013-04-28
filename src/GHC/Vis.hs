@@ -466,7 +466,7 @@ react2 = do
                     return ())
 
       boxes <- readMVar visBoxes
-      performGC -- TODO: Else Blackholes appear. Do we want this?
+      performGC -- Else Blackholes appear. Do we want this?
                 -- Blackholes stop our current thread and only resume after
                 -- they have been replaced with their result, thereby leading
                 -- to an additional element in the HeapMap we don't want.
@@ -537,7 +537,7 @@ react canvas legendCanvas = do
       boxes <- readMVar visBoxes
 
       when doUpdate $ do
-        performGC -- TODO: Else Blackholes appear. Do we want this?
+        performGC -- Else Blackholes appear. Do we want this?
                   -- Blackholes stop our current thread and only resume after
                   -- they have been replaced with their result, thereby leading
                   -- to an additional element in the HeapMap we don't want.
@@ -573,8 +573,6 @@ runCorrect f = do
 
 zoomImage :: WidgetClass w1 => w1 -> State -> Double -> T.Point -> IO T.Point
 zoomImage _canvas s newZoomRatio _mousePos@(_x', _y') = do
-  -- TODO: Mouse must stay at same spot
-
   --E.Rectangle _ _ rw' rh' <- widgetGetAllocation canvas
   --let (rw, rh) = (fromIntegral rw', fromIntegral rh')
   --let (x,y) = (x' - rw / 2, y' - rh / 2)
