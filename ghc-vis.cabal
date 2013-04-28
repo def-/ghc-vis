@@ -8,7 +8,7 @@ build-type:         Custom
 author:             Dennis Felsing, Joachim Breitner
 maintainer:         Dennis Felsing <dennis@felsin9.de>
 homepage:           http://felsin9.de/nnis/ghc-vis
-copyright:          Dennis Felsing 2012
+copyright:          Dennis Felsing 2012-2013
 synopsis:           Live visualization of data structures in GHCi
 description:        Visualize live data structures in GHCi. Evaluation is not
                     forced and you can interact with the visualized data
@@ -20,7 +20,7 @@ description:        Visualize live data structures in GHCi. Evaluation is not
                     how it can be used with GHCi's debugger:
                     <http://felsin9.de/nnis/ghc-vis/#combined-debugger>
 
-tested-with: GHC == 7.4.1, GHC == 7.4.2, GHC == 7.6.1
+tested-with: GHC == 7.4.1, GHC == 7.4.2, GHC == 7.6.1, GHC == 7.6.2, GHC == 7.6.3
 data-files: ghci data/main.ui data/welcome.svg data/legend_graph.svg data/legend_list.svg data/icon_collapse.svg data/icon_evaluate.svg data/hover_collapse.svg data/hover_evaluate.svg
 Extra-source-files: nonghci-test.hs
 
