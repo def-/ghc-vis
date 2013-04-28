@@ -1,0 +1,40 @@
+\documentclass[DIV16,twocolumn,10pt]{scrreprt}
+\usepackage{paralist}
+\usepackage{graphicx}
+\usepackage[final]{hcar}
+
+%include polycode.fmt
+
+\begin{document}
+
+\begin{hcarentry}{ghc-vis}
+\report{Dennis Felsing}
+\status{active development}
+\participants{Joachim Breitner}
+\makeheader
+
+The tool ghc-vis visualizes live Haskell data structures in GHCi.
+Since it does not force the evaluation of the values under inspection it is possible to see Haskell's lazy evaluation and sharing in action while you interact with the data.
+
+Ghc-vis supports two styles: A linear rendering similar to GHCi's \texttt{:print}, and a graph-based view where closures in memory are nodes and pointers between them are edges.
+In the following GHCi session a partially evaluated list of fibonacci numbers is visualized:
+
+\begin{verbatim}
+> let f = 0 : 1 : zipWith (+) f (tail f)
+> f !! 2
+> :view f
+\end{verbatim}
+
+\begin{center}
+  \includegraphics[scale=.35]{fib.jpg}
+\end{center}
+
+At this point the visualization can be used interactively: To evaluate a thunk, simply click on it and immediately see the effects. You can even evaluate thunks which are normally not reachable by regular Haskell code.
+
+Ghc-vis can also be used as a library and in combination with GHCi's debugger.
+
+\FurtherReading
+  \url{http://felsin9.de/nnis/ghc-vis}
+\end{hcarentry}
+
+\end{document}
