@@ -2,9 +2,6 @@
 
 - Getting a reconstructed type as a String from GHCi would be enough?
 
-- interactively blend in and out:
-  either single cloures or in general for all closures of a specific type (pattern matching?)
-
 - return $ MVarClosure itbl (ptrs !! 0) (ptrs !! 1) (ptrs !! 2)
   in HeapView sometimes fails at (ptrs !! 0) (primes example with byte-code)
 
