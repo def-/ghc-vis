@@ -21,6 +21,9 @@ for i in *svg; do
   mv ${i:r}-nq8.png ${i:r}.png
 done
 
+ghcivisversion=$(grep "^version:" ../ghc-vis.cabal | sed -e "s/^.* //")
+ghcversion=$(ghc -V | sed -e "s/^.* //")
+
 cat > index.html <<EOF
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
@@ -133,7 +136,7 @@ ones' = 1 : ones'</pre>
     </p>
     <pre class="code">
 $ cabal install ghc-vis
-$ echo ":script $HOME/.cabal/share/ghc-vis-$(grep "^version:" ../ghc-vis.cabal | sed -e "s/^.* //")/ghci" >> ~/.ghci</pre>
+$ echo ":script $HOME/.cabal/share/ghc-vis-${ghcivisversion}/ghci" >> ~/.ghci</pre>
     <p>
       You need GTK, Cairo, Pango, Graphviz and their corresponding Haskell
       library bindings. If you run into any problems, try this:
@@ -147,7 +150,7 @@ $ cabal install gtk2hs-buildtools</pre>
     </p>
     <pre class="code">
 $ ghci
-GHCi, version 7.6.3: http://www.haskell.org/ghc/  :? for help
+GHCi, version ${ghcversion}: http://www.haskell.org/ghc/  :? for help
 λ> :vis</pre>
     <p>
       A window should appear now. This is the visualization window:<br/>
@@ -218,7 +221,7 @@ GHCi, version 7.6.3: http://www.haskell.org/ghc/  :? for help
     </p>
     <pre class="code">
 $ ghci
-GHCi, version 7.6.3: http://www.haskell.org/ghc/  :? for help
+GHCi, version ${ghcversion}: http://www.haskell.org/ghc/  :? for help
 λ> let a = [1..3]
 λ> :print a
 a = (_t1::[Integer])
