@@ -32,9 +32,9 @@ flag full
   Default: True
   Description: "Full ghc-vis window: decorations, buttons, legend"
 
-flag sdl
-  Default: False
-  Description: "SDL window"
+--flag sdl
+--  Default: False
+--  Description: "SDL window"
 
 Library
   Exposed-modules: GHC.Vis GHC.Vis.Internal 
@@ -48,6 +48,7 @@ Library
                  transformers == 0.3.*,
                  containers >= 0.4 && < 0.6,
                  gtk == 0.12.*,
+                 svgcairo == 0.12.*,
                  cairo == 0.12.*,
                  ghc-heap-view == 0.5.*
   Hs-source-dirs: src/
@@ -60,12 +61,11 @@ Library
       Cpp-options: -DGRAPH_VIEW
 
   if flag(full)
-      Build-depends: svgcairo == 0.12.*
       Cpp-options: -DFULL_WINDOW
 
-  if flag(sdl)
-      Build-depends: SDL == 0.6.*
-      Cpp-options: -DSDL_WINDOW
+  --if flag(sdl)
+  --    Build-depends: SDL == 0.6.*
+  --    Cpp-options: -DSDL_WINDOW
 
 source-repository head
     type:     git
