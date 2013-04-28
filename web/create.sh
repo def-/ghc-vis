@@ -133,7 +133,7 @@ ones' = 1 : ones'</pre>
     </p>
     <pre class="code">
 $ cabal install ghc-vis
-$ echo ":script $HOME/.cabal/share/ghc-vis-0.7/ghci" >> ~/.ghci</pre>
+$ echo ":script $HOME/.cabal/share/ghc-vis-$(grep "^version:" ../ghc-vis.cabal | sed -e "s/^.* //")/ghci" >> ~/.ghci</pre>
     <p>
       You need GTK, Cairo, Pango, Graphviz and their corresponding Haskell
       library bindings. If you run into any problems, try this:
