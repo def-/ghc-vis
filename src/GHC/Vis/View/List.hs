@@ -400,12 +400,15 @@ height :: [VisObject] -> Render Double
 height xs = do
   (layout, _) <- pangoLayout ""
   (_, PangoRectangle _ _ _ ya) <- liftIO $ layoutGetExtents layout
-  let go (Named _ ys) = (ya + 15) + maximum (map go ys)
+  let go (Named _ ys) = (ya + 15) + maxGo ys
       go (Unnamed _)  = ya
       go (Link _)     = ya + 2 * padding
       go (Thunk _) = ya + 2 * padding
       go (Function _) = ya + 2 * padding
-  return $ maximum $ map go xs
+
+      maxGo = maximum . (0 :) . map go
+
+  return $ maxGo xs
 
 width :: VisObject -> Render Double
 width (Named x ys) = do
