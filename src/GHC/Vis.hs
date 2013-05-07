@@ -547,7 +547,7 @@ react canvas legendCanvas = do
                   -- λ> let x = 17 :: Int
                   -- λ> let ys = [ y | y <- xs, y >= x ]
 
-        x <- multiBuildHeapGraph 10 boxes
+        x <- multiBuildHeapGraph 100 boxes
         modifyMVar_ visHeapHistory (\(i,xs) -> return (i,x:xs))
 
       runCorrect updateObjects >>= \f -> f boxes
