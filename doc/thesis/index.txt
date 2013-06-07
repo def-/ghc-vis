@@ -1,0 +1,40 @@
+Visualization of Lazy Evaluation and Sharing
+============================================
+Dennis Felsing <dennis@felsin9.de>
+June 2013
+
+== Bachelor Thesis of Dennis Felsing
+
+  Karlsruhe Institute of Technology
+  At the Department of Informatics
+  Institute for Program Structures and Data Organization (IPD)
+
+  Reviewer: Prof. Gregor Snelting
+  Advisor: Joachim Breitner
+
+== Abstract
+
+This thesis details the motivation, implementation and evaluation of ghc-vis,
+a tool for visualizing Haskell data structures inside of GHCi and GHC compiled
+programs at runtime. The layout of objects on the GHC heap is used as the
+basis for two types of visualizations, which respectively aim to functionally
+be supersets of GHCi's :print and vacuum-cairo. Examples for using ghc-vis to
+further the understanding of lazy evaluation and sharing in Haskell are given.
+
+The visualization of sharing and lazy evaluation in Haskell data structures
+can be useful to enhance the comprehension of functional data structures and
+algorithms and their perfomance in the environment of education, development
+and debugging.
+
+A new library for parsing and viewing graphs in Haskell, called xdot, was
+created in order to interactively view graphs created by Graphviz.
+
+== Material
+
+- link:thesis.pdf[Thesis] (link:thesis.tar.bz2[source])
+- link:examples.tar.bz2[Examples used in the thesis]
+- link:beamer.pdf[Talk] (in German, link:beamer.tar.bz2[source])
+- link:ghc-vis[http://felsin9.de/nnis/ghc-vis] (link:http://hackage.haskell.org/package/ghc-vis[on Hackage])
+- xdot (link:http://hackage.haskell.org/package/xdot[on Hackage])
+
+// vim: set syntax=asciidoc:
