@@ -6,6 +6,8 @@ import Distribution.Simple.LocalBuildInfo
 import Distribution.PackageDescription (PackageDescription)
 
 import System.FilePath
+import System.Info
+import Data.List
 
 main = defaultMainWithHooks $ simpleUserHooks
   { postInst = postInstHook (postInst simpleUserHooks)
@@ -15,7 +17,9 @@ main = defaultMainWithHooks $ simpleUserHooks
 postInstHook oldHook args iflags pDesc lbi = do
   let instDataDir = datadir $ absoluteInstallDirs pDesc lbi (fromFlag $ copyDest defaultCopyFlags)
   putStrLn "To use ghc-vis you have to load its ghci file in GHCi. To do this automatically when GHCi is started run:"
-  putStrLn $ "echo \":script " ++ (instDataDir </> "ghci") ++ "\" >> ~/.ghci"
+  case stripPrefix "mingw" os of
+    Just _ -> putStrLn $ "echo :script " ++ (instDataDir </> "ghci") ++ " >> %APPDATA%\\ghc\\ghci.conf"
+    Nothing -> putStrLn $ "echo \":script " ++ (instDataDir </> "ghci") ++ "\" >> ~/.ghci"
 
   oldHook args iflags pDesc lbi
 
