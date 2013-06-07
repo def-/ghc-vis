@@ -13,7 +13,7 @@ apply the changes.
 
 == Install HomeBrew
 
-Install the _Command Line Tools for Xcode_ or from
+Install the _Command Line Tools for Xcode_ from
 https://developer.apple.com/downloads
 .
 
