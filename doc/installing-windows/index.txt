@@ -1,0 +1,60 @@
+Installing ghc-vis on Windows 7
+===============================
+Dennis Felsing <dennis@felsin9.de>
+June 2013
+
+This document explains how to install ghc-vis on a fresh installation of
+Windows 7. Everything will be in 32 bit, as there seems to be no 64 bit
+Haskell Platform for Windows.
+
+== Install the Haskell Platform
+
+Visit
+http://www.haskell.org/platform/windows.html
+and install the Haskell Platform.
+
+== Install GTK and GraphViz
+
+Download the all-in-one GTK bundle from
+http://www.gtk.org/download/win32.php
+and extract it to +C:\gtk+.
+
+Download the current GraphViz ZIP archive from
+http://www.graphviz.org/Download_windows.php
+and extract it to +C:\graphviz+, so that it directly contains the directories
++bin+, +lib+, +share+ and so on.
+
+Download the following libraries and extract them directly into +C:\gtk+:
+
+- http://ftp.gnome.org/pub/gnome/binaries/win32/librsvg/2.32/librsvg_2.32.1-1_win32.zip
+  (+librsvg-2-2.dll+ to +C:\gtk\bin\rsvg-2.dll+)
+- http://ftp.gnome.org/pub/gnome/binaries/win32/libcroco/0.6/libcroco_0.6.2-1_win32.zip
+  (+libcroco-0.6-3.dll+ to +C:\gtk\bin\+)
+- ftp://ftp.zlatkovic.com/libxml/libxml2-2.7.8.win32.zip
+  (+libxml2.dll+ to +C:\gtk\bin\libxml2-2.dll+)
+
+== Set Correct Paths
+
+Start +cmd.exe+ and set up the correct PATH variable:
+
+---------------------------------------------------------------------------------------------
+set PATH=C:\gtk\bin;C:\graphviz\bin;%PATH%
+---------------------------------------------------------------------------------------------
+
+In order to keep the PATH variable permanently, right-click _My Computer_,
+click _Properties_, click _Advanced System Settings_, click _Environment
+Variables_. Prepend the system variable _Path_ with
++C:\gtk\bin;C:\graphviz\bin;+.
+
+== Install ghc-vis
+
+---------------------------------------------------------------------------------------------
+cabal update
+cabal install gtk2hs-buildtools
+cabal install ghc-vis
+---------------------------------------------------------------------------------------------
+
+Follow the instructions in the output of +cabal install ghc-vis+ to setup the
+ghci script.
+
+// vim: set syntax=asciidoc:

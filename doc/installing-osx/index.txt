@@ -1,0 +1,76 @@
+Installing ghc-vis on Mac OS X 10.8
+===================================
+Dennis Felsing <dennis@felsin9.de>
+June 2013
+
+This document explains how to install ghc-vis on a fresh installation of Mac
+OS X 10.8 on an x86_64 system.
+
+== Install HomeBrew
+
+Install the _Command Line Tools for Xcode_ or from
+https://developer.apple.com/downloads
+.
+
+Install HomeBrew as described on
+http://mxcl.github.io/homebrew/
+:
+
+---------------------------------------------------------------------------------------------
+ruby -e "$(curl -fsSL https://raw.github.com/mxcl/homebrew/go)"
+---------------------------------------------------------------------------------------------
+
+== Install GTK and GraphViz
+
+---------------------------------------------------------------------------------------------
+brew install gtk graphviz
+gtk-demo
+---------------------------------------------------------------------------------------------
+
+If you're running a Hackintosh with an older CPU you have to set LLVM to
+compile for your CPU instead of the one advertised by your virtual machine
+(LLVM wrongly uses the CPU ID instead of its cap flags to determine which
+instructions it supports). To do this open +/usr/local/Library/ENV/4.3/cc+ in
+a text editor and replace +-march=native+ with +-march=core2+. See
+https://github.com/mxcl/homebrew/issues/19567#issuecomment-18888359
+for more details.
+
+== Install the Haskell Platform
+
+Visit
+http://www.haskell.org/platform/mac.html
+and install the Haskell Platform.
+
+== Set Correct Paths
+
+Set up the correct executable and library paths by adding them to your
++.profile+:
+
+---------------------------------------------------------------------------------------------
+cat <<EOT >> ~/.profile
+export PATH=\$HOME/Library/Haskell/bin:/usr/local/bin:\$PATH
+export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/opt/X11/lib/pkgconfig
+export LDFLAGS=-L/usr/local/lib
+export CFLAGS=-I/usr/local/include
+export LIBS=-L/usr/local/lib
+EOT
+source .profile
+---------------------------------------------------------------------------------------------
+
+This is important as otherwise the linker will use the system's cairo version
+instead of the one we just installed, leading to a segmentation fault. See
+https://github.com/vslavik/diff-pdf/issues/13#issuecomment-18222977
+for more details.
+
+== Install ghc-vis
+
+---------------------------------------------------------------------------------------------
+cabal update
+cabal install gtk2hs-buildtools
+cabal install ghc-vis --disable-library-profiling
+---------------------------------------------------------------------------------------------
+
+Follow the instructions in the output of +cabal install ghc-vis+ to setup the
+ghci script.
+
+// vim: set syntax=asciidoc:

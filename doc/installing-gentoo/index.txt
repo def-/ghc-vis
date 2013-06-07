@@ -1,0 +1,30 @@
+Installing ghc-vis on Gentoo Linux
+==================================
+Dennis Felsing <dennis@felsin9.de>
+June 2013
+
+This document explains how to install ghc-vis on Gentoo Linux.
+
+== Setup the Gentoo Haskell Overlay
+
+Visit
+https://github.com/gentoo-haskell/gentoo-haskell#gentoo-haskell-project
+and setup the Gentoo Haskell overlay.
+
+== Install dependencies of ghc-vis
+
+---------------------------------------------------------------------------------------------
+emerge dev-haskell/graphviz dev-haskell/gtk
+---------------------------------------------------------------------------------------------
+
+== Install ghc-vis
+
+---------------------------------------------------------------------------------------------
+cabal update
+cabal install ghc-vis
+---------------------------------------------------------------------------------------------
+
+Follow the instructions in the output of +cabal install ghc-vis+ to setup the
+ghci script.
+
+// vim: set syntax=asciidoc:

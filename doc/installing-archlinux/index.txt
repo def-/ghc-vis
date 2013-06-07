@@ -1,0 +1,30 @@
+Installing ghc-vis on Arch Linux
+===============================
+Dennis Felsing <dennis@felsin9.de>
+June 2013
+
+This document explains how to install ghc-vis on Arch Linux.
+
+== Install [haskell-core]
+
+Visit
+https://wiki.archlinux.org/index.php/Haskell_Package_Guidelines#.5Bhaskell-core.5D
+and install the [haskell-core] repository.
+
+== Install dependencies of ghc-vis
+
+---------------------------------------------------------------------------------------------
+pacman -S haskell-graphviz haskell-gtk
+---------------------------------------------------------------------------------------------
+
+== Install ghc-vis
+
+---------------------------------------------------------------------------------------------
+cabal update
+cabal install ghc-vis
+---------------------------------------------------------------------------------------------
+
+Follow the instructions in the output of +cabal install ghc-vis+ to setup the
+ghci script.
+
+// vim: set syntax=asciidoc:
