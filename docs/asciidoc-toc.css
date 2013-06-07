@@ -1,0 +1,9 @@
+ul.toc {
+	list-style-type: none;
+	margin-left: 0;
+	padding-left: 0;
+}
+
+ul.toc ul.toc {
+	padding-left: 0.5em;
+}

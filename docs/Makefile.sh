@@ -15,4 +15,6 @@ for i in *svg; do
   mv ${i:r}-nq8.png ${i:r}.png
 done
 
-for i in **/*.txt; do asciidoc $i; done
+for i in **/*.txt; do
+  asciidoc -b xhtml11 -f asciidoc.conf -a disable-javascript -a data-uri -a stylesheet=$PWD/asciidoc-toc.css -a idprefix -o - $i | hxtoc -l 2 > ${i:r}.html &
+done
