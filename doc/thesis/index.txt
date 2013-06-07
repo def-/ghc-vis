@@ -34,7 +34,7 @@ created in order to interactively view graphs created by Graphviz.
 - link:thesis.pdf[Thesis] (link:thesis.tar.bz2[source])
 - link:examples.tar.bz2[Examples used in the thesis]
 - link:beamer.pdf[Talk] (in German, link:beamer.tar.bz2[source])
-- link:ghc-vis[http://felsin9.de/nnis/ghc-vis] (link:http://hackage.haskell.org/package/ghc-vis[on Hackage])
+- link:http://felsin9.de/nnis/ghc-vis[ghc-vis] (link:http://hackage.haskell.org/package/ghc-vis[on Hackage])
 - xdot (link:http://hackage.haskell.org/package/xdot[on Hackage])
 
 // vim: set syntax=asciidoc:
