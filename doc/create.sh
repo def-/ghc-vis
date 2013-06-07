@@ -1,5 +1,6 @@
 #!/usr/bin/env zsh
 
+rm *.hi *.o
 ghci -ghci-script create.ghci
 
 for i in *svg; do
