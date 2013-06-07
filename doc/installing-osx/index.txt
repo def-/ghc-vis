@@ -6,6 +6,11 @@ June 2013
 This document explains how to install ghc-vis on a fresh installation of Mac
 OS X 10.8 on an x86_64 system.
 
+== Install XQuartz
+
+Visit http://xquartz.macosforge.org and install XQuartz. Reboot your system to
+apply the changes.
+
 == Install HomeBrew
 
 Install the _Command Line Tools for Xcode_ or from
