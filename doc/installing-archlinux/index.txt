@@ -13,16 +13,16 @@ and install the [haskell-core] repository.
 
 == Install dependencies of ghc-vis
 
----------------------------------------------------------------------------------------------
+----
 pacman -S haskell-graphviz haskell-gtk
----------------------------------------------------------------------------------------------
+----
 
 == Install ghc-vis
 
----------------------------------------------------------------------------------------------
+----
 cabal update
 cabal install ghc-vis
----------------------------------------------------------------------------------------------
+----
 
 Follow the instructions in the output of +cabal install ghc-vis+ to setup the
 ghci script.

@@ -2,6 +2,7 @@
 
 rm *.hi *.o
 ghci -ghci-script create.ghci
+rm *.hi *.o
 
 for i in *svg; do
   inkscape -z -e ${i:r}.png -d 60 -b white $i

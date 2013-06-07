@@ -37,9 +37,9 @@ Download the following libraries and extract them directly into +C:\gtk+:
 
 Start +cmd.exe+ and set up the correct PATH variable:
 
----------------------------------------------------------------------------------------------
+----
 set PATH=C:\gtk\bin;C:\graphviz\bin;%PATH%
----------------------------------------------------------------------------------------------
+----
 
 In order to keep the PATH variable permanently, right-click _My Computer_,
 click _Properties_, click _Advanced System Settings_, click _Environment
@@ -48,11 +48,11 @@ Variables_. Prepend the system variable _Path_ with
 
 == Install ghc-vis
 
----------------------------------------------------------------------------------------------
+----
 cabal update
 cabal install gtk2hs-buildtools
 cabal install ghc-vis
----------------------------------------------------------------------------------------------
+----
 
 Follow the instructions in the output of +cabal install ghc-vis+ to setup the
 ghci script.

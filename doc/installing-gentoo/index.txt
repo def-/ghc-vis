@@ -13,16 +13,16 @@ and setup the Gentoo Haskell overlay.
 
 == Install dependencies of ghc-vis
 
----------------------------------------------------------------------------------------------
+----
 emerge dev-haskell/graphviz dev-haskell/gtk
----------------------------------------------------------------------------------------------
+----
 
 == Install ghc-vis
 
----------------------------------------------------------------------------------------------
+----
 cabal update
 cabal install ghc-vis
----------------------------------------------------------------------------------------------
+----
 
 Follow the instructions in the output of +cabal install ghc-vis+ to setup the
 ghci script.

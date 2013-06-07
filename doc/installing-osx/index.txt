@@ -21,16 +21,16 @@ Install HomeBrew as described on
 http://mxcl.github.io/homebrew/
 :
 
----------------------------------------------------------------------------------------------
+----
 ruby -e "$(curl -fsSL https://raw.github.com/mxcl/homebrew/go)"
----------------------------------------------------------------------------------------------
+----
 
 == Install GTK and GraphViz
 
----------------------------------------------------------------------------------------------
+----
 brew install gtk graphviz
 gtk-demo
----------------------------------------------------------------------------------------------
+----
 
 If you're running a Hackintosh with an older CPU you have to set LLVM to
 compile for your CPU instead of the one advertised by your virtual machine
@@ -51,7 +51,7 @@ and install the Haskell Platform.
 Set up the correct executable and library paths by adding them to your
 +.profile+:
 
----------------------------------------------------------------------------------------------
+----
 cat <<EOT >> ~/.profile
 export PATH=\$HOME/Library/Haskell/bin:/usr/local/bin:\$PATH
 export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/opt/X11/lib/pkgconfig
@@ -60,7 +60,7 @@ export CFLAGS=-I/usr/local/include
 export LIBS=-L/usr/local/lib
 EOT
 source .profile
----------------------------------------------------------------------------------------------
+----
 
 This is important as otherwise the linker will use the system's cairo version
 instead of the one we just installed, leading to a segmentation fault. See
@@ -69,11 +69,11 @@ for more details.
 
 == Install ghc-vis
 
----------------------------------------------------------------------------------------------
+----
 cabal update
 cabal install gtk2hs-buildtools
 cabal install ghc-vis --disable-library-profiling
----------------------------------------------------------------------------------------------
+----
 
 Follow the instructions in the output of +cabal install ghc-vis+ to setup the
 ghci script.
