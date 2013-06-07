@@ -55,6 +55,13 @@ references itself as the rest of the list.
 
 === Installation
 
+More specific installation instructions can be found here:
+
+- link:installing-archlinux[Arch Linux]
+- link:installing-gentoo[Gentoo Linux]
+- link:installing-osx[Mac OS X 10.8]
+- link:installing-windows[Windows 7]
+
 The http://hackage.haskell.org/package/ghc-vis[package] is available on
 Hackage. Install it like this:
 
