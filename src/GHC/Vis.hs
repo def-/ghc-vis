@@ -633,11 +633,15 @@ visMainThread = do
   onDelete aboutDialog  $ const $ widgetHide aboutDialog  >> return True
   onDelete legendDialog $ const $ widgetHide legendDialog >> return True
 
+  let setDepthSpin = do
+        s <- readIORef visState
+        spinButtonSetValue depthSpin $ fromIntegral $ heapDepth s
+
   getO castToMenuItem "clear"       >>= \item -> onActivateLeaf item clear
   getO castToMenuItem "switch"      >>= \item -> onActivateLeaf item switch
   getO castToMenuItem "restore"     >>= \item -> onActivateLeaf item restore
   getO castToMenuItem "update"      >>= \item -> onActivateLeaf item update
-  getO castToMenuItem "setdepth"    >>= \item -> onActivateLeaf item $ widgetShow depthDialog
+  getO castToMenuItem "setdepth"    >>= \item -> onActivateLeaf item $ setDepthSpin >> widgetShow depthDialog
   getO castToMenuItem "export"      >>= \item -> onActivateLeaf item $ widgetShow saveDialog
   getO castToMenuItem "quit"        >>= \item -> onActivateLeaf item $ widgetDestroy window
   getO castToMenuItem "about"       >>= \item -> onActivateLeaf item $ widgetShow aboutDialog
