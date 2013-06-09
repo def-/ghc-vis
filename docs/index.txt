@@ -461,6 +461,7 @@ Commands are executed on the GHCi command line:
 | +:update+      | Update the visualization window, in case an expression has changed
 | +:clear+       | Remove all visualized expressions
 | +:restore+     | Restore all hidden nodes
+| +:setDepth x+  | Set the maximum recursion depth closures are followed on the heap to x
 | +:timeback+    | Go back in history
 | +:timeforward+ | Go forward in history
 | +:export file+ | Export the current visualization to a file; SVG, PDF, PS and PNG supported
@@ -471,26 +472,26 @@ Commands are executed on the GHCi command line:
 Key and mouse bindings work in the visualization window:
 [cols="3*,3,4",grid="rows",frame="topbot",options="header"]
 |====
-3+| Keys | Mouse | Action
-3+| v | | Switch view
-3+| c | | Clear view
-3+| C | | Restore hidden nodes
-3+| u | | Update view
-| Enter, 2+| Space, | Left click | Evaluate and update
-3+| , | | Go back in history
-3+| . | | Go forward in history
-3+|  | Right click and drag | Move
-| Left, | h, | a | | Move left
-|       | H, | A | | Move left fast
-| Right, | l, | d | | Move right
-|        | L, | D | | Move right fast
-| Up, | k, | w | | Move up
-|     | K, | W | | Move up fast
-| Down, | j, | s | | Move down
-|       | J, | S | | Move down fast
-| \+, 2+| PageUp | Wheel up | Zoom in
-| -, 2+| PageDown | Wheel down | Zoom out
-| 0, 2+| = | Wheel click | Reset zoom and position
+3+| Keys                | Mouse                | Action
+3+| v                   |                      | Switch view
+3+| c                   |                      | Clear view
+3+| C                   |                      | Restore hidden nodes
+3+| u                   |                      | Update view
+  | Enter, 2+| Space,   | Left click           | Evaluate and update
+3+| ,                   |                      | Go back in history
+3+| .                   |                      | Go forward in history
+3+|                     | Right click and drag | Move
+  | Left,    | h, | a   |                      | Move left
+  |          | H, | A   |                      | Move left fast
+  | Right,   | l, | d   |                      | Move right
+  |          | L, | D   |                      | Move right fast
+  | Up,      | k, | w   |                      | Move up
+  |          | K, | W   |                      | Move up fast
+  | Down,    | j, | s   |                      | Move down
+  |          | J, | S   |                      | Move down fast
+  | \+,    2+| PageUp   | Wheel up             | Zoom in
+  | -,     2+| PageDown | Wheel down           | Zoom out
+  | 0,     2+| =        | Wheel click          | Reset zoom and position
 |====
 
 == Using ghc-vis as a Library

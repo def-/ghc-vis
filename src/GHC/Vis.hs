@@ -46,17 +46,18 @@ module GHC.Vis (
   clear,
   restore,
   history,
+  setDepth,
   export
   )
   where
 
 #if __GLASGOW_HASKELL__ < 706
-import Prelude hiding (catch, error)
+import Prelude hiding (catch)
 #else
-import Prelude hiding (error)
+import Prelude
 #endif
 
-import Graphics.UI.Gtk hiding (Box, Signal, get, response)
+import Graphics.UI.Gtk hiding (Box, Signal, response)
 import qualified Graphics.UI.Gtk.Gdk.Events as E
 
 import System.IO
@@ -177,7 +178,7 @@ switch = put SwitchSignal
 update :: IO ()
 update = put UpdateSignal
 
--- | Clear the visualization window, removing all expressions from it.
+-- | Clear the visualization window, removing all expressions from it
 clear :: IO ()
 clear = put ClearSignal
 
@@ -189,6 +190,12 @@ restore = put RestoreSignal
 history :: (Int -> Int) -> IO ()
 history = put . HistorySignal
 
+-- | Set the maximum depth for following closures on the heap
+setDepth :: Int -> IO ()
+setDepth newDepth
+  | newDepth > 0 = modifyIORef visState (\s -> s {heapDepth = newDepth})
+  | otherwise    = error "Heap depth has to be positive"
+
 -- | Export the current visualization view to a file, format depends on the
 --   file ending. Currently supported: svg, png, pdf, ps
 export :: String -> IO ()
@@ -196,8 +203,8 @@ export filename = void $ export' filename
 
 export' :: String -> IO (Maybe String)
 export' filename = case mbDrawFn of
-  Right error -> do putStrLn error
-                    return $ Just error
+  Right errorMsg -> do putStrLn errorMsg
+                       return $ Just errorMsg
   Left _ -> do put $ ExportSignal ((\(Left x) -> x) mbDrawFn) filename
                return Nothing
 
@@ -547,7 +554,8 @@ react canvas legendCanvas = do
                   -- λ> let x = 17 :: Int
                   -- λ> let ys = [ y | y <- xs, y >= x ]
 
-        x <- multiBuildHeapGraph 100 boxes
+        s <- readIORef visState
+        x <- multiBuildHeapGraph (heapDepth s) boxes
         modifyMVar_ visHeapHistory (\(i,xs) -> return (i,x:xs))
 
       runCorrect updateObjects >>= \f -> f boxes
@@ -592,20 +600,23 @@ visMainThread = do
   builder <- builderNew
   builderAddFromFile builder =<< My.getDataFileName "data/main.ui"
 
-  let get :: forall cls . GObjectClass cls
-          => (GObject -> cls)
-          -> String
-          -> IO cls
-      get = builderGetObject builder
+  let getO :: forall cls . GObjectClass cls
+           => (GObject -> cls)
+           -> String
+           -> IO cls
+      getO = builderGetObject builder
 
-  window       <- get castToWindow "window"
-  canvas       <- get castToDrawingArea "drawingarea"
+  window       <- getO castToWindow "window"
+  canvas       <- getO castToDrawingArea "drawingarea"
 
-  saveDialog   <- get castToFileChooserDialog "savedialog"
-  aboutDialog  <- get castToAboutDialog "aboutdialog"
+  saveDialog   <- getO castToFileChooserDialog "savedialog"
+  aboutDialog  <- getO castToAboutDialog "aboutdialog"
 
-  legendDialog <- get castToWindow "legenddialog"
-  legendCanvas <- get castToDrawingArea "legenddrawingarea"
+  depthDialog  <- getO castToDialog "depthdialog"
+  depthSpin    <- getO castToSpinButton "depthspin"
+
+  legendDialog <- getO castToWindow "legenddialog"
+  legendCanvas <- getO castToDrawingArea "legenddrawingarea"
 
   newFilter "*.pdf" "PDF" saveDialog
   newFilter "*.svg" "SVG" saveDialog
@@ -615,22 +626,24 @@ visMainThread = do
   set aboutDialog [aboutDialogVersion := showVersion My.version]
 
   onResponse saveDialog $ fileSave saveDialog
+  onResponse depthDialog $ setDepthDialog depthDialog depthSpin
   onResponse aboutDialog $ const $ widgetHide aboutDialog
 
   onDelete saveDialog   $ const $ widgetHide saveDialog   >> return True
   onDelete aboutDialog  $ const $ widgetHide aboutDialog  >> return True
   onDelete legendDialog $ const $ widgetHide legendDialog >> return True
 
-  get castToMenuItem "clear"       >>= \item -> onActivateLeaf item clear
-  get castToMenuItem "switch"      >>= \item -> onActivateLeaf item switch
-  get castToMenuItem "restore"     >>= \item -> onActivateLeaf item restore
-  get castToMenuItem "update"      >>= \item -> onActivateLeaf item update
-  get castToMenuItem "export"      >>= \item -> onActivateLeaf item $ widgetShow saveDialog
-  get castToMenuItem "quit"        >>= \item -> onActivateLeaf item $ widgetDestroy window
-  get castToMenuItem "about"       >>= \item -> onActivateLeaf item $ widgetShow aboutDialog
-  get castToMenuItem "legend"      >>= \item -> onActivateLeaf item $ widgetShow legendDialog
-  get castToMenuItem "timeback"    >>= \item -> onActivateLeaf item $ history (+1)
-  get castToMenuItem "timeforward" >>= \item -> onActivateLeaf item $ history (\x -> x - 1)
+  getO castToMenuItem "clear"       >>= \item -> onActivateLeaf item clear
+  getO castToMenuItem "switch"      >>= \item -> onActivateLeaf item switch
+  getO castToMenuItem "restore"     >>= \item -> onActivateLeaf item restore
+  getO castToMenuItem "update"      >>= \item -> onActivateLeaf item update
+  getO castToMenuItem "setdepth"    >>= \item -> onActivateLeaf item $ widgetShow depthDialog
+  getO castToMenuItem "export"      >>= \item -> onActivateLeaf item $ widgetShow saveDialog
+  getO castToMenuItem "quit"        >>= \item -> onActivateLeaf item $ widgetDestroy window
+  getO castToMenuItem "about"       >>= \item -> onActivateLeaf item $ widgetShow aboutDialog
+  getO castToMenuItem "legend"      >>= \item -> onActivateLeaf item $ widgetShow legendDialog
+  getO castToMenuItem "timeback"    >>= \item -> onActivateLeaf item $ history (+1)
+  getO castToMenuItem "timeforward" >>= \item -> onActivateLeaf item $ history (\x -> x - 1)
 
   widgetModifyBg canvas StateNormal backgroundColor
   widgetModifyBg legendCanvas StateNormal backgroundColor
@@ -665,13 +678,21 @@ fileSave fcdialog response = do
                      mbError <- export' filename
                      case mbError of
                        Nothing -> return ()
-                       Just error -> do
-                         errorDialog <- messageDialogNew Nothing [] MessageError ButtonsOk error
+                       Just errorMsg -> do
+                         errorDialog <- messageDialogNew Nothing [] MessageError ButtonsOk errorMsg
                          widgetShow errorDialog
                          onResponse errorDialog $ const $ widgetHide errorDialog
                          return ()
     _ -> return ()
   widgetHide fcdialog
+
+setDepthDialog :: Dialog -> SpinButton -> ResponseId -> IO ()
+setDepthDialog depthDialog depthSpin response = do
+  case response of
+    ResponseOk -> do depth <- spinButtonGetValue depthSpin
+                     setDepth $ round depth
+    _ -> return ()
+  widgetHide depthDialog
 
 newFilter :: FileChooserClass fc => String -> String -> fc -> IO ()
 newFilter filterString name dialog = do

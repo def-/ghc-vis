@@ -64,10 +64,8 @@ reachableSubgraph roots graph = flip delNodes graph $
 -- | Converts a 'HeapGraph' to a fgl 'Gr', taking into account special
 -- representations for BCOs.
 convertGraph :: HeapGraph Identifier -> Gr ([String], Int) (String, Int)
-convertGraph hg = appEndo (removeGarbage <> addNames <> addEdges <> addNodes) empty
+convertGraph (HeapGraph hgm) = appEndo (removeGarbage <> addNames <> addEdges <> addNodes) empty
   where
-    HeapGraph hgm = hg
-
     -- Adds nodes for every closure in the map
     -- Special treatment for BCOs: Use the disassembler
     addNodes = mconcat [
@@ -84,7 +82,7 @@ convertGraph hg = appEndo (removeGarbage <> addNames <> addEdges <> addNodes) em
                | otherwise
         = (showClosureFields (hgeClosure hge), length $ allPtrs (hgeClosure hge))
 
-    -- Adds edges between the closurs, treating BCOs specially
+    -- Adds edges between the closures, treating BCOs specially
     addEdges = mconcat [
         Endo (insEdge (i, t, ("",n)))
         | (i, hge) <- M.toList hgm
@@ -97,8 +95,7 @@ convertGraph hg = appEndo (removeGarbage <> addNames <> addEdges <> addNodes) em
                      = allPtrs (hgeClosure hge)
 
     -- Adds the nodes and edges for the names
-    -- addNameList = zip [-1,-2..] -- Displays from right to left
-    addNameList = zip [-1,-2..] $ reverse
+    addNameList = zip [-1,-2..] $ reverse -- Reverse to display from left to right
         [ (i,name)
         | (i, hge) <- M.toList hgm
         , name <- hgeData hge

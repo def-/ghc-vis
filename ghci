@@ -10,6 +10,7 @@
 :def timeBack \_ -> return $ "GHC.Vis.history (+1)"
 :def timeForward \_ -> return $ "GHC.Vis.history (\\x -> x - 1)"
 :def export \x -> return $ "GHC.Vis.export " ++ show x
+:def setDepth \x -> return $ "GHC.Vis.setDepth (" ++ x ++ ")"
 
 -- Evaluate one step and update values in ghc-vis
 :def su \x -> return $ ":step " ++ x ++ "\n:update"

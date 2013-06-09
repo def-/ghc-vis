@@ -52,9 +52,12 @@ visSignal = unsafePerformIO (newEmptyMVar :: IO (MVar Signal))
 visRunning :: MVar Bool
 visRunning = unsafePerformIO (newMVar False)
 
+defaultDepth :: Int
+defaultDepth = 100
+
 -- | Internal state of the visualization
 visState :: IORef State
-visState = unsafePerformIO $ newIORef $ State (0, 0) ListView 1 (0, 0) False False
+visState = unsafePerformIO $ newIORef $ State (0, 0) ListView 1 (0, 0) False False defaultDepth
 
 -- | All the visualized boxes
 visBoxes :: MVar [NamedBox]

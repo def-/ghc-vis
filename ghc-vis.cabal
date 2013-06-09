@@ -1,5 +1,5 @@
 name:               ghc-vis
-version:            0.7.0.1
+version:            0.7.1
 license:            BSD3
 license-file:       LICENSE
 category:           GHC, Debug, Development

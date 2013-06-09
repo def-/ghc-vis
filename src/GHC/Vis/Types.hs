@@ -66,6 +66,7 @@ data State = State
   , position   :: Point    -- ^ Current position in the zoom
   , dragging   :: Bool     -- ^ Whether the mouse is dragging
   , wasDragged :: Bool     -- ^ Whether the mouse was actually dragged
+  , heapDepth  :: Int      -- ^ Maximum heap depth to follow
   }
 
 -- | Identifier of a closure
