@@ -46,9 +46,7 @@ module GHC.Vis (
   clear,
   restore,
   history,
-  export,
-  setExecuter,
-  execute
+  export
   )
   where
 
@@ -100,9 +98,6 @@ import qualified Graphics.UI.SDL as SDL
 import Foreign.Ptr ( castPtr )
 #endif
 
-import Eghci706.GhciMonad
-import Unsafe.Coerce
-
 views :: [View]
 views =
   View List.redraw List.click List.move List.updateObjects List.export :
@@ -147,23 +142,6 @@ vis = do
 #else
 vis = mvis
 #endif
-
-setExecuter :: a -> IO ()
-setExecuter executer = do
-  putMVar visExecuter (unsafeCoerce executer)
-  --void $ forkIO $ execLoop (unsafeCoerce executer)
-
-execLoop executer = do
-  executer $ do
-    a <- isOptionSet ShowTiming
-    liftIO $ putStrLn $ show a
-  threadDelay 1000000
-  execLoop executer
-
-execute :: GHCi a -> IO a
-execute function = do
-  executer <- readMVar visExecuter
-  executer function
 
 -- | A minimalistic version of ghc-vis, without window decorations, help and
 --   all that other stuff.

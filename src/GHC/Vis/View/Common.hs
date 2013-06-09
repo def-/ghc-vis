@@ -8,7 +8,6 @@
  -}
 module GHC.Vis.View.Common (
   visSignal,
-  visExecuter,
   visRunning,
   visState,
   visBoxes,
@@ -45,14 +44,9 @@ import GHC.Vis.Internal
 import GHC.Vis.Types
 import GHC.HeapView
 
-import Eghci706.GhciMonad
-
 -- | Communication channel to the visualization
 visSignal :: MVar Signal
 visSignal = unsafePerformIO (newEmptyMVar :: IO (MVar Signal))
-
-visExecuter :: MVar (GHCi a -> IO a)
-visExecuter = unsafePerformIO (newEmptyMVar :: IO (MVar (GHCi a -> IO a)))
 
 -- | Whether a visualization is currently running
 visRunning :: MVar Bool
