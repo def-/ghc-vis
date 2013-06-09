@@ -11,20 +11,13 @@ Visit
 https://github.com/gentoo-haskell/gentoo-haskell#gentoo-haskell-project
 and setup the Gentoo Haskell overlay.
 
-== Install dependencies of ghc-vis
-
-----
-emerge dev-haskell/graphviz dev-haskell/gtk
-----
-
 == Install ghc-vis
 
 ----
-cabal update
-cabal install ghc-vis
+emerge ghc-vis
 ----
 
-Follow the instructions in the output of +cabal install ghc-vis+ to setup the
-ghci script.
+Follow the instructions in the output of +emerge ghc-vis+ to setup the ghci
+script.
 
 // vim: set syntax=asciidoc:
