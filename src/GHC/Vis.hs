@@ -196,6 +196,23 @@ setDepth newDepth
   | newDepth > 0 = modifyIORef visState (\s -> s {heapDepth = newDepth})
   | otherwise    = error "Heap depth has to be positive"
 
+zoom :: WidgetClass w => w -> (Double -> Double) -> IO ()
+zoom canvas f = do
+  state <- readIORef visState
+
+  let newZoomRatio = f $ zoomRatio state
+  newPos <- zoomImage canvas state newZoomRatio (mousePos state)
+  modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
+
+  widgetQueueDraw canvas
+
+movePos :: WidgetClass w => w -> (T.Point -> T.Point) -> IO ()
+movePos canvas f = do
+  modifyIORef visState (\s ->
+    let newPosition = f $ position s
+    in s {position = newPosition})
+  widgetQueueDraw canvas
+
 -- | Export the current visualization view to a file, format depends on the
 --   file ending. Currently supported: svg, png, pdf, ps
 export :: String -> IO ()
@@ -582,10 +599,6 @@ runCorrect f = do
 
 zoomImage :: WidgetClass w1 => w1 -> State -> Double -> T.Point -> IO T.Point
 zoomImage _canvas s newZoomRatio _mousePos@(_x', _y') = do
-  --E.Rectangle _ _ rw' rh' <- widgetGetAllocation canvas
-  --let (rw, rh) = (fromIntegral rw', fromIntegral rh')
-  --let (x,y) = (x' - rw / 2, y' - rh / 2)
-
   let (oldPosX, oldPosY) = position s
       zoom = newZoomRatio / zoomRatio s
       newPos = (oldPosX * zoom, oldPosY * zoom)
@@ -648,6 +661,12 @@ visMainThread = do
   getO castToMenuItem "legend"      >>= \item -> onActivateLeaf item $ widgetShow legendDialog
   getO castToMenuItem "timeback"    >>= \item -> onActivateLeaf item $ history (+1)
   getO castToMenuItem "timeforward" >>= \item -> onActivateLeaf item $ history (\x -> x - 1)
+  getO castToMenuItem "zoomin"      >>= \item -> onActivateLeaf item $ zoom canvas (*1.25)
+  getO castToMenuItem "zoomout"     >>= \item -> onActivateLeaf item $ zoom canvas (/1.25)
+  getO castToMenuItem "left"        >>= \item -> onActivateLeaf item $ movePos canvas (\(x,y) -> (x + positionIncrement, y))
+  getO castToMenuItem "right"       >>= \item -> onActivateLeaf item $ movePos canvas (\(x,y) -> (x - positionIncrement, y))
+  getO castToMenuItem "up"          >>= \item -> onActivateLeaf item $ movePos canvas (\(x,y) -> (x, y + positionIncrement))
+  getO castToMenuItem "down"        >>= \item -> onActivateLeaf item $ movePos canvas (\(x,y) -> (x, y - positionIncrement))
 
   widgetModifyBg canvas StateNormal backgroundColor
   widgetModifyBg legendCanvas StateNormal backgroundColor
