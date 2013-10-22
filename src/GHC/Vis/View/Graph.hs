@@ -115,7 +115,7 @@ draw s rw2 rh2 = do
         size@(_,_,sw,sh) = totalSize s
 
     -- Proportional scaling
-        (sx,sy) = (min 1000 $ zoomRatio vS * min (rw / sw) (rh / sh), sx)
+        (sx,sy) = (min 1000 $ zoomRatio vS * minimum [2, rw / sw, rh / sh], sx)
         (ox1,oy1) = (0.5 * fromIntegral rw2, 0.5 * fromIntegral rh2)
         (ox2,oy2) = position vS
         (ox,oy) = (ox1 + ox2, oy1 + oy2)
