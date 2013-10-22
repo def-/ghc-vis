@@ -55,9 +55,16 @@ visRunning = unsafePerformIO (newMVar False)
 defaultDepth :: Int
 defaultDepth = 100
 
+defaultView :: ViewType
+#ifdef GRAPH_VIEW
+defaultView = GraphView
+#else
+defaultView = ListView
+#endif
+
 -- | Internal state of the visualization
 visState :: IORef State
-visState = unsafePerformIO $ newIORef $ State (0, 0) ListView 1 (0, 0) False False defaultDepth
+visState = unsafePerformIO $ newIORef $ State (0, 0) defaultView 1 (0, 0) False False defaultDepth
 
 -- | All the visualized boxes
 visBoxes :: MVar [NamedBox]
