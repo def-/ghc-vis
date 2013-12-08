@@ -21,7 +21,7 @@ import Prelude hiding (catch)
 
 import Graphics.UI.Gtk hiding (Box, Signal, Rectangle, Object)
 import qualified Graphics.UI.Gtk as Gtk
-import Graphics.Rendering.Cairo
+import Graphics.Rendering.Cairo hiding (x, y)
 
 import Control.Concurrent
 import Control.Monad

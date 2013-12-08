@@ -87,7 +87,7 @@ import Data.GraphViz.Commands
 import qualified GHC.Vis.View.Graph as Graph
 #endif
 
-import Graphics.Rendering.Cairo hiding (restore)
+import Graphics.Rendering.Cairo hiding (restore, x, y, width, height)
 
 #ifdef FULL_WINDOW
 import Graphics.Rendering.Cairo.SVG
@@ -600,8 +600,8 @@ runCorrect f = do
 zoomImage :: WidgetClass w1 => w1 -> State -> Double -> T.Point -> IO T.Point
 zoomImage _canvas s newZoomRatio _mousePos@(_x', _y') = do
   let (oldPosX, oldPosY) = position s
-      zoom = newZoomRatio / zoomRatio s
-      newPos = (oldPosX * zoom, oldPosY * zoom)
+      newZoom = newZoomRatio / zoomRatio s
+      newPos = (oldPosX * newZoom, oldPosY * newZoom)
 
   return newPos
 

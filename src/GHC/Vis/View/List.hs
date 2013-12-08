@@ -21,9 +21,9 @@ module GHC.Vis.View.List (
   updateObjects
   )
   where
-import Graphics.UI.Gtk hiding (Box, Signal, Rectangle)
+import Graphics.UI.Gtk hiding (Box, Signal, Rectangle, draw)
 import qualified Graphics.UI.Gtk as Gtk
-import Graphics.Rendering.Cairo
+import Graphics.Rendering.Cairo hiding (width, height, x, y)
 
 import Control.Concurrent
 import Control.Monad
