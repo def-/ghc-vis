@@ -9,7 +9,8 @@ This document explains how to install ghc-vis on Debian.
 
 ----
 apt-get install libghc-gtk-dev libghc-svgcairo-dev libghc-cairo-dev \
-  libghc-transformers-dev libghc-text-dev libghc-fgl-dev libghc-mtl-dev
+  libghc-transformers-dev libghc-text-dev libghc-fgl-dev \
+  libghc-mtl-dev libghc-polyparse-dev graphviz
 ----
 
 == Install ghc-vis
