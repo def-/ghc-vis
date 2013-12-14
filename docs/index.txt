@@ -61,6 +61,7 @@ More specific installation instructions can be found here:
 
 - link:installing-archlinux[Arch Linux]
 - link:installing-gentoo[Gentoo Linux]
+- link:installing-debian[Debian]
 - link:installing-osx[Mac OS X 10.8]
 - link:installing-windows[Windows 7]
 

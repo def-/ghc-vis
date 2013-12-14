@@ -1,0 +1,25 @@
+Installing ghc-vis on Debian
+============================
+Dennis Felsing <dennis@felsin9.de>
+December 2013
+
+This document explains how to install ghc-vis on Debian.
+
+== Install Dependencies
+
+----
+apt-get install libghc-gtk-dev libghc-svgcairo-dev libghc-cairo-dev \
+  libghc-transformers-dev libghc-text-dev libghc-fgl-dev libghc-mtl-dev
+----
+
+== Install ghc-vis
+
+----
+cabal update
+cabal install ghc-vis --disable-library-profiling
+----
+
+Follow the instructions in the output of +cabal install+ to setup the ghci
+script.
+
+// vim: set syntax=asciidoc:
