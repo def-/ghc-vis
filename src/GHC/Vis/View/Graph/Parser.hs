@@ -123,7 +123,7 @@ xDotParse hidden = do
   let hg = HeapGraph $ M.map (\hge -> hge{hgeClosure = fmap (removeOld $ M.keys hg') (hgeClosure hge)}) hg'
   --let hg = HeapGraph $ traverse removeOld hg'
 
-  xDot <- graphvizWithHandle graphvizCommand (defaultVis $ convertGraph hg) XDot hGetDot
+  xDot <- graphvizWithHandle graphvizCommand (defaultVis $ convertGraph hg) (XDot Nothing) hGetDot
 
   return (getOperations xDot, getBoxes (HeapGraph hg''), getDimensions xDot, getSize xDot)
 
