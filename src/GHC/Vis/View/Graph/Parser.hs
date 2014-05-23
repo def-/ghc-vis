@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, RankNTypes, KindSignatures #-}
 
 {- |
    Module      : GHC.Vis.View.Graph.Parser
@@ -52,7 +52,7 @@ graphvizCommand :: GraphvizCommand
 graphvizCommand = Dot
 
 -- | A generic algorithm to restrict a graph to the subgraph reachable by certain nodes
-reachableSubgraph :: DynGraph gr => [Node] => gr a b => gr a b
+reachableSubgraph :: forall (gr :: * -> * -> *) a b. DynGraph gr => [Node] -> gr a b -> gr a b
 reachableSubgraph roots graph = flip delNodes graph $
     filter (`S.notMember` reachableNodes) $
     nodes graph
