@@ -587,6 +587,11 @@ and extract it to <code>C:\graphviz</code>, so that it directly contains the dir
 <a href="ftp://ftp.zlatkovic.com/libxml/libxml2-2.7.8.win32.zip">ftp://ftp.zlatkovic.com/libxml/libxml2-2.7.8.win32.zip</a>
   (<code>libxml2.dll</code> to <code>C:\gtk\bin\libxml2-2.dll</code>)
 </p>
+</li><li>
+<p>
+<a href="m.dll">m.dll</a>
+  (<code>m.dll</code> to <code>C:\gtk\bin\</code>)
+</p>
 </li></ul></div>
 </div>
 </div>
@@ -611,6 +616,7 @@ Variables</em>. Prepend the system variable <em>Path</em> with
 <div class="content">
 <pre><code>cabal update
 cabal install gtk2hs-buildtools
+cabal install gtk -f -fmode-binary
 cabal install ghc-vis --disable-library-profiling</code></pre>
 </div></div>
 <div class="paragraph"><p>Follow the instructions in the output of <code>cabal install ghc-vis</code> to setup the
@@ -619,6 +625,6 @@ ghci script.</p></div>
 </div>
 </div><div id="footer"><a class="bctarget" name="footer"></a>
 <div id="footer-text"><a class="bctarget" name="footer-text"></a>
-Last updated 2014-05-24 10:08:55 CEST
+Last updated 2014-05-24 15:28:37 CEST
 </div>
 </div></body></html>
