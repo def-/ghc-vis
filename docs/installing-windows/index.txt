@@ -15,7 +15,7 @@ and install the Haskell Platform.
 
 == Install GTK and GraphViz
 
-Download the all-in-one GTK bundle from
+Download the all-in-one GTK 2.x bundle from
 http://www.gtk.org/download/win32.php
 and extract it to +C:\gtk+.
 
@@ -28,6 +28,8 @@ Download the following libraries and extract them directly into +C:\gtk+:
 
 - http://ftp.gnome.org/pub/gnome/binaries/win32/librsvg/2.32/librsvg_2.32.1-1_win32.zip
   (+librsvg-2-2.dll+ to +C:\gtk\bin\rsvg-2.dll+)
+- http://ftp.gnome.org/pub/gnome/binaries/win32/librsvg/2.32/librsvg-dev_2.32.1-1_win32.zip
+  (+lib+ and +include+ directories)
 - http://ftp.gnome.org/pub/gnome/binaries/win32/libcroco/0.6/libcroco_0.6.2-1_win32.zip
   (+libcroco-0.6-3.dll+ to +C:\gtk\bin\+)
 - ftp://ftp.zlatkovic.com/libxml/libxml2-2.7.8.win32.zip
@@ -51,7 +53,7 @@ Variables_. Prepend the system variable _Path_ with
 ----
 cabal update
 cabal install gtk2hs-buildtools
-cabal install ghc-vis
+cabal install ghc-vis --disable-library-profiling
 ----
 
 Follow the instructions in the output of +cabal install ghc-vis+ to setup the

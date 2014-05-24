@@ -559,7 +559,7 @@ and install the Haskell Platform.</p></div>
 <div class="sect1">
 <h2 id="install_gtk_and_graphviz"><a class="bctarget" name="install_gtk_and_graphviz"></a>Install GTK and GraphViz</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Download the all-in-one GTK bundle from
+<div class="paragraph"><p>Download the all-in-one GTK 2.x bundle from
 <a href="http://www.gtk.org/download/win32.php">http://www.gtk.org/download/win32.php</a>
 and extract it to <code>C:\gtk</code>.</p></div>
 <div class="paragraph"><p>Download the current GraphViz ZIP archive from
@@ -571,6 +571,11 @@ and extract it to <code>C:\graphviz</code>, so that it directly contains the dir
 <p>
 <a href="http://ftp.gnome.org/pub/gnome/binaries/win32/librsvg/2.32/librsvg_2.32.1-1_win32.zip">http://ftp.gnome.org/pub/gnome/binaries/win32/librsvg/2.32/librsvg_2.32.1-1_win32.zip</a>
   (<code>librsvg-2-2.dll</code> to <code>C:\gtk\bin\rsvg-2.dll</code>)
+</p>
+</li><li>
+<p>
+<a href="http://ftp.gnome.org/pub/gnome/binaries/win32/librsvg/2.32/librsvg-dev_2.32.1-1_win32.zip">http://ftp.gnome.org/pub/gnome/binaries/win32/librsvg/2.32/librsvg-dev_2.32.1-1_win32.zip</a>
+  (<code>lib</code> and <code>include</code> directories)
 </p>
 </li><li>
 <p>
@@ -606,7 +611,7 @@ Variables</em>. Prepend the system variable <em>Path</em> with
 <div class="content">
 <pre><code>cabal update
 cabal install gtk2hs-buildtools
-cabal install ghc-vis</code></pre>
+cabal install ghc-vis --disable-library-profiling</code></pre>
 </div></div>
 <div class="paragraph"><p>Follow the instructions in the output of <code>cabal install ghc-vis</code> to setup the
 ghci script.</p></div>
@@ -614,6 +619,6 @@ ghci script.</p></div>
 </div>
 </div><div id="footer"><a class="bctarget" name="footer"></a>
 <div id="footer-text"><a class="bctarget" name="footer-text"></a>
-Last updated 2013-06-07 23:17:45 CEST
+Last updated 2014-05-24 10:08:55 CEST
 </div>
 </div></body></html>
