@@ -56,7 +56,7 @@ Variables_. Prepend the system variable _Path_ with
 cabal update
 cabal install gtk2hs-buildtools
 cabal install gtk -f -fmode-binary
-cabal install ghc-vis --disable-library-profiling
+cabal install ghc-vis --enable-shared --disable-library-profiling
 ----
 
 Follow the instructions in the output of +cabal install ghc-vis+ to setup the

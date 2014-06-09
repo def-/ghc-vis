@@ -21,10 +21,10 @@ pacman -S haskell-graphviz haskell-gtk
 
 ----
 cabal update
-cabal install ghc-vis
+cabal install --enable-shared ghc-vis
 ----
 
-Follow the instructions in the output of +cabal install ghc-vis+ to setup the
+Follow the instructions in the output of +cabal install+ to setup the
 ghci script.
 
 // vim: set syntax=asciidoc:

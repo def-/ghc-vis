@@ -72,7 +72,7 @@ for more details.
 ----
 cabal update
 cabal install gtk2hs-buildtools
-cabal install ghc-vis --disable-library-profiling
+cabal install ghc-vis --enable-shared --disable-library-profiling
 ----
 
 Follow the instructions in the output of +cabal install ghc-vis+ to setup the

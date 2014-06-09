@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"><html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en"><head><meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"><meta name="generator" content="AsciiDoc 8.6.8"><title>Installing ghc-vis on Mac OS X 10.8</title><style type="text/css">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"><html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en"><head><meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"><meta name="generator" content="AsciiDoc 8.6.9"><title>Installing ghc-vis on Mac OS X 10.8</title><style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
 
 /* Default font. */
@@ -87,7 +87,9 @@ ul > li > * { color: black; }
   padding: 0;
   margin: 0;
 }
-
+pre {
+  white-space: pre-wrap;
+}
 
 #author {
   color: #527bbd;
@@ -216,7 +218,7 @@ div.exampleblock > div.content {
 }
 
 div.imageblock div.content { padding-left: 0; }
-span.image img { border-style: none; }
+span.image img { border-style: none; vertical-align: text-bottom; }
 a.image:visited { color: white; }
 
 dl {
@@ -623,7 +625,7 @@ for more details.</p></div>
 <div class="content">
 <pre><code>cabal update
 cabal install gtk2hs-buildtools
-cabal install ghc-vis --disable-library-profiling</code></pre>
+cabal install ghc-vis --enable-shared --disable-library-profiling</code></pre>
 </div></div>
 <div class="paragraph"><p>Follow the instructions in the output of <code>cabal install ghc-vis</code> to setup the
 ghci script.</p></div>
@@ -631,6 +633,6 @@ ghci script.</p></div>
 </div>
 </div><div id="footer"><a class="bctarget" name="footer"></a>
 <div id="footer-text"><a class="bctarget" name="footer-text"></a>
-Last updated 2013-06-07 23:17:45 CEST
+Last updated 2014-06-09 18:22:33 CEST
 </div>
 </div></body></html>
