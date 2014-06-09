@@ -69,4 +69,4 @@ Library
 
 source-repository head
     type:     git
-    location: git://r0q.ath.cx/vis
+    location: https://github.com/def-/ghc-vis.git
