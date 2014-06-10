@@ -11,6 +11,8 @@ import Data.List
 
 main = defaultMainWithHooks $ simpleUserHooks
   { postInst = postInstHook (postInst simpleUserHooks)
+  -- Copy for Cabal 1.20, which does not work with postInst
+  , postCopy = postInstHook (postCopy simpleUserHooks)
   , postConf = postConfHook (postConf simpleUserHooks)
   }
 
