@@ -70,6 +70,7 @@ import Data.Char
 import Data.IORef
 import Data.Version
 
+import qualified Data.Text as Text
 import qualified Data.IntMap as M
 
 import System.Timeout
@@ -357,92 +358,92 @@ setupGUI window canvas legendCanvas = do
     return True
 
   onKeyPress window $ \e -> do
-    --putStrLn $ E.eventKeyName e
-
     state <- readIORef visState
 
-    when (E.eventKeyName e `elem` ["plus", "Page_Up", "KP_Add"]) $ do
+    let eventKeyName = Text.unpack . E.eventKeyName
+
+    when (eventKeyName e `elem` ["plus", "Page_Up", "KP_Add"]) $ do
       let newZoomRatio = zoomRatio state * zoomIncrement
           (oldX, oldY) = position state
           newPos = (oldX*zoomIncrement, oldY*zoomIncrement)
       modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
 
-    when (E.eventKeyName e `elem` ["minus", "Page_Down", "KP_Subtract"]) $ do
+    when (eventKeyName e `elem` ["minus", "Page_Down", "KP_Subtract"]) $ do
       let newZoomRatio = zoomRatio state / zoomIncrement
           (oldX, oldY) = position state
           newPos = (oldX/zoomIncrement, oldY/zoomIncrement)
       modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
 
-    when (E.eventKeyName e `elem` ["0", "equal"]) $
+    when (eventKeyName e `elem` ["0", "equal"]) $
       modifyIORef visState (\s -> s {zoomRatio = 1, position = (0, 0)})
 
-    when (E.eventKeyName e `elem` ["Left", "h", "a"]) $
+    when (eventKeyName e `elem` ["Left", "h", "a"]) $
       modifyIORef visState (\s ->
         let (x,y) = position s
             newX  = x + positionIncrement
         in s {position = (newX, y)})
 
-    when (E.eventKeyName e `elem` ["Right", "l", "d"]) $
+    when (eventKeyName e `elem` ["Right", "l", "d"]) $
       modifyIORef visState (\s ->
         let (x,y) = position s
             newX  = x - positionIncrement
         in s {position = (newX, y)})
 
-    when (E.eventKeyName e `elem` ["Up", "k", "w"]) $
+    when (eventKeyName e `elem` ["Up", "k", "w"]) $
       modifyIORef visState (\s ->
         let (x,y) = position s
             newY  = y + positionIncrement
         in s {position = (x, newY)})
 
-    when (E.eventKeyName e `elem` ["Down", "j", "s"]) $
+    when (eventKeyName e `elem` ["Down", "j", "s"]) $
       modifyIORef visState (\s ->
         let (x,y) = position s
             newY  = y - positionIncrement
         in s {position = (x, newY)})
 
-    when (E.eventKeyName e `elem` ["H", "A"]) $
+    when (eventKeyName e `elem` ["H", "A"]) $
       modifyIORef visState (\s ->
         let (x,y) = position s
             newX  = x + bigPositionIncrement
         in s {position = (newX, y)})
 
-    when (E.eventKeyName e `elem` ["L", "D"]) $
+    when (eventKeyName e `elem` ["L", "D"]) $
       modifyIORef visState (\s ->
         let (x,y) = position s
             newX  = x - bigPositionIncrement
         in s {position = (newX, y)})
 
-    when (E.eventKeyName e `elem` ["K", "W"]) $
+    when (eventKeyName e `elem` ["K", "W"]) $
       modifyIORef visState (\s ->
         let (x,y) = position s
             newY  = y + bigPositionIncrement
         in s {position = (x, newY)})
 
-    when (E.eventKeyName e `elem` ["J", "S"]) $
+    when (eventKeyName e `elem` ["J", "S"]) $
       modifyIORef visState (\s ->
         let (x,y) = position s
             newY  = y - bigPositionIncrement
         in s {position = (x, newY)})
 
-    when (E.eventKeyName e `elem` ["space", "Return", "KP_Enter"]) $
+    when (eventKeyName e `elem` ["space", "Return", "KP_Enter"]) $
       join $ runCorrect click
 
-    when (E.eventKeyName e `elem` ["v"]) $
+    when (eventKeyName e `elem` ["v"]) $
       put SwitchSignal
 
-    when (E.eventKeyName e `elem` ["c"]) $
+    when (eventKeyName e `elem` ["c"]) $
       put ClearSignal
 
-    when (E.eventKeyName e `elem` ["C"]) $
+    when (eventKeyName e `elem` ["C"]) $
       put RestoreSignal
 
-    when (E.eventKeyName e `elem` ["u"]) $
+    when (eventKeyName e `elem` ["u"]) $
       put UpdateSignal
 
-    when (E.eventKeyName e `elem` ["comma", "bracketleft"]) $
+    when (eventKeyName e `elem` ["comma", "bracketleft"]) $
       put $ HistorySignal (+1)
 
-    when (E.eventKeyName e `elem` ["period", "bracketright"]) $
+    when (eventKeyName e `elem` ["period", "bracketright"]) $
       put $ HistorySignal (\x -> x - 1)
 
     widgetQueueDraw canvas
