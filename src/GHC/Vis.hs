@@ -360,7 +360,11 @@ setupGUI window canvas legendCanvas = do
   onKeyPress window $ \e -> do
     state <- readIORef visState
 
+#if MIN_VERSION_gtk(0,13,0)
     let eventKeyName = Text.unpack . E.eventKeyName
+#else
+    let eventKeyName = E.eventKeyName
+#endif
 
     when (eventKeyName e `elem` ["plus", "Page_Up", "KP_Add"]) $ do
       let newZoomRatio = zoomRatio state * zoomIncrement
