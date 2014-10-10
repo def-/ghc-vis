@@ -585,6 +585,7 @@ ul.toc ul.toc {
  <ul class="toc">
  <li><a href="#installation">2.1. Installation</a>
  <li><a href="#interactive_usage">2.2. Interactive Usage</a>
+ <li><a href="#cabal_sandbox_repl">2.3. Cabal Sandbox REPL</a>
  </ul>
 <li><a href="#other_tools">3. Other Tools</a>
  <ul class="toc">
@@ -800,6 +801,25 @@ update:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>λ&gt; :clear</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="cabal_sandbox_repl"><a class="bctarget" name="cabal_sandbox_repl"></a>2.3. Cabal Sandbox REPL</h3>
+<div class="paragraph"><p>To run ghc-vis inside a cabal sandbox REPL, you have to install it inside the
+sandbox:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ cabal sandbox init
+$ cabal install ghc-vis --disable-library-profiling</code></pre>
+</div></div>
+<div class="paragraph"><p>Now to use ghc-vis inside the REPL you have to explicitly load the ghc-vis
+package:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ cabal repl
+GHCi, version 7.8.3: http://www.haskell.org/ghc/  :? for help
+λ&gt; :set -package ghc-vis
+λ&gt; :vis</code></pre>
 </div></div>
 </div>
 </div>
@@ -1193,6 +1213,6 @@ me an email. I&#8217;ll be glad to help you.</p></div>
 </div>
 </div><div id="footer"><a class="bctarget" name="footer"></a>
 <div id="footer-text"><a class="bctarget" name="footer-text"></a>
-Last updated 2013-12-14 14:41:13 CET
+Last updated 2014-10-10 14:10:51 CEST
 </div>
 </div></body></html>

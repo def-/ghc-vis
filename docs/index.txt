@@ -169,6 +169,26 @@ Clear the visualization window, this also happens when you +:load+ or
 λ> :clear
 ----
 
+=== Cabal Sandbox REPL
+
+To run ghc-vis inside a cabal sandbox REPL, you have to install it inside the
+sandbox:
+
+----
+$ cabal sandbox init
+$ cabal install ghc-vis --disable-library-profiling
+----
+
+Now to use ghc-vis inside the REPL you have to explicitly load the ghc-vis
+package:
+
+----
+$ cabal repl
+GHCi, version 7.8.3: http://www.haskell.org/ghc/  :? for help
+λ> :set -package ghc-vis
+λ> :vis
+----
+
 == Other Tools
 
 === :print
