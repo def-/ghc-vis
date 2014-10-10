@@ -21,7 +21,7 @@ pacman -S haskell-graphviz haskell-gtk
 
 ----
 cabal update
-cabal install --enable-shared ghc-vis
+cabal install ghc-vis
 ----
 
 Follow the instructions in the output of +cabal install+ to setup the

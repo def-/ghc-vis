@@ -17,7 +17,7 @@ apt-get install libghc-gtk-dev libghc-svgcairo-dev libghc-cairo-dev \
 
 ----
 cabal update
-cabal install ghc-vis --enable-shared --disable-library-profiling
+cabal install ghc-vis --disable-library-profiling
 ----
 
 Follow the instructions in the output of +cabal install+ to setup the ghci
