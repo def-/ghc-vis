@@ -554,7 +554,7 @@ more examples, explains how it works and what kind of problems I encountered.
 
 == Bugs, Feature Requests, Development
 
-If you have any problems, new ideas or comments concerning ghc-vis, just drop
-me an email. I'll be glad to help you.
+If you have any problems, new ideas or comments concerning ghc-vis, you can
+use http://github.com/def-/ghc-vis/issues[the github issue tracker].
 
 // vim: set syntax=asciidoc:
