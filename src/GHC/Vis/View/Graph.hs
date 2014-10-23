@@ -180,6 +180,10 @@ click = do
     Just (Node t, EvaluateIcon) -> evaluateClick s t
     Just (Node t, CollapseIcon) -> collapseClick s t
     _ -> return ()
+  when hm $ case iconHover s of
+    -- Don't evaluate when we're back in time, but allow collapsing
+    Just (Node t, CollapseIcon) -> collapseClick s t
+    _ -> return ()
 
 evaluateClick :: State -> Int -> IO ()
 evaluateClick s t = unless (length (boxes s) <= t) $ do
