@@ -21,7 +21,12 @@ module GHC.Vis.View.List (
   updateObjects
   )
   where
-import Graphics.UI.Gtk hiding (Box, Signal, Rectangle, draw)
+import Graphics.UI.Gtk (PangoRectangle(..), layoutGetExtents, showLayout,
+  PangoLayout(..), WidgetClass(..), widgetGetAllocation, widgetGetDrawWindow,
+  renderWithDrawable, widgetQueueDraw, ascent, layoutSetFontDescription,
+  FontMetrics(..), layoutCopy, layoutSetText, layoutGetContext,
+  fontDescriptionFromString, fontDescriptionSetSize, contextGetLanguage,
+  contextGetMetrics, createLayout)
 import qualified Graphics.UI.Gtk as Gtk
 import Graphics.Rendering.Cairo hiding (width, height, x, y)
 
