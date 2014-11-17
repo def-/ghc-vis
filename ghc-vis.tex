@@ -1,14 +1,7 @@
-\documentclass[DIV16,twocolumn,10pt]{scrreprt}
-\usepackage{paralist}
-\usepackage{graphicx}
-\usepackage[final]{hcar}
-
-%include polycode.fmt
-
-\begin{document}
-
+% ghcvis-Dg.tex
 \begin{hcarentry}{ghc-vis}
-\report{Dennis Felsing}
+\label{ghc-vis}
+\report{Dennis Felsing}%05/13
 \status{active development}
 \participants{Joachim Breitner}
 \makeheader
@@ -25,9 +18,12 @@ In the following GHCi session a partially evaluated list of fibonacci numbers is
 > :view f
 \end{verbatim}
 
+%**<img width=500 src="./fib.jpg">
+%*ignore
 \begin{center}
-  \includegraphics[scale=.35]{fib.jpg}
+\includegraphics[width=0.35\textwidth]{html/fib.jpg}
 \end{center}
+%*endignore
 
 At this point the visualization can be used interactively: To evaluate a thunk, simply click on it and immediately see the effects. You can even evaluate thunks which are normally not reachable by regular Haskell code.
 
@@ -36,5 +32,3 @@ Ghc-vis can also be used as a library and in combination with GHCi's debugger.
 \FurtherReading
   \url{http://felsin9.de/nnis/ghc-vis}
 \end{hcarentry}
-
-\end{document}
