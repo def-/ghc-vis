@@ -13,34 +13,37 @@ before_cache:
 
 matrix:
   include:
-    - env: CABALVER=1.16 GHCVER=7.4.1
+    - env: CABALVER=1.18 GHCVER=7.4.1
       compiler: ": #GHC 7.4.1"
-      addons: {apt: {packages: [cabal-install-1.16,ghc-7.4.1], sources: [hvr-ghc]}}
-    - env: CABALVER=1.16 GHCVER=7.4.2
+      addons: {apt: {packages: [cabal-install-1.18,ghc-7.4.1,happy-1.19.5,alex-3.1.4], sources: [hvr-ghc]}}
+    - env: CABALVER=1.18 GHCVER=7.4.2
       compiler: ": #GHC 7.4.2"
-      addons: {apt: {packages: [cabal-install-1.16,ghc-7.4.2], sources: [hvr-ghc]}}
-    - env: CABALVER=1.16 GHCVER=7.6.1
+      addons: {apt: {packages: [cabal-install-1.18,ghc-7.4.2,happy-1.19.5,alex-3.1.4], sources: [hvr-ghc]}}
+    - env: CABALVER=1.18 GHCVER=7.6.1
       compiler: ": #GHC 7.6.1"
-      addons: {apt: {packages: [cabal-install-1.16,ghc-7.6.1], sources: [hvr-ghc]}}
-    - env: CABALVER=1.16 GHCVER=7.6.2
+      addons: {apt: {packages: [cabal-install-1.18,ghc-7.6.1,happy-1.19.5,alex-3.1.4], sources: [hvr-ghc]}}
+    - env: CABALVER=1.18 GHCVER=7.6.2
       compiler: ": #GHC 7.6.2"
-      addons: {apt: {packages: [cabal-install-1.16,ghc-7.6.2], sources: [hvr-ghc]}}
-    - env: CABALVER=1.16 GHCVER=7.6.3
+      addons: {apt: {packages: [cabal-install-1.18,ghc-7.6.2,happy-1.19.5,alex-3.1.4], sources: [hvr-ghc]}}
+    - env: CABALVER=1.18 GHCVER=7.6.3
       compiler: ": #GHC 7.6.3"
-      addons: {apt: {packages: [cabal-install-1.16,ghc-7.6.3], sources: [hvr-ghc]}}
+      addons: {apt: {packages: [cabal-install-1.18,ghc-7.6.3,happy-1.19.5,alex-3.1.4], sources: [hvr-ghc]}}
     - env: CABALVER=1.18 GHCVER=7.8.3
       compiler: ": #GHC 7.8.3"
-      addons: {apt: {packages: [cabal-install-1.18,ghc-7.8.3], sources: [hvr-ghc]}}
+      addons: {apt: {packages: [cabal-install-1.18,ghc-7.8.3,happy-1.19.5,alex-3.1.4], sources: [hvr-ghc]}}
+    - env: CABALVER=1.18 GHCVER=7.8.4
+      compiler: ": #GHC 7.8.4"
+      addons: {apt: {packages: [cabal-install-1.18,ghc-7.8.4,happy-1.19.5,alex-3.1.4], sources: [hvr-ghc]}}
     - env: CABALVER=1.22 GHCVER=7.10.1
       compiler: ": #GHC 7.10.1"
-      addons: {apt: {packages: [cabal-install-1.22,ghc-7.10.1], sources: [hvr-ghc]}}
+      addons: {apt: {packages: [cabal-install-1.22,ghc-7.10.1,happy-1.19.5,alex-3.1.4], sources: [hvr-ghc]}}
     - env: CABALVER=1.22 GHCVER=7.10.2
       compiler: ": #GHC 7.10.2"
-      addons: {apt: {packages: [cabal-install-1.22,ghc-7.10.2], sources: [hvr-ghc]}}
+      addons: {apt: {packages: [cabal-install-1.22,ghc-7.10.2,happy-1.19.5,alex-3.1.4], sources: [hvr-ghc]}}
 
 before_install:
  - unset CC
- - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
+ - export PATH=$HOME/.cabal/bin:/opt/happy/1.19.5/bin:/opt/alex/3.1.4/bin:/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
 
 install:
  - cabal --version
@@ -52,7 +55,8 @@ install:
    fi
  - travis_retry cabal update -v
  - sed -i 's/^jobs:/-- jobs:/' ${HOME}/.cabal/config
- - cabal install --only-dependencies --enable-tests --enable-benchmarks --dry -v > installplan.txt
+ - cabal install Cabal gtk2hs-buildtools --dry -v > installplan.txt
+ - cabal install --only-dependencies --enable-tests --enable-benchmarks --dry -v >> installplan.txt
  - sed -i -e '1,/^Resolving /d' installplan.txt; cat installplan.txt
 
 # check whether current requested install-plan matches cached package-db snapshot
@@ -66,9 +70,10 @@ install:
      echo "cabal build-cache MISS";
      rm -rf $HOME/.cabsnap;
      mkdir -p $HOME/.ghc $HOME/.cabal/lib $HOME/.cabal/share $HOME/.cabal/bin;
+     cabal install Cabal gtk2hs-buildtools;
      cabal install --only-dependencies --enable-tests --enable-benchmarks;
    fi
- 
+
 # snapshot package-db on cache miss
  - if [ ! -d $HOME/.cabsnap ];
    then
