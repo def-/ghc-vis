@@ -20,7 +20,7 @@ description:        Visualize live data structures in GHCi. Evaluation is not
                     how it can be used with GHCi's debugger:
                     <http://felsin9.de/nnis/ghc-vis/#combined-debugger>
 
-tested-with: GHC == 7.4.1, GHC == 7.4.2, GHC == 7.6.1, GHC == 7.6.2, GHC == 7.6.3, GHC == 7.8.3
+tested-with: GHC == 7.4.1, GHC == 7.4.2, GHC == 7.6.1, GHC == 7.6.2, GHC == 7.6.3, GHC == 7.8.3, GHC == 7.8.4, GHC == 7.10.1, GHC == 7.10.2
 data-files: ghci data/main.ui data/welcome.svg data/legend_graph.svg data/legend_list.svg data/icon_collapse.svg data/icon_evaluate.svg data/hover_collapse.svg data/hover_evaluate.svg
 Extra-source-files: nonghci-test.hs
 
@@ -40,24 +40,24 @@ Library
   Exposed-modules: GHC.Vis
   Other-modules: GHC.Vis.Internal GHC.Vis.Types GHC.Vis.View.List GHC.Vis.View.Common Paths_ghc_vis
   Default-Language: Haskell2010
-  Build-depends: base >= 4.5 && < 4.8,
+  Build-depends: base >= 4.5 && < 4.9,
                  mtl >= 2.0 && < 2.3,
                  fgl >= 5.4 && < 5.6,
-                 deepseq == 1.3.*,
+                 deepseq >= 1.3,
                  text >= 0.11 && < 1.3,
                  transformers >= 0.3 && < 0.5,
                  containers >= 0.4 && < 0.6,
                  gtk >= 0.12 && < 0.14,
                  svgcairo >= 0.12 && < 0.14,
                  cairo >= 0.12 && < 0.14,
-                 ghc-heap-view == 0.5.*
+                 ghc-heap-view >= 0.5
   Hs-source-dirs: src/
   Ghc-options: -Wall -fno-warn-unused-do-bind
 
   if flag(graph)
       Other-modules: GHC.Vis.View.Graph.Parser GHC.Vis.View.Graph
-      Build-depends: graphviz == 2999.17.*,
-                     xdot == 0.2.*
+      Build-depends: graphviz >= 2999.17,
+                     xdot >= 0.2.4
       Cpp-options: -DGRAPH_VIEW
 
   if flag(full)
