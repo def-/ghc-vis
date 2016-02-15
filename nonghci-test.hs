@@ -8,7 +8,7 @@ main = do
   let d = [1..]
   putStrLn $ show $ d !! 1
 
-  visualization
+  vis
   view a "a"
   view b "b"
   view c "c"

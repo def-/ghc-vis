@@ -19,7 +19,7 @@ module GHC.Vis.View.Graph (
 import Prelude hiding (catch)
 #endif
 
-import Graphics.UI.Gtk hiding (Box, Signal, Rectangle, Object)
+import Graphics.UI.Gtk hiding (Box, Signal, Rectangle, draw)
 import qualified Graphics.UI.Gtk as Gtk
 import Graphics.Rendering.Cairo hiding (x, y)
 
@@ -80,14 +80,15 @@ hoverCollapseSVG = unsafePerformIO $ My.getDataFileName "data/hover_collapse.svg
 
 -- | Draw visualization to screen, called on every update or when it's
 --   requested from outside the program.
-redraw :: WidgetClass w => w -> IO ()
+redraw :: WidgetClass w => w -> Render ()
 redraw canvas = do
-  s <- readIORef state
-  Gtk.Rectangle _ _ rw2 rh2 <- widgetGetAllocation canvas
+  s <- liftIO $ readIORef state
+  rw2 <- liftIO $ Gtk.widgetGetAllocatedWidth canvas
+  rh2 <- liftIO $ Gtk.widgetGetAllocatedWidth canvas
 
-  (bbs, hibbs) <- render canvas (draw s rw2 rh2)
+  (bbs, hibbs) <- draw s rw2 rh2
 
-  modifyIORef state (\s' -> s' {bounds = bbs, hoverIconBounds = hibbs})
+  liftIO $ modifyIORef state (\s' -> s' {bounds = bbs, hoverIconBounds = hibbs})
 
 -- | Export the visualization to an SVG file
 export :: DrawFunction -> String -> IO ()
@@ -146,11 +147,6 @@ draw s rw2 rh2 = do
           ])
 
     return (map trafo result, map toHoverIconBounds result)
-
-render :: WidgetClass w => w -> Render b -> IO b
-render canvas r = do
-  win <- widgetGetDrawWindow canvas
-  renderWithDrawable win r
 
 drawHoverMenu :: Maybe (t, Icon) -> Render Bool
 drawHoverMenu x = do

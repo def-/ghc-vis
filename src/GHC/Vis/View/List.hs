@@ -22,8 +22,8 @@ module GHC.Vis.View.List (
   )
   where
 import Graphics.UI.Gtk (PangoRectangle(..), layoutGetExtents, showLayout,
-  PangoLayout(..), WidgetClass(..), widgetGetAllocation, widgetGetDrawWindow,
-  renderWithDrawable, widgetQueueDraw, ascent, layoutSetFontDescription,
+  PangoLayout, WidgetClass,
+  widgetQueueDraw, ascent, layoutSetFontDescription,
   FontMetrics(..), layoutCopy, layoutSetText, layoutGetContext,
   fontDescriptionFromString, fontDescriptionSetSize, contextGetLanguage,
   contextGetMetrics, createLayout)
@@ -97,13 +97,14 @@ padding = 5
 
 -- | Draw visualization to screen, called on every update or when it's
 --   requested from outside the program.
-redraw :: WidgetClass w => w -> IO ()
+redraw :: WidgetClass w => w -> Render ()
 redraw canvas = do
-  s <- readIORef state
-  Gtk.Rectangle _ _ rw2 rh2 <- widgetGetAllocation canvas
+  s <- liftIO $ readIORef state
+  rw2 <- liftIO $ Gtk.widgetGetAllocatedWidth canvas
+  rh2 <- liftIO $ Gtk.widgetGetAllocatedWidth canvas
 
-  (size, boundingBoxes) <- render canvas (draw s rw2 rh2)
-  modifyIORef state (\s' -> s' {totalSize = size, bounds = boundingBoxes})
+  (size, boundingBoxes) <- draw s rw2 rh2
+  liftIO $ modifyIORef state (\s' -> s' {totalSize = size, bounds = boundingBoxes})
 
 #ifdef SDL_WINDOW
 getState :: IO State
@@ -163,11 +164,6 @@ draw s rw2 rh2 = do
   result <- mapM (drawEntry s maxNameWidth 0) (zip3 objs rpos names)
 
   return ((0, 0, sw, sh), map (\(o, (x,y,w,h)) -> (o, (x*sx+ox,y*sy+oy,w*sx,h*sy))) $ concat result)
-
-render :: WidgetClass w => w -> Render b -> IO b
-render canvas r = do
-  win <- widgetGetDrawWindow canvas
-  renderWithDrawable win r
 
 -- | Handle a mouse click. If an object was clicked an 'UpdateSignal' is sent
 --   that causes the object to be evaluated and the screen to be updated.

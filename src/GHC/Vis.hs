@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, RankNTypes, ImpredicativeTypes #-}
+{-# LANGUAGE CPP, RankNTypes, ImpredicativeTypes, OverloadedStrings #-}
 {- |
    Module      : GHC.Vis
    Copyright   : (c) Dennis Felsing
@@ -57,12 +57,13 @@ import Prelude hiding (catch)
 import Prelude
 #endif
 
-import Graphics.UI.Gtk hiding (Box, Signal, response)
-import qualified Graphics.UI.Gtk.Gdk.Events as E
+import Graphics.UI.Gtk hiding (Box, Signal)
 
 import System.IO
 import Control.Concurrent
 import Control.Monad
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Class
 
 import Control.Exception hiding (evaluate)
 
@@ -70,7 +71,7 @@ import Data.Char
 import Data.IORef
 import Data.Version
 
-import qualified Data.Text as Text
+import Data.Text ()
 import qualified Data.IntMap as M
 
 import System.Timeout
@@ -257,10 +258,9 @@ mVisMainThread = do
              ]
   (uncurry $ windowSetDefaultSize window) defaultSize
 
-  onExpose canvas $ const $ do
+  on canvas draw $ do
     runCorrect redraw >>= \f -> f canvas
-    runCorrect move >>= \f -> f canvas
-    return True
+    runCorrect move >>= \f -> liftIO $ f canvas
 
   dummy <- windowNew
 
@@ -306,158 +306,166 @@ sdlVisMainThread = SDL.withInit [ SDL.InitVideo ] $ do
 
 setupGUI :: (WidgetClass w1, WidgetClass w2, WidgetClass w3) => w1 -> w2 -> w3 -> IO ()
 setupGUI window canvas legendCanvas = do
-  onMotionNotify canvas False $ \e -> do
-    state <- readIORef visState
-    modifyIORef visState (\s -> s {mousePos = (E.eventX e, E.eventY e)})
+  widgetAddEvents canvas [PointerMotionMask]
+  on canvas motionNotifyEvent $ do
+    (x,y) <- eventCoordinates
+    lift $ do
+      state <- readIORef visState
+      modifyIORef visState (\s -> s {mousePos = (x,y)})
 
-    if dragging state
-    then do
-      let (oldX, oldY) = mousePos state
-          (deltaX, deltaY) = (E.eventX e - oldX, E.eventY e - oldY)
-          (oldPosX, oldPosY) = position state
-      modifyIORef visState (\s -> s {position = (oldPosX + deltaX, oldPosY + deltaY)})
+      if dragging state
+      then do
+        let (oldX, oldY) = mousePos state
+            (deltaX, deltaY) = (x - oldX, y - oldY)
+            (oldPosX, oldPosY) = position state
+        modifyIORef visState (\s -> s {position = (oldPosX + deltaX, oldPosY + deltaY)})
+        widgetQueueDraw canvas
+      else
+        runCorrect move >>= \f -> f canvas
+
+      return True
+
+  on canvas buttonPressEvent $ do
+    button <- eventButton
+    eClick <- eventClick
+    lift $ do
+      when (button == LeftButton && eClick == SingleClick) $
+        join $ runCorrect click
+
+      when (button == RightButton && eClick == SingleClick) $
+        modifyIORef visState (\s -> s {dragging = True})
+
+      when (button == MiddleButton && eClick == SingleClick) $ do
+        modifyIORef visState (\s -> s {zoomRatio = 1, position = (0, 0)})
+        widgetQueueDraw canvas
+
+    return True
+
+  on canvas buttonReleaseEvent $ do
+    button <- eventButton
+    lift $ do
+      when (button == RightButton) $
+        modifyIORef visState (\s -> s {dragging = False})
+
+      return True
+
+  on canvas scrollEvent $ do
+    direction <- eventScrollDirection
+    lift $ do
+      state <- readIORef visState
+
+
+      when (direction == ScrollUp) $ do
+        let newZoomRatio = zoomRatio state * zoomIncrement
+        newPos <- zoomImage canvas state newZoomRatio (mousePos state)
+        modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
+
+      when (direction == ScrollDown) $ do
+        let newZoomRatio = zoomRatio state / zoomIncrement
+        newPos <- zoomImage canvas state newZoomRatio (mousePos state)
+        modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
+
       widgetQueueDraw canvas
-    else
-      runCorrect move >>= \f -> f canvas
+      return True
 
-    return True
+  on window keyPressEvent $ do
+    eKeyName <- eventKeyName
+    lift $ do
+      state <- readIORef visState
 
-  onButtonPress canvas $ \e -> do
-    when (E.eventButton e == LeftButton && E.eventClick e == SingleClick) $
-      join $ runCorrect click
 
-    when (E.eventButton e == RightButton && E.eventClick e == SingleClick) $
-      modifyIORef visState (\s -> s {dragging = True})
+      when (eKeyName `elem` ["plus", "Page_Up", "KP_Add"]) $ do
+        let newZoomRatio = zoomRatio state * zoomIncrement
+            (oldX, oldY) = position state
+            newPos = (oldX*zoomIncrement, oldY*zoomIncrement)
+        modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
 
-    when (E.eventButton e == MiddleButton && E.eventClick e == SingleClick) $ do
-      modifyIORef visState (\s -> s {zoomRatio = 1, position = (0, 0)})
+      when (eKeyName `elem` ["minus", "Page_Down", "KP_Subtract"]) $ do
+        let newZoomRatio = zoomRatio state / zoomIncrement
+            (oldX, oldY) = position state
+            newPos = (oldX/zoomIncrement, oldY/zoomIncrement)
+        modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
+
+      when (eKeyName `elem` ["0", "equal"]) $
+        modifyIORef visState (\s -> s {zoomRatio = 1, position = (0, 0)})
+
+      when (eKeyName `elem` ["Left", "h", "a"]) $
+        modifyIORef visState (\s ->
+          let (x,y) = position s
+              newX  = x + positionIncrement
+          in s {position = (newX, y)})
+
+      when (eKeyName `elem` ["Right", "l", "d"]) $
+        modifyIORef visState (\s ->
+          let (x,y) = position s
+              newX  = x - positionIncrement
+          in s {position = (newX, y)})
+
+      when (eKeyName `elem` ["Up", "k", "w"]) $
+        modifyIORef visState (\s ->
+          let (x,y) = position s
+              newY  = y + positionIncrement
+          in s {position = (x, newY)})
+
+      when (eKeyName `elem` ["Down", "j", "s"]) $
+        modifyIORef visState (\s ->
+          let (x,y) = position s
+              newY  = y - positionIncrement
+          in s {position = (x, newY)})
+
+      when (eKeyName `elem` ["H", "A"]) $
+        modifyIORef visState (\s ->
+          let (x,y) = position s
+              newX  = x + bigPositionIncrement
+          in s {position = (newX, y)})
+
+      when (eKeyName `elem` ["L", "D"]) $
+        modifyIORef visState (\s ->
+          let (x,y) = position s
+              newX  = x - bigPositionIncrement
+          in s {position = (newX, y)})
+
+      when (eKeyName `elem` ["K", "W"]) $
+        modifyIORef visState (\s ->
+          let (x,y) = position s
+              newY  = y + bigPositionIncrement
+          in s {position = (x, newY)})
+
+      when (eKeyName `elem` ["J", "S"]) $
+        modifyIORef visState (\s ->
+          let (x,y) = position s
+              newY  = y - bigPositionIncrement
+          in s {position = (x, newY)})
+
+      when (eKeyName `elem` ["space", "Return", "KP_Enter"]) $
+        join $ runCorrect click
+
+      when (eKeyName `elem` ["v"]) $
+        put SwitchSignal
+
+      when (eKeyName `elem` ["c"]) $
+        put ClearSignal
+
+      when (eKeyName `elem` ["C"]) $
+        put RestoreSignal
+
+      when (eKeyName `elem` ["u"]) $
+        put UpdateSignal
+
+      when (eKeyName `elem` ["comma", "bracketleft"]) $
+        put $ HistorySignal (+1)
+
+      when (eKeyName `elem` ["period", "bracketright"]) $
+        put $ HistorySignal (\x -> x - 1)
+
       widgetQueueDraw canvas
-
-    return True
-
-  onButtonRelease canvas $ \e -> do
-    when (E.eventButton e == RightButton) $
-      modifyIORef visState (\s -> s {dragging = False})
-
-    return True
-
-  onScroll canvas $ \e -> do
-    state <- readIORef visState
-
-    when (E.eventDirection e == ScrollUp) $ do
-      let newZoomRatio = zoomRatio state * zoomIncrement
-      newPos <- zoomImage canvas state newZoomRatio (mousePos state)
-      modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
-
-    when (E.eventDirection e == ScrollDown) $ do
-      let newZoomRatio = zoomRatio state / zoomIncrement
-      newPos <- zoomImage canvas state newZoomRatio (mousePos state)
-      modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
-
-    widgetQueueDraw canvas
-    return True
-
-  onKeyPress window $ \e -> do
-    state <- readIORef visState
-
-#if MIN_VERSION_gtk(0,13,0)
-    let eventKeyName = Text.unpack . E.eventKeyName
-#else
-    let eventKeyName = E.eventKeyName
-#endif
-
-    when (eventKeyName e `elem` ["plus", "Page_Up", "KP_Add"]) $ do
-      let newZoomRatio = zoomRatio state * zoomIncrement
-          (oldX, oldY) = position state
-          newPos = (oldX*zoomIncrement, oldY*zoomIncrement)
-      modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
-
-    when (eventKeyName e `elem` ["minus", "Page_Down", "KP_Subtract"]) $ do
-      let newZoomRatio = zoomRatio state / zoomIncrement
-          (oldX, oldY) = position state
-          newPos = (oldX/zoomIncrement, oldY/zoomIncrement)
-      modifyIORef visState (\s -> s {zoomRatio = newZoomRatio, position = newPos})
-
-    when (eventKeyName e `elem` ["0", "equal"]) $
-      modifyIORef visState (\s -> s {zoomRatio = 1, position = (0, 0)})
-
-    when (eventKeyName e `elem` ["Left", "h", "a"]) $
-      modifyIORef visState (\s ->
-        let (x,y) = position s
-            newX  = x + positionIncrement
-        in s {position = (newX, y)})
-
-    when (eventKeyName e `elem` ["Right", "l", "d"]) $
-      modifyIORef visState (\s ->
-        let (x,y) = position s
-            newX  = x - positionIncrement
-        in s {position = (newX, y)})
-
-    when (eventKeyName e `elem` ["Up", "k", "w"]) $
-      modifyIORef visState (\s ->
-        let (x,y) = position s
-            newY  = y + positionIncrement
-        in s {position = (x, newY)})
-
-    when (eventKeyName e `elem` ["Down", "j", "s"]) $
-      modifyIORef visState (\s ->
-        let (x,y) = position s
-            newY  = y - positionIncrement
-        in s {position = (x, newY)})
-
-    when (eventKeyName e `elem` ["H", "A"]) $
-      modifyIORef visState (\s ->
-        let (x,y) = position s
-            newX  = x + bigPositionIncrement
-        in s {position = (newX, y)})
-
-    when (eventKeyName e `elem` ["L", "D"]) $
-      modifyIORef visState (\s ->
-        let (x,y) = position s
-            newX  = x - bigPositionIncrement
-        in s {position = (newX, y)})
-
-    when (eventKeyName e `elem` ["K", "W"]) $
-      modifyIORef visState (\s ->
-        let (x,y) = position s
-            newY  = y + bigPositionIncrement
-        in s {position = (x, newY)})
-
-    when (eventKeyName e `elem` ["J", "S"]) $
-      modifyIORef visState (\s ->
-        let (x,y) = position s
-            newY  = y - bigPositionIncrement
-        in s {position = (x, newY)})
-
-    when (eventKeyName e `elem` ["space", "Return", "KP_Enter"]) $
-      join $ runCorrect click
-
-    when (eventKeyName e `elem` ["v"]) $
-      put SwitchSignal
-
-    when (eventKeyName e `elem` ["c"]) $
-      put ClearSignal
-
-    when (eventKeyName e `elem` ["C"]) $
-      put RestoreSignal
-
-    when (eventKeyName e `elem` ["u"]) $
-      put UpdateSignal
-
-    when (eventKeyName e `elem` ["comma", "bracketleft"]) $
-      put $ HistorySignal (+1)
-
-    when (eventKeyName e `elem` ["period", "bracketright"]) $
-      put $ HistorySignal (\x -> x - 1)
-
-    widgetQueueDraw canvas
-    return True
+      return True
 
   widgetShowAll window
 
   reactThread <- forkIO $ react canvas legendCanvas
   --onDestroy window mainQuit -- Causes :r problems with multiple windows
-  onDestroy window (quit reactThread)
+  on window destroyEvent $ lift $ quit reactThread >> return True
 
   mainGUI
   return ()
@@ -597,9 +605,9 @@ react canvas legendCanvas = do
   where doSwitch = putStrLn "Cannot switch view: Graph view disabled at build"
 #endif
 
-runCorrect :: (View -> f) -> IO f
+runCorrect :: MonadIO m => (View -> f) -> m f
 runCorrect f = do
-  s <- readIORef visState
+  s <- liftIO $ readIORef visState
   return $ f $ views !! fromEnum (T.view s)
 
 zoomImage :: WidgetClass w1 => w1 -> State -> Double -> T.Point -> IO T.Point
@@ -640,38 +648,40 @@ visMainThread = do
   newFilter "*.svg" "SVG" saveDialog
   newFilter "*.ps" "PostScript" saveDialog
   newFilter "*.png" "PNG" saveDialog
+  putStrLn "aboutDialog"
 
   set aboutDialog [aboutDialogVersion := showVersion My.version]
 
-  onResponse saveDialog $ fileSave saveDialog
-  onResponse depthDialog $ setDepthDialog depthDialog depthSpin
-  onResponse aboutDialog $ const $ widgetHide aboutDialog
+  on saveDialog  response $ fileSave saveDialog
+  on depthDialog response $ setDepthDialog depthDialog depthSpin
+  on aboutDialog response $ const $ widgetHide aboutDialog
 
-  onDelete saveDialog   $ const $ widgetHide saveDialog   >> return True
-  onDelete aboutDialog  $ const $ widgetHide aboutDialog  >> return True
-  onDelete legendDialog $ const $ widgetHide legendDialog >> return True
+  on saveDialog   deleteEvent $ lift $ widgetHide saveDialog   >> return True
+  on aboutDialog  deleteEvent $ lift $ widgetHide aboutDialog  >> return True
+  on legendDialog deleteEvent $ lift $ widgetHide legendDialog >> return True
 
   let setDepthSpin = do
         s <- readIORef visState
         spinButtonSetValue depthSpin $ fromIntegral $ heapDepth s
 
-  getO castToMenuItem "clear"       >>= \item -> onActivateLeaf item clear
-  getO castToMenuItem "switch"      >>= \item -> onActivateLeaf item switch
-  getO castToMenuItem "restore"     >>= \item -> onActivateLeaf item restore
-  getO castToMenuItem "update"      >>= \item -> onActivateLeaf item update
-  getO castToMenuItem "setdepth"    >>= \item -> onActivateLeaf item $ setDepthSpin >> widgetShow depthDialog
-  getO castToMenuItem "export"      >>= \item -> onActivateLeaf item $ widgetShow saveDialog
-  getO castToMenuItem "quit"        >>= \item -> onActivateLeaf item $ widgetDestroy window
-  getO castToMenuItem "about"       >>= \item -> onActivateLeaf item $ widgetShow aboutDialog
-  getO castToMenuItem "legend"      >>= \item -> onActivateLeaf item $ widgetShow legendDialog
-  getO castToMenuItem "timeback"    >>= \item -> onActivateLeaf item $ history (+1)
-  getO castToMenuItem "timeforward" >>= \item -> onActivateLeaf item $ history (\x -> x - 1)
-  getO castToMenuItem "zoomin"      >>= \item -> onActivateLeaf item $ zoom canvas (*1.25)
-  getO castToMenuItem "zoomout"     >>= \item -> onActivateLeaf item $ zoom canvas (/1.25)
-  getO castToMenuItem "left"        >>= \item -> onActivateLeaf item $ movePos canvas (\(x,y) -> (x + positionIncrement, y))
-  getO castToMenuItem "right"       >>= \item -> onActivateLeaf item $ movePos canvas (\(x,y) -> (x - positionIncrement, y))
-  getO castToMenuItem "up"          >>= \item -> onActivateLeaf item $ movePos canvas (\(x,y) -> (x, y + positionIncrement))
-  getO castToMenuItem "down"        >>= \item -> onActivateLeaf item $ movePos canvas (\(x,y) -> (x, y - positionIncrement))
+
+  getO castToMenuItem "clear"       >>= \item -> on item menuItemActivated clear
+  getO castToMenuItem "switch"      >>= \item -> on item menuItemActivated switch
+  getO castToMenuItem "restore"     >>= \item -> on item menuItemActivated restore
+  getO castToMenuItem "update"      >>= \item -> on item menuItemActivated update
+  getO castToMenuItem "setdepth"    >>= \item -> on item menuItemActivated $ setDepthSpin >> widgetShow depthDialog
+  getO castToMenuItem "export"      >>= \item -> on item menuItemActivated $ widgetShow saveDialog
+  getO castToMenuItem "quit"        >>= \item -> on item menuItemActivated $ widgetDestroy window
+  getO castToMenuItem "about"       >>= \item -> on item menuItemActivated $ widgetShow aboutDialog
+  getO castToMenuItem "legend"      >>= \item -> on item menuItemActivated $ widgetShow legendDialog
+  getO castToMenuItem "timeback"    >>= \item -> on item menuItemActivated $ history (+1)
+  getO castToMenuItem "timeforward" >>= \item -> on item menuItemActivated $ history (\x -> x - 1)
+  getO castToMenuItem "zoomin"      >>= \item -> on item menuItemActivated $ zoom canvas (*1.25)
+  getO castToMenuItem "zoomout"     >>= \item -> on item menuItemActivated $ zoom canvas (/1.25)
+  getO castToMenuItem "left"        >>= \item -> on item menuItemActivated $ movePos canvas (\(x,y) -> (x + positionIncrement, y))
+  getO castToMenuItem "right"       >>= \item -> on item menuItemActivated $ movePos canvas (\(x,y) -> (x - positionIncrement, y))
+  getO castToMenuItem "up"          >>= \item -> on item menuItemActivated $ movePos canvas (\(x,y) -> (x, y + positionIncrement))
+  getO castToMenuItem "down"        >>= \item -> on item menuItemActivated $ movePos canvas (\(x,y) -> (x, y - positionIncrement))
 
   widgetModifyBg canvas StateNormal backgroundColor
   widgetModifyBg legendCanvas StateNormal backgroundColor
@@ -681,18 +691,18 @@ visMainThread = do
   legendListSVG  <- My.getDataFileName "data/legend_list.svg" >>= svgNewFromFile
   legendGraphSVG <- My.getDataFileName "data/legend_graph.svg" >>= svgNewFromFile
 
-  onExpose canvas $ const $ do
-    boxes <- readMVar visBoxes
+  on canvas draw $ do
+    boxes <- liftIO $ readMVar visBoxes
 
     if null boxes
     then renderSVGScaled canvas welcomeSVG
     else do
       runCorrect redraw >>= \f -> f canvas
-      runCorrect move >>= \f -> f canvas
-      return True
+      runCorrect move >>= \f -> liftIO $ f canvas
+      return ()
 
-  onExpose legendCanvas $ const $ do
-    state <- readIORef visState
+  on legendCanvas draw $ do
+    state <- liftIO $ readIORef visState
     renderSVGScaled legendCanvas $ case T.view state of
       ListView  -> legendListSVG
       GraphView -> legendGraphSVG
@@ -700,8 +710,8 @@ visMainThread = do
   setupGUI window canvas legendCanvas
 
 fileSave :: FileChooserDialog -> ResponseId -> IO ()
-fileSave fcdialog response = do
-  case response of
+fileSave fcdialog responseId = do
+  case responseId of
     ResponseOk -> do Just filename <- fileChooserGetFilename fcdialog
                      mbError <- export' filename
                      case mbError of
@@ -709,14 +719,14 @@ fileSave fcdialog response = do
                        Just errorMsg -> do
                          errorDialog <- messageDialogNew Nothing [] MessageError ButtonsOk errorMsg
                          widgetShow errorDialog
-                         onResponse errorDialog $ const $ widgetHide errorDialog
+                         on errorDialog response $ const $ widgetHide errorDialog
                          return ()
     _ -> return ()
   widgetHide fcdialog
 
 setDepthDialog :: Dialog -> SpinButton -> ResponseId -> IO ()
-setDepthDialog depthDialog depthSpin response = do
-  case response of
+setDepthDialog depthDialog depthSpin responseId = do
+  case responseId of
     ResponseOk -> do depth <- spinButtonGetValue depthSpin
                      setDepth $ round depth
     _ -> return ()
@@ -729,23 +739,23 @@ newFilter filterString name dialog = do
   fileFilterSetName filt $ name ++ " (" ++ filterString ++ ")"
   fileChooserAddFilter dialog filt
 
-renderSVGScaled :: (WidgetClass w) => w -> SVG -> IO Bool
+renderSVGScaled :: (WidgetClass w) => w -> SVG -> Render ()
 renderSVGScaled canvas svg = do
-  E.Rectangle _ _ rw2 rh2 <- widgetGetAllocation canvas
-  win <- widgetGetDrawWindow canvas
-  renderWithDrawable win $ do
-    let (cx2, cy2) = svgGetSize svg
+  rw2 <- liftIO $ widgetGetAllocatedWidth canvas
+  rh2 <- liftIO $ widgetGetAllocatedHeight canvas
+  let (cx2, cy2) = svgGetSize svg
 
-        (rw,rh) = (fromIntegral rw2, fromIntegral rh2)
-        (cx,cy) = (fromIntegral cx2, fromIntegral cy2)
+      (rw,rh) = (fromIntegral rw2, fromIntegral rh2)
+      (cx,cy) = (fromIntegral cx2, fromIntegral cy2)
 
-        -- Proportional scaling
-        (sx,sy) = (min (rw/cx) (rh/cy), sx)
-        (ox,oy) = (rw/2 - sx*cx/2, rh/2 - sy*cy/2)
+      -- Proportional scaling
+      (sx,sy) = (min (rw/cx) (rh/cy), sx)
+      (ox,oy) = (rw/2 - sx*cx/2, rh/2 - sy*cy/2)
 
-    translate ox oy
-    scale sx sy
-    svgRender svg
+  translate ox oy
+  scale sx sy
+  svgRender svg
+  return ()
 #endif
 
 -- Zoom into mouse, but only working from (0,0)
