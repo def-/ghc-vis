@@ -24,7 +24,6 @@ import GHC.HeapView hiding (pkg, modl, fun, arrWords)
 import Control.Monad
 import Control.Monad.State hiding (State, fix)
 
-import Data.Word
 import Data.Char
 import Data.List hiding (insert)
 import qualified Data.IntMap as M

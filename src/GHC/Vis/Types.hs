@@ -26,7 +26,7 @@ import GHC.HeapView
 import qualified Control.Monad.State as MS
 
 import Graphics.UI.Gtk hiding (Box, Signal, Point)
-import Graphics.Rendering.Cairo
+import Graphics.Rendering.Cairo hiding (x)
 
 -- | A simple Point
 type Point = (Double, Double)
@@ -46,9 +46,9 @@ data Signal = NewSignal Box String -- ^ Add a new Box to be visualized
 
 -- | All functions a view has to provide
 data View = View
-  { redraw        :: WidgetClass w => w -> Render ()
+  { redraw        :: forall w. WidgetClass w => w -> Render ()
   , click         :: IO ()
-  , move          :: WidgetClass w => w -> IO ()
+  , move          :: forall w. WidgetClass w => w -> IO ()
   , updateObjects :: [NamedBox] -> IO ()
   , exportView    :: DrawFunction -> String -> IO ()
   }
