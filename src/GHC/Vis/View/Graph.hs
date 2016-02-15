@@ -84,7 +84,7 @@ redraw :: WidgetClass w => w -> Render ()
 redraw canvas = do
   s <- liftIO $ readIORef state
   rw2 <- liftIO $ Gtk.widgetGetAllocatedWidth canvas
-  rh2 <- liftIO $ Gtk.widgetGetAllocatedWidth canvas
+  rh2 <- liftIO $ Gtk.widgetGetAllocatedHeight canvas
 
   (bbs, hibbs) <- draw s rw2 rh2
 
