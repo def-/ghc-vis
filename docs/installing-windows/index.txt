@@ -1,65 +1,68 @@
 Installing ghc-vis on Windows 7
 ===============================
 Dennis Felsing <dennis@felsin9.de>
-June 2013
+February 2016
 
 This document explains how to install ghc-vis on a fresh installation of
-Windows 7. Everything will be in 32 bit, as there seems to be no 64 bit
-Haskell Platform for Windows.
+Windows 7. These instructions are for 64 bit, but should work similarly on 32
+bit. Note that ghc-vis is easiest to use on Linux, setting it up on Windows is
+rather difficult. If someone knows of an easier way, let me know.
 
 == Install the Haskell Platform
 
 Visit
 http://www.haskell.org/platform/windows.html
-and install the Haskell Platform.
+and install the Haskell Platform (64 bit).
+
+Put m.dll in C:\Program Files\Haskell Platform\7.10.3\mingw\bin or similar
+(64bit: link:64bit/m.dll[], 32bit: link:32bit/m.dll[])
 
 == Install GTK and GraphViz
-
-Download the all-in-one GTK 2.x bundle from
-http://www.gtk.org/download/win32.php
-and extract it to +C:\gtk+.
-
 Download the current GraphViz ZIP archive from
 http://www.graphviz.org/Download_windows.php
 and extract it to +C:\graphviz+, so that it directly contains the directories
 +bin+, +lib+, +share+ and so on.
 
-Download the following libraries and extract them directly into +C:\gtk+:
-
-- http://ftp.gnome.org/pub/gnome/binaries/win32/librsvg/2.32/librsvg_2.32.1-1_win32.zip
-  (+librsvg-2-2.dll+ to +C:\gtk\bin\rsvg-2.dll+)
-- http://ftp.gnome.org/pub/gnome/binaries/win32/librsvg/2.32/librsvg-dev_2.32.1-1_win32.zip
-  (+lib+ and +include+ directories)
-- http://ftp.gnome.org/pub/gnome/binaries/win32/libcroco/0.6/libcroco_0.6.2-1_win32.zip
-  (+libcroco-0.6-3.dll+ to +C:\gtk\bin\+)
-- ftp://ftp.zlatkovic.com/libxml/libxml2-2.7.8.win32.zip
-  (+libxml2.dll+ to +C:\gtk\bin\libxml2-2.dll+)
-- link:m.dll[]
-  (+m.dll+ to +C:\gtk\bin\+)
-
-== Set Correct Paths
-
-Start +cmd.exe+ and set up the correct PATH variable:
+Install msys2 by following the instructions at https://msys2.github.io/
 
 ----
-set PATH=C:\gtk\bin;C:\graphviz\bin;%PATH%
+pacman -S mingw-w64-x86_64-pkg-config mingw-w64-x86_64-gtk3 wget unzip
+echo 'export PATH=/c/graphviz/bin:$PATH' >> ~/.bashrc
+source ~/.bashrc
 ----
-
-In order to keep the PATH variable permanently, right-click _My Computer_,
-click _Properties_, click _Advanced System Settings_, click _Environment
-Variables_. Prepend the system variable _Path_ with
-+C:\gtk\bin;C:\graphviz\bin;+.
 
 == Install ghc-vis
+
+Run in the MinGW-w64 Win64 Shell (not the MSYS2 Shell):
 
 ----
 cabal update
 cabal install gtk2hs-buildtools
-cabal install gtk -f -fmode-binary
-cabal install ghc-vis --disable-library-profiling
+wget https://github.com/def-/gtk2hs/archive/master.zip
+unzip master.zip
+cd gtk2hs-master/glib && cabal install
+cd ../cairo && cabal install --ghc-pkg-options="--force"
+cd ../pango && cabal install --ghc-pkg-options="--force"
+cd ../gtk && cabal install --ghc-pkg-options="--force"
+cabal install --ghc-pkg-options="--force" ghc-vis
 ----
 
-Follow the instructions in the output of +cabal install ghc-vis+ to setup the
-ghci script.
+This can be simplified once these issues are resolved:
+
+- https://github.com/gtk2hs/gtk2hs/issues/139
+- https://github.com/gtk2hs/gtk2hs/pull/152
+- https://github.com/Alexpux/MINGW-packages/issues/737
+- https://github.com/ellson/graphviz/issues/19
+
+Follow the instructions printed by the last cabal install. They should tell
+you something like this:
+
+----
+To use ghc-vis you have to load its ghci file in GHCi. To do this
+automatically when GHCi is started run:
+echo :script C:\Users\def\AppData\Roaming\cabal\x86_64-windows-ghc-7.10.3\ghc-vis-0.8\ghci >> %APPDATA%\ghc\ghci.conf
+----
+
+Now you can run ghci inside the MINGW64 shell and use :vis.
 
 // vim: set syntax=asciidoc:

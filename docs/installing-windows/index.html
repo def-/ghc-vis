@@ -541,13 +541,14 @@ ul.toc ul.toc {
 <h1>Installing ghc-vis on Windows 7</h1>
 <span id="author"><a class="bctarget" name="author"></a>Dennis Felsing</span><br>
 <span id="email"><a class="bctarget" name="email"></a><code>&lt;<a href="mailto:dennis@felsin9.de">dennis@felsin9.de</a>&gt;</code></span><br>
-<span id="revdate"><a class="bctarget" name="revdate"></a>June 2013</span>
+<span id="revdate"><a class="bctarget" name="revdate"></a>February 2016</span>
 </div><div id="content"><a class="bctarget" name="content"></a>
 <div id="preamble"><a class="bctarget" name="preamble"></a>
 <div class="sectionbody">
 <div class="paragraph"><p>This document explains how to install ghc-vis on a fresh installation of
-Windows 7. Everything will be in 32 bit, as there seems to be no 64 bit
-Haskell Platform for Windows.</p></div>
+Windows 7. These instructions are for 64 bit, but should work similarly on 32
+bit. Note that ghc-vis is easiest to use on Linux, setting it up on Windows is
+rather difficult. If someone knows of an easier way, let me know.</p></div>
 </div>
 </div>
 <div class="sect1">
@@ -555,78 +556,74 @@ Haskell Platform for Windows.</p></div>
 <div class="sectionbody">
 <div class="paragraph"><p>Visit
 <a href="http://www.haskell.org/platform/windows.html">http://www.haskell.org/platform/windows.html</a>
-and install the Haskell Platform.</p></div>
+and install the Haskell Platform (64 bit).</p></div>
+<div class="paragraph"><p>Put m.dll in C:\Program Files\Haskell Platform\7.10.3\mingw\bin or similar
+(64bit: <a href="64bit/m.dll">64bit/m.dll</a>, 32bit: <a href="32bit/m.dll">32bit/m.dll</a>)</p></div>
 </div>
 </div>
 <div class="sect1">
 <h2 id="install_gtk_and_graphviz"><a class="bctarget" name="install_gtk_and_graphviz"></a>Install GTK and GraphViz</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Download the all-in-one GTK 2.x bundle from
-<a href="http://www.gtk.org/download/win32.php">http://www.gtk.org/download/win32.php</a>
-and extract it to <code>C:\gtk</code>.</p></div>
 <div class="paragraph"><p>Download the current GraphViz ZIP archive from
 <a href="http://www.graphviz.org/Download_windows.php">http://www.graphviz.org/Download_windows.php</a>
 and extract it to <code>C:\graphviz</code>, so that it directly contains the directories
 <code>bin</code>, <code>lib</code>, <code>share</code> and so on.</p></div>
-<div class="paragraph"><p>Download the following libraries and extract them directly into <code>C:\gtk</code>:</p></div>
-<div class="ulist"><ul><li>
-<p>
-<a href="http://ftp.gnome.org/pub/gnome/binaries/win32/librsvg/2.32/librsvg_2.32.1-1_win32.zip">http://ftp.gnome.org/pub/gnome/binaries/win32/librsvg/2.32/librsvg_2.32.1-1_win32.zip</a>
-  (<code>librsvg-2-2.dll</code> to <code>C:\gtk\bin\rsvg-2.dll</code>)
-</p>
-</li><li>
-<p>
-<a href="http://ftp.gnome.org/pub/gnome/binaries/win32/librsvg/2.32/librsvg-dev_2.32.1-1_win32.zip">http://ftp.gnome.org/pub/gnome/binaries/win32/librsvg/2.32/librsvg-dev_2.32.1-1_win32.zip</a>
-  (<code>lib</code> and <code>include</code> directories)
-</p>
-</li><li>
-<p>
-<a href="http://ftp.gnome.org/pub/gnome/binaries/win32/libcroco/0.6/libcroco_0.6.2-1_win32.zip">http://ftp.gnome.org/pub/gnome/binaries/win32/libcroco/0.6/libcroco_0.6.2-1_win32.zip</a>
-  (<code>libcroco-0.6-3.dll</code> to <code>C:\gtk\bin\</code>)
-</p>
-</li><li>
-<p>
-<a href="ftp://ftp.zlatkovic.com/libxml/libxml2-2.7.8.win32.zip">ftp://ftp.zlatkovic.com/libxml/libxml2-2.7.8.win32.zip</a>
-  (<code>libxml2.dll</code> to <code>C:\gtk\bin\libxml2-2.dll</code>)
-</p>
-</li><li>
-<p>
-<a href="m.dll">m.dll</a>
-  (<code>m.dll</code> to <code>C:\gtk\bin\</code>)
-</p>
-</li></ul></div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="set_correct_paths"><a class="bctarget" name="set_correct_paths"></a>Set Correct Paths</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>Start <code>cmd.exe</code> and set up the correct PATH variable:</p></div>
+<div class="paragraph"><p>Install msys2 by following the instructions at <a href="https://msys2.github.io/">https://msys2.github.io/</a></p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>set PATH=C:\gtk\bin;C:\graphviz\bin;%PATH%</code></pre>
+<pre><code>pacman -S mingw-w64-x86_64-pkg-config mingw-w64-x86_64-gtk3 wget unzip
+echo 'export PATH=/c/graphviz/bin:$PATH' &gt;&gt; ~/.bashrc
+source ~/.bashrc</code></pre>
 </div></div>
-<div class="paragraph"><p>In order to keep the PATH variable permanently, right-click <em>My Computer</em>,
-click <em>Properties</em>, click <em>Advanced System Settings</em>, click <em>Environment
-Variables</em>. Prepend the system variable <em>Path</em> with
-<code>C:\gtk\bin;C:\graphviz\bin;</code>.</p></div>
 </div>
 </div>
 <div class="sect1">
 <h2 id="install_ghc_vis"><a class="bctarget" name="install_ghc_vis"></a>Install ghc-vis</h2>
 <div class="sectionbody">
+<div class="paragraph"><p>Run in the MinGW-w64 Win64 Shell (not the MSYS2 Shell):</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>cabal update
 cabal install gtk2hs-buildtools
-cabal install gtk -f -fmode-binary
-cabal install ghc-vis --disable-library-profiling</code></pre>
+wget https://github.com/def-/gtk2hs/archive/master.zip
+unzip master.zip
+cd gtk2hs-master/glib &amp;&amp; cabal install
+cd ../cairo &amp;&amp; cabal install --ghc-pkg-options="--force"
+cd ../pango &amp;&amp; cabal install --ghc-pkg-options="--force"
+cd ../gtk &amp;&amp; cabal install --ghc-pkg-options="--force"
+cabal install --ghc-pkg-options="--force" ghc-vis</code></pre>
 </div></div>
-<div class="paragraph"><p>Follow the instructions in the output of <code>cabal install ghc-vis</code> to setup the
-ghci script.</p></div>
+<div class="paragraph"><p>This can be simplified once these issues are resolved:</p></div>
+<div class="ulist"><ul><li>
+<p>
+<a href="https://github.com/gtk2hs/gtk2hs/issues/139">https://github.com/gtk2hs/gtk2hs/issues/139</a>
+</p>
+</li><li>
+<p>
+<a href="https://github.com/gtk2hs/gtk2hs/pull/152">https://github.com/gtk2hs/gtk2hs/pull/152</a>
+</p>
+</li><li>
+<p>
+<a href="https://github.com/Alexpux/MINGW-packages/issues/737">https://github.com/Alexpux/MINGW-packages/issues/737</a>
+</p>
+</li><li>
+<p>
+<a href="https://github.com/ellson/graphviz/issues/19">https://github.com/ellson/graphviz/issues/19</a>
+</p>
+</li></ul></div>
+<div class="paragraph"><p>Follow the instructions printed by the last cabal install. They should tell
+you something like this:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>To use ghc-vis you have to load its ghci file in GHCi. To do this
+automatically when GHCi is started run:
+echo :script C:\Users\def\AppData\Roaming\cabal\x86_64-windows-ghc-7.10.3\ghc-vis-0.8\ghci &gt;&gt; %APPDATA%\ghc\ghci.conf</code></pre>
+</div></div>
+<div class="paragraph"><p>Now you can run ghci inside the MINGW64 shell and use :vis.</p></div>
 </div>
 </div>
 </div><div id="footer"><a class="bctarget" name="footer"></a>
 <div id="footer-text"><a class="bctarget" name="footer-text"></a>
-Last updated 2014-10-10 12:36:12 CEST
+Last updated 2016-02-16 21:07:27 CET
 </div>
 </div></body></html>

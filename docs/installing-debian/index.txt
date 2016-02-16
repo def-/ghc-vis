@@ -20,7 +20,12 @@ cabal update
 cabal install ghc-vis --disable-library-profiling
 ----
 
-Follow the instructions in the output of +cabal install+ to setup the ghci
-script.
+To use ghc-vis you have to load its ghci file in GHCi. To do this
+automatically when GHCi is started run you have to run something like this,
+adapted to your GHC and ghc-vis versions:
+
+----
+echo ":script /home/def/.cabal/share/x86_64-linux-ghc-7.10.3/ghc-vis-0.8/ghci" >> ~/.ghci
+----
 
 // vim: set syntax=asciidoc:

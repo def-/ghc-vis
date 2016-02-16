@@ -541,7 +541,7 @@ ul.toc ul.toc {
 <h1>Installing ghc-vis on Arch Linux</h1>
 <span id="author"><a class="bctarget" name="author"></a>Dennis Felsing</span><br>
 <span id="email"><a class="bctarget" name="email"></a><code>&lt;<a href="mailto:dennis@felsin9.de">dennis@felsin9.de</a>&gt;</code></span><br>
-<span id="revdate"><a class="bctarget" name="revdate"></a>June 2013</span>
+<span id="revdate"><a class="bctarget" name="revdate"></a>February 2016</span>
 </div><div id="content"><a class="bctarget" name="content"></a>
 <div id="preamble"><a class="bctarget" name="preamble"></a>
 <div class="sectionbody">
@@ -552,7 +552,7 @@ ul.toc ul.toc {
 <h2 id="install_haskell_core"><a class="bctarget" name="install_haskell_core"></a>Install [haskell-core]</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Visit
-<a href="https://wiki.archlinux.org/index.php/Haskell_Package_Guidelines#.5Bhaskell-core.5D">https://wiki.archlinux.org/index.php/Haskell_Package_Guidelines#.5Bhaskell-core.5D</a>
+<a href="https://wiki.archlinux.org/index.php/ArchHaskell#haskell-core">https://wiki.archlinux.org/index.php/ArchHaskell#haskell-core</a>
 and install the [haskell-core] repository.</p></div>
 </div>
 </div>
@@ -561,24 +561,33 @@ and install the [haskell-core] repository.</p></div>
 <div class="sectionbody">
 <div class="listingblock">
 <div class="content">
-<pre><code>pacman -S haskell-graphviz haskell-gtk</code></pre>
+<pre><code>pacman -S gtk2hs-buildtools haskell-fgl haskell-transformers-base \
+  haskell-cairo haskell-glib haskell-colour haskell-polyparse \
+  haskell-temporary haskell-wl-pprint-text cabal-install</code></pre>
 </div></div>
 </div>
 </div>
 <div class="sect1">
 <h2 id="install_ghc_vis"><a class="bctarget" name="install_ghc_vis"></a>Install ghc-vis</h2>
 <div class="sectionbody">
+<div class="paragraph"><p>Now only the dependencies that are not in the [haskell-core] repository need
+to be compiled with cabal:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>cabal update
 cabal install ghc-vis</code></pre>
 </div></div>
-<div class="paragraph"><p>Follow the instructions in the output of <code>cabal install</code> to setup the
-ghci script.</p></div>
+<div class="paragraph"><p>To use ghc-vis you have to load its ghci file in GHCi. To do this
+automatically when GHCi is started run you have to run something like this,
+adapted to your GHC and ghc-vis versions:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>echo ":script /home/def/.cabal/share/x86_64-linux-ghc-7.10.3/ghc-vis-0.8/ghci" &gt;&gt; ~/.ghci</code></pre>
+</div></div>
 </div>
 </div>
 </div><div id="footer"><a class="bctarget" name="footer"></a>
 <div id="footer-text"><a class="bctarget" name="footer-text"></a>
-Last updated 2014-10-10 12:35:33 CEST
+Last updated 2016-02-16 19:36:43 CET
 </div>
 </div></body></html>

@@ -567,12 +567,17 @@ ul.toc ul.toc {
 <pre><code>cabal update
 cabal install ghc-vis --disable-library-profiling</code></pre>
 </div></div>
-<div class="paragraph"><p>Follow the instructions in the output of <code>cabal install</code> to setup the ghci
-script.</p></div>
+<div class="paragraph"><p>To use ghc-vis you have to load its ghci file in GHCi. To do this
+automatically when GHCi is started run you have to run something like this,
+adapted to your GHC and ghc-vis versions:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>echo ":script /home/def/.cabal/share/x86_64-linux-ghc-7.10.3/ghc-vis-0.8/ghci" &gt;&gt; ~/.ghci</code></pre>
+</div></div>
 </div>
 </div>
 </div><div id="footer"><a class="bctarget" name="footer"></a>
 <div id="footer-text"><a class="bctarget" name="footer-text"></a>
-Last updated 2014-10-10 12:36:02 CEST
+Last updated 2016-02-16 13:27:18 CET
 </div>
 </div></body></html>
