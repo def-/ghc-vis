@@ -1,5 +1,5 @@
 name:               ghc-vis
-version:            0.7.2.9
+version:            0.8
 license:            BSD3
 license-file:       LICENSE
 category:           GHC, Debug, Development
@@ -8,7 +8,7 @@ build-type:         Custom
 author:             Dennis Felsing, Joachim Breitner
 maintainer:         Dennis Felsing <dennis@felsin9.de>
 homepage:           http://felsin9.de/nnis/ghc-vis
-copyright:          Dennis Felsing 2012-2013
+copyright:          Dennis Felsing 2012-2016
 synopsis:           Live visualization of data structures in GHCi
 description:        Visualize live data structures in GHCi. Evaluation is not
                     forced and you can interact with the visualized data
@@ -57,7 +57,7 @@ Library
   if flag(graph)
       Other-modules: GHC.Vis.View.Graph.Parser GHC.Vis.View.Graph
       Build-depends: graphviz >= 2999.17,
-                     xdot >= 0.2.4
+                     xdot >= 0.3
       Cpp-options: -DGRAPH_VIEW
 
   if flag(full)
