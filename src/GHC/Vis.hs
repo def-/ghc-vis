@@ -648,7 +648,6 @@ visMainThread = do
   newFilter "*.svg" "SVG" saveDialog
   newFilter "*.ps" "PostScript" saveDialog
   newFilter "*.png" "PNG" saveDialog
-  putStrLn "aboutDialog"
 
   set aboutDialog [aboutDialogVersion := showVersion My.version]
 
