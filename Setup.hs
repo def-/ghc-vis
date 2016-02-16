@@ -20,7 +20,7 @@ postInstHook oldHook args iflags pDesc lbi = do
   let instDataDir = datadir $ absoluteInstallDirs pDesc lbi (fromFlag $ copyDest defaultCopyFlags)
   putStrLn "To use ghc-vis you have to load its ghci file in GHCi. To do this automatically when GHCi is started run:"
   case stripPrefix "mingw" os of
-    Just _ -> putStrLn $ "echo :script " ++ (instDataDir </> "ghci") ++ " >> %APPDATA%\\ghc\\ghci.conf"
+    Just _ -> putStrLn $ "echo \":script " ++ (instDataDir </> "ghci") ++ "\" >> $APPDATA/ghc/ghci.conf"
     Nothing -> putStrLn $ "echo \":script " ++ (instDataDir </> "ghci") ++ "\" >> ~/.ghci"
 
   oldHook args iflags pDesc lbi
