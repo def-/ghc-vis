@@ -225,7 +225,7 @@ export' filename = case mbDrawFn of
   Right errorMsg -> do putStrLn errorMsg
                        return $ Just errorMsg
   Left _ -> do put $ ExportSignal ((\(Left x) -> x) mbDrawFn) filename
-               return Nothing
+               return (Nothing :: Maybe String)
 
   where mbDrawFn = case map toLower (reverse . take 4 . reverse $ filename) of
           ".svg"  -> Left withSVGSurface
@@ -234,6 +234,7 @@ export' filename = case mbDrawFn of
           _:".ps" -> Left withPSSurface
           _       -> Right "Unknown file extension, try one of the following: .svg, .pdf, .ps, .png"
 
+        withPNGSurface :: FilePath -> Double -> Double -> (Surface -> IO a) -> IO a
         withPNGSurface filePath width height action =
           withImageSurface FormatARGB32 (ceiling width) (ceiling height) $
           \surface -> do
