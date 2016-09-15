@@ -1,0 +1,6 @@
+resolver: lts-7.4
+packages:
+- '.'
+extra-deps:
+- xdot-0.3.0.1
+- svgcairo-0.13.1.0
