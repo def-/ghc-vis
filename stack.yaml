@@ -1,6 +1,6 @@
-resolver: lts-7.4
+resolver: lts-8.6
 packages:
 - '.'
 extra-deps:
 - xdot-0.3.0.1
-- svgcairo-0.13.1.0
+- svgcairo-0.13.1.1
