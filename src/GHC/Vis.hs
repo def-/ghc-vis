@@ -567,7 +567,7 @@ react canvas legendCanvas = do
           modifyMVar_ visHeapHistory (\(i,xs) -> return (max 0 (min (length xs - 1) (f i)), xs))
           return False
         ExportSignal d f -> do
-          catch (runCorrect exportView >>= \e -> e d f)
+          catch (runCorrect (exportView :: View -> (forall a. FilePath -> Double -> Double -> (Surface -> IO a) -> IO a) -> String -> IO ()) >>= \e -> e d f)
             (\e -> do let err = show (e :: IOException)
                       hPutStrLn stderr $ "Couldn't export to file \"" ++ f ++ "\": " ++ err
                       return ())
