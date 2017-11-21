@@ -403,4 +403,4 @@ isInfix (x:_)
   | isSymbol x          = True
   | isPunctuation x     = True
   | otherwise           = False
-  where ascSymbols = "!#$%&*+./<=>?@  \\^|-~:"
+  where ascSymbols = ("!#$%&*+./<=>?@  \\^|-~:" :: String)
