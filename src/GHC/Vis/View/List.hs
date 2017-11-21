@@ -328,7 +328,7 @@ pangoLayout text = do
 
 pangoEmptyLayout :: Render PangoLayout
 pangoEmptyLayout = do
-  layout <- createLayout ""
+  layout <- createLayout ("" :: String)
 
   liftIO $ do
     font <- fontDescriptionFromString fontName
