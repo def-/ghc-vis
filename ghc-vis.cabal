@@ -1,14 +1,14 @@
 name:               ghc-vis
-version:            0.8
+version:            0.9
 license:            BSD3
 license-file:       LICENSE
 category:           GHC, Debug, Development
 cabal-version:      >= 1.10
 build-type:         Custom
-author:             Dennis Felsing, Joachim Breitner
+author:             Dennis Felsing, Joachim Breitner, Contributors
 maintainer:         Dennis Felsing <dennis@felsin9.de>
 homepage:           http://felsin9.de/nnis/ghc-vis
-copyright:          Dennis Felsing 2012-2016
+copyright:          Dennis Felsing 2012-2018
 synopsis:           Live visualization of data structures in GHCi
 description:        Visualize live data structures in GHCi. Evaluation is not
                     forced and you can interact with the visualized data
