@@ -17,16 +17,20 @@ At [http://felsin9.de/nnis/ghc-vis](http://felsin9.de/nnis/ghc-vis)
 
 1) Once
 
-> stack exec -- pacman -S mingw-w64-x86_64-pkg-config mingw-w64-x86_64-gtk3 mingw-w64-x86_64-gtk2 wget unzip 
-> stack exec -- echo 'export PATH=/c/graphviz/bin:$PATH' >> ~/.bashrc
-> stack install gtk2hs-buildtools glib cairo pango gtk
-> git clone https://github.com/def-/ghc-vis.git
-> stack install
+```sh
+$ stack exec -- pacman -S mingw-w64-x86_64-pkg-config mingw-w64-x86_64-gtk3 mingw-w64-x86_64-gtk2 wget unzip 
+$ stack exec -- echo 'export PATH=/c/graphviz/bin:$PATH' >> ~/.bashrc
+$ stack install gtk2hs-buildtools glib cairo pango gtk
+$ git clone https://github.com/def-/ghc-vis.git
+$ stack install
+```
 
 2) Each time
 
 In ghc-vis folder:
 
-> stack repl
-> :script ghci
-> :vis
+```she
+$ stack repl
+ghci> :script ghci
+ghci> :vis
+```
