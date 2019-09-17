@@ -1,10 +1,9 @@
 resolver: lts-8.8
 packages:
 - '.'
-- location:
-    git: https://github.com/nomeata/ghc-heap-view.git
-    commit: 368068c5c208323d690ece6a9bfb8aa843a95537
-  extra-dep: true 
 extra-deps:
 - xdot-0.3.0.1
 - svgcairo-0.13.1.1
+- git: https://github.com/nomeata/ghc-heap-view.git
+  commit: 368068c5c208323d690ece6a9bfb8aa843a95537
+
