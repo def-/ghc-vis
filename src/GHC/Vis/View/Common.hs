@@ -124,7 +124,7 @@ generalParseBoxes f = do
 -- second parameter adds external references, commonly @[heapGraphRoot]@.
 boundMultipleTimes :: HeapGraph a -> [HeapGraphIndex] -> [HeapGraphIndex]
 boundMultipleTimes (HeapGraph m) roots = map head $ filter (not.null) $ map tail $ group $ sort $
-     roots ++ concatMap (catMaybes . allPtrs . hgeClosure) (M.elems m)
+     roots ++ concatMap (catMaybes . allClosures . hgeClosure) (M.elems m)
 
 -- Pulls together multiple Unnamed objects to one
 simplify :: [VisObject] -> [VisObject]

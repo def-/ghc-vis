@@ -1,6 +1,18 @@
-resolver: lts-8.8
+resolver: nightly-2020-01-06
 packages:
 - '.'
 extra-deps:
-- xdot-0.3.0.1
-- svgcairo-0.13.2.0
+  - git: https://github.com/def-/xdot.git
+    commit: 414faa6d456dd8a13f09c58e260d11a63375043b
+
+  - cairo-0.13.8.0
+  - ghc-heap-view-0.6.1
+  - graphviz-2999.20.0.3
+  - gtk3-0.15.4
+  - svgcairo-0.13.2.1
+  - gio-0.13.8.0
+  - glib-0.13.8.0
+  - gtk2hs-buildtools-0.13.8.0
+  - pango-0.13.8.0
+  - wl-pprint-text-1.2.0.0
+allow-newer: true

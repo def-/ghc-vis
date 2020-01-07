@@ -67,15 +67,20 @@ data State = State
   }
 
 state :: IORef State
+{-# NOINLINE state #-}
 state = unsafePerformIO $ newIORef $ State [] [] (0, 0, 1, 1) [] [] None Nothing
 
 iconEvaluateSVG :: SVG
+{-# NOINLINE iconEvaluateSVG #-}
 iconEvaluateSVG = unsafePerformIO $ My.getDataFileName "data/icon_evaluate.svg" >>= svgNewFromFile
 iconCollapseSVG :: SVG
+{-# NOINLINE iconCollapseSVG #-}
 iconCollapseSVG = unsafePerformIO $ My.getDataFileName "data/icon_collapse.svg" >>= svgNewFromFile
 hoverEvaluateSVG :: SVG
+{-# NOINLINE hoverEvaluateSVG #-}
 hoverEvaluateSVG = unsafePerformIO $ My.getDataFileName "data/hover_evaluate.svg" >>= svgNewFromFile
 hoverCollapseSVG :: SVG
+{-# NOINLINE hoverCollapseSVG #-}
 hoverCollapseSVG = unsafePerformIO $ My.getDataFileName "data/hover_collapse.svg" >>= svgNewFromFile
 
 -- | Draw visualization to screen, called on every update or when it's
@@ -103,7 +108,7 @@ export drawFn file = do
   return ()
 
 draw :: State -> Int -> Int -> Render ([(Object Int, Rectangle)], [(Object Int, [(Icon, Rectangle)])])
-draw s rw2 rh2 = do
+draw s rw2 rh2 =
   if null $ boxes s then return ([], [])
   else do
     vS <- liftIO $ readIORef visState

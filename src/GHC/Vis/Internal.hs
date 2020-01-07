@@ -101,7 +101,9 @@ insertObjects (Unnamed _) xs = xs
 insertObjects _ _ = error "unexpected arguments"
 
 parseInternal :: HeapGraphIndex -> GenClosure (Maybe HeapGraphIndex) -> PrintState [VisObject]
-parseInternal _ (ConsClosure _ [] [dataArg] _pkg modl name) =
+
+-- TODO remove old cases replaced by closure types
+parseInternal _ (ConstrClosure _ [] [dataArg] _pkg modl name) =
  return [Unnamed $ case (modl, name) of
     k | k `elem` [ ("GHC.Word", "W#")
                  , ("GHC.Word", "W8#")
@@ -127,24 +129,38 @@ parseInternal _ (ConsClosure _ [] [dataArg] _pkg modl name) =
     _ -> printf "%s %d" (infixFix name) dataArg
   ]
 
-parseInternal _ (ConsClosure (StgInfoTable 1 3 _ _) _ [_,0,0] _ "Data.ByteString.Internal" "PS")
+parseInternal _ (IntClosure _ val) = return [Unnamed $ "I# " ++ show val]
+
+parseInternal _ (Int64Closure _ val) = return [Unnamed $ "I64# " ++ show val]
+
+parseInternal _ (WordClosure _ val) = return [Unnamed $ "W# " ++ show val]
+
+parseInternal _ (Word64Closure _ val) = return [Unnamed $ "W64# " ++ show val]
+
+parseInternal _ (FloatClosure _ val) = return [Unnamed $ printf "F# %0.5f" val]
+
+parseInternal _ (DoubleClosure _ val) = return [Unnamed $ printf "D# %0.5f" val]
+
+parseInternal _ (AddrClosure _ val) = return [Unnamed $ printf "Addr# %p" val]
+
+parseInternal _ (ConstrClosure (StgInfoTable _ 1 3 _ _ _) _ [_,0,0] _ "Data.ByteString.Internal" "PS")
   = return [Unnamed "ByteString 0 0"]
 
-parseInternal _ (ConsClosure (StgInfoTable 1 3 _ _) [bPtr] [_,start,end] _ "Data.ByteString.Internal" "PS")
+parseInternal _ (ConstrClosure (StgInfoTable _ 1 3 _ _ _) [bPtr] [_,start,end] _ "Data.ByteString.Internal" "PS")
   = do cPtr  <- liftM mbParens $ contParse bPtr
        return $ Unnamed (printf "ByteString %d %d " start end) : cPtr
 
-parseInternal _ (ConsClosure (StgInfoTable 2 3 _ _) [bPtr1,bPtr2] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
+parseInternal _ (ConstrClosure (StgInfoTable _ 2 3 _ _ _) [bPtr1,bPtr2] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
   = do cPtr1 <- liftM mbParens $ contParse bPtr1
        cPtr2 <- liftM mbParens $ contParse bPtr2
        return $ Unnamed (printf "Chunk %d %d " start end) : cPtr1 ++ [Unnamed " "] ++ cPtr2
 
-parseInternal _ (ConsClosure (StgInfoTable 2 0 _ _) [bHead,bTail] [] _ "GHC.Types" ":")
+parseInternal _ (ConstrClosure (StgInfoTable _ 2 0 _ _ _) [bHead,bTail] [] _ "GHC.Types" ":")
   = do cHead <- liftM mbParens $ contParse bHead
        cTail <- liftM mbParens $ contParse bTail
        return $ cHead ++ [Unnamed ":"] ++ cTail
 
-parseInternal _ (ConsClosure _ bPtrs dArgs _ _ name)
+parseInternal _ (ConstrClosure _ bPtrs dArgs _ _ name)
   = do cPtrs <- mapM (liftM mbParens . contParse) bPtrs
        let tPtrs = intercalate [Unnamed " "] cPtrs
        let sPtrs = if null tPtrs then [Unnamed ""] else Unnamed " " : tPtrs
@@ -165,10 +181,10 @@ parseInternal _ (BlackholeClosure _ b)
 parseInternal _ BlockingQueueClosure{}
   = return [Unnamed "BlockingQueue"]
 
-parseInternal _ (OtherClosure (StgInfoTable _ _ cTipe _) _ _)
+parseInternal _ (OtherClosure (StgInfoTable _ _ _ cTipe _ _) _ _)
   = return [Unnamed $ show cTipe]
 
-parseInternal _ (UnsupportedClosure (StgInfoTable _ _ cTipe _))
+parseInternal _ (UnsupportedClosure (StgInfoTable _ _ _ cTipe _ _))
   = return [Unnamed $ show cTipe]
 
 -- Reversed order of ptrs
@@ -294,7 +310,7 @@ mbParens t = if needsParens
 
 -- | Textual representation of Heap objects, used in the graph visualization.
 showClosureFields :: GenClosure t -> [String]
-showClosureFields (ConsClosure _ _ [dataArg] _ modl name) =
+showClosureFields (ConstrClosure _ _ [dataArg] _ modl name) =
  case (modl, name) of
     k | k `elem` [ ("GHC.Word", "W#")
                  , ("GHC.Word", "W8#")
@@ -322,16 +338,30 @@ showClosureFields (ConsClosure _ _ [dataArg] _ modl name) =
     -- :view b
     _ -> [name, show dataArg]
 
-showClosureFields (ConsClosure (StgInfoTable 1 3 _ 0) _ [_,0,0] _ "Data.ByteString.Internal" "PS")
+showClosureFields (IntClosure _ val) = ["I# " ++ show val]
+
+showClosureFields (Int64Closure _ val) = ["I64# " ++ show val]
+
+showClosureFields (WordClosure _ val) = ["W# " ++ show val]
+
+showClosureFields (Word64Closure _ val) = ["W64# " ++ show val]
+
+showClosureFields (FloatClosure _ val) = [printf "F# %0.5f" val]
+
+showClosureFields (DoubleClosure _ val) = [printf "D# %0.5f" val]
+
+showClosureFields (AddrClosure _ val) = [printf "Addr# %p" val]
+
+showClosureFields (ConstrClosure (StgInfoTable _ 1 3 _ 0 _) _ [_,0,0] _ "Data.ByteString.Internal" "PS")
   = ["ByteString","0","0"]
 
-showClosureFields (ConsClosure (StgInfoTable 1 3 _ 0) [_] [_,start,end] _ "Data.ByteString.Internal" "PS")
+showClosureFields (ConstrClosure (StgInfoTable _ 1 3 _ 0 _) [_] [_,start,end] _ "Data.ByteString.Internal" "PS")
   = ["ByteString",printf "%d" start,printf "%d" end]
 
-showClosureFields (ConsClosure (StgInfoTable 2 3 _ 1) [_,_] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
+showClosureFields (ConstrClosure (StgInfoTable _ 2 3 _ 1 _) [_,_] [_,start,end] _ "Data.ByteString.Lazy.Internal" "Chunk")
   = ["Chunk",printf "%d" start,printf "%d" end]
 
-showClosureFields (ConsClosure _ _ dArgs _ _ name)
+showClosureFields (ConstrClosure _ _ dArgs _ _ name)
   = name : map show dArgs
 
 -- Reversed order of ptrs
@@ -378,10 +408,10 @@ showClosureFields FunClosure{}
 showClosureFields BlockingQueueClosure{}
   = ["BlockingQueue"]
 
-showClosureFields (OtherClosure (StgInfoTable _ _ cTipe _) _ _)
+showClosureFields (OtherClosure (StgInfoTable _ _ _ cTipe _ _) _ _)
   = [show cTipe]
 
-showClosureFields (UnsupportedClosure (StgInfoTable _ _ cTipe _))
+showClosureFields (UnsupportedClosure (StgInfoTable _ _ _ cTipe _ _))
   = [show cTipe]
 
 --showClosure c = "Missing pattern for " ++ show c
