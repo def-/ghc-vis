@@ -42,6 +42,7 @@ import Graphics.XDot.Types hiding (size, w, h)
 
 import Graphics.Rendering.Cairo.SVG
 import Paths_ghc_vis as My
+import Debug.Trace
 
 hoverIconWidth :: Double
 hoverIconWidth = 35
@@ -87,6 +88,7 @@ hoverCollapseSVG = unsafePerformIO $ My.getDataFileName "data/hover_collapse.svg
 --   requested from outside the program.
 redraw :: WidgetClass w => w -> Render ()
 redraw canvas = do
+  liftIO $ traceIO "redraw"
   s <- liftIO $ readIORef state
   rw2 <- liftIO $ Gtk.widgetGetAllocatedWidth canvas
   rh2 <- liftIO $ Gtk.widgetGetAllocatedHeight canvas
@@ -94,6 +96,7 @@ redraw canvas = do
   (bbs, hibbs) <- draw s rw2 rh2
 
   liftIO $ modifyIORef state (\s' -> s' {bounds = bbs, hoverIconBounds = hibbs})
+  liftIO $ traceIO "redraw End"
 
 -- | Export the visualization to an SVG file
 export :: DrawFunction -> String -> IO ()
@@ -269,7 +272,9 @@ move canvas = do
 -- | Something might have changed on the heap, update the view.
 updateObjects :: [NamedBox] -> IO ()
 updateObjects _boxes = do
+  traceIO "updateObjects"
   hidden <- readMVar visHidden
   (ops, bs', _ , size) <- xDotParse $ hidden
 
   modifyIORef state (\s -> s {operations = ops, boxes = bs', totalSize = size, hover = None})
+  traceIO "updateObjects End"

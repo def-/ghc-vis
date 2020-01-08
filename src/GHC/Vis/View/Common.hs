@@ -46,10 +46,12 @@ import GHC.HeapView
 
 -- | Communication channel to the visualization
 visSignal :: MVar Signal
+{-# NOINLINE visSignal #-}
 visSignal = unsafePerformIO (newEmptyMVar :: IO (MVar Signal))
 
 -- | Whether a visualization is currently running
 visRunning :: MVar Bool
+{-# NOINLINE visRunning #-}
 visRunning = unsafePerformIO (newMVar False)
 
 defaultDepth :: Int
@@ -64,18 +66,22 @@ defaultView = ListView
 
 -- | Internal state of the visualization
 visState :: IORef State
+{-# NOINLINE visState #-}
 visState = unsafePerformIO $ newIORef $ State (0, 0) defaultView 1 (0, 0) False False defaultDepth
 
 -- | All the visualized boxes
 visBoxes :: MVar [NamedBox]
+{-# NOINLINE visBoxes #-}
 visBoxes = unsafePerformIO (newMVar [] :: IO (MVar [NamedBox]))
 
 -- | Hidden boxes
 visHidden :: MVar [Box]
+{-# NOINLINE visHidden #-}
 visHidden = unsafePerformIO (newMVar [] :: IO (MVar [Box]))
 
 -- | All heap graphs since the last clear command
 visHeapHistory :: MVar (Int, [(HeapGraph Identifier, [(Identifier, HeapGraphIndex)])])
+{-# NOINLINE visHeapHistory #-}
 visHeapHistory = unsafePerformIO (newMVar (0, [(HeapGraph M.empty, [])]) :: IO (MVar (Int, [(HeapGraph Identifier, [(Identifier, HeapGraphIndex)])])))
 
 -- | Get the currently selected heap graph
