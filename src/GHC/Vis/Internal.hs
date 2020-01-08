@@ -22,7 +22,7 @@ import GHC.Vis.Types
 import GHC.HeapView hiding (pkg, modl, fun, arrWords)
 
 import Control.Monad
-import Control.Monad.State hiding (State, fix)
+import Control.Monad.State.Strict hiding (State, fix)
 
 import Data.Char
 import Data.List hiding (insert)
@@ -36,6 +36,7 @@ import System.IO.Unsafe
 -- TODO: Remove
 instance Eq Box where
   a == b = unsafePerformIO $ areBoxesEqual a b
+  {-# NoINLINE (==) #-}
 
 -- | Parse a closure to a list of VisObjects
 parseClosure :: HeapGraphIndex -> PrintState [VisObject]

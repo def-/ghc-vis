@@ -29,7 +29,7 @@ import Control.Concurrent
 import Control.DeepSeq
 import Control.Exception hiding (evaluate)
 
-import Control.Monad.State hiding (State, fix)
+import Control.Monad.State.Strict hiding (State, fix)
 
 import qualified Data.IntMap as M
 

@@ -2,8 +2,8 @@ resolver: nightly-2020-01-06
 packages:
 - '.'
 extra-deps:
-  - git: https://github.com/def-/xdot.git
-    commit: 414faa6d456dd8a13f09c58e260d11a63375043b
+  - git: https://github.com/Avi-D-coder/xdot.git
+    commit: 4a68bb7542d15a0345d6b625a39d47c8eca3bd73
 
   - cairo-0.13.8.0
   - ghc-heap-view-0.6.1
