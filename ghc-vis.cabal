@@ -1,10 +1,10 @@
+cabal-version:      2.2
 name:               ghc-vis
 version:            0.9
-license:            BSD3
+license:            BSD-3-Clause
 license-file:       LICENSE
 category:           GHC, Debug, Development
-cabal-version:      >= 1.10
-build-type:         Custom
+-- build-type:         Custom
 author:             Dennis Felsing, Joachim Breitner, Contributors
 maintainer:         Dennis Felsing <dennis@felsin9.de>
 homepage:           http://felsin9.de/nnis/ghc-vis
