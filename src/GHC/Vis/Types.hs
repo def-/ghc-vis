@@ -23,7 +23,7 @@ module GHC.Vis.Types (
 
 import GHC.HeapView
 
-import qualified Control.Monad.State as MS
+import qualified Control.Monad.State.Strict as MS
 
 import Graphics.UI.Gtk hiding (Box, Signal, Point)
 import Graphics.Rendering.Cairo hiding (x)

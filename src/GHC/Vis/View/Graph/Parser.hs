@@ -80,7 +80,7 @@ convertGraph (HeapGraph hgm) = appEndo (removeGarbage <> addNames <> addEdges <>
         -- = (map show byteCode, 0)
         = (["BCO"], length (concatMap F.toList byteCode))
                | otherwise
-        = (showClosureFields (hgeClosure hge), length $ allPtrs (hgeClosure hge))
+        = (showClosureFields (hgeClosure hge), length $ allClosures (hgeClosure hge))
 
     -- Adds edges between the closures, treating BCOs specially
     addEdges = mconcat [
@@ -92,7 +92,7 @@ convertGraph (HeapGraph hgm) = appEndo (removeGarbage <> addNames <> addEdges <>
         where myPtrs | Just byteCode <- disassembleBCO deref (hgeClosure hge)
                      = concatMap F.toList byteCode
                      | otherwise
-                     = allPtrs (hgeClosure hge)
+                     = allClosures (hgeClosure hge)
 
     -- Adds the nodes and edges for the names
     addNameList = zip [-1,-2..] $ reverse -- Reverse to display from left to right

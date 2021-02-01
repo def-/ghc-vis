@@ -42,6 +42,7 @@ import Graphics.XDot.Types hiding (size, w, h)
 
 import Graphics.Rendering.Cairo.SVG
 import Paths_ghc_vis as My
+import Debug.Trace
 
 hoverIconWidth :: Double
 hoverIconWidth = 35
@@ -67,21 +68,27 @@ data State = State
   }
 
 state :: IORef State
+{-# NOINLINE state #-}
 state = unsafePerformIO $ newIORef $ State [] [] (0, 0, 1, 1) [] [] None Nothing
 
 iconEvaluateSVG :: SVG
+{-# NOINLINE iconEvaluateSVG #-}
 iconEvaluateSVG = unsafePerformIO $ My.getDataFileName "data/icon_evaluate.svg" >>= svgNewFromFile
 iconCollapseSVG :: SVG
+{-# NOINLINE iconCollapseSVG #-}
 iconCollapseSVG = unsafePerformIO $ My.getDataFileName "data/icon_collapse.svg" >>= svgNewFromFile
 hoverEvaluateSVG :: SVG
+{-# NOINLINE hoverEvaluateSVG #-}
 hoverEvaluateSVG = unsafePerformIO $ My.getDataFileName "data/hover_evaluate.svg" >>= svgNewFromFile
 hoverCollapseSVG :: SVG
+{-# NOINLINE hoverCollapseSVG #-}
 hoverCollapseSVG = unsafePerformIO $ My.getDataFileName "data/hover_collapse.svg" >>= svgNewFromFile
 
 -- | Draw visualization to screen, called on every update or when it's
 --   requested from outside the program.
 redraw :: WidgetClass w => w -> Render ()
 redraw canvas = do
+  liftIO $ traceIO "redraw"
   s <- liftIO $ readIORef state
   rw2 <- liftIO $ Gtk.widgetGetAllocatedWidth canvas
   rh2 <- liftIO $ Gtk.widgetGetAllocatedHeight canvas
@@ -89,6 +96,7 @@ redraw canvas = do
   (bbs, hibbs) <- draw s rw2 rh2
 
   liftIO $ modifyIORef state (\s' -> s' {bounds = bbs, hoverIconBounds = hibbs})
+  liftIO $ traceIO "redraw End"
 
 -- | Export the visualization to an SVG file
 export :: DrawFunction -> String -> IO ()
@@ -103,7 +111,7 @@ export drawFn file = do
   return ()
 
 draw :: State -> Int -> Int -> Render ([(Object Int, Rectangle)], [(Object Int, [(Icon, Rectangle)])])
-draw s rw2 rh2 = do
+draw s rw2 rh2 =
   if null $ boxes s then return ([], [])
   else do
     vS <- liftIO $ readIORef visState
@@ -264,7 +272,9 @@ move canvas = do
 -- | Something might have changed on the heap, update the view.
 updateObjects :: [NamedBox] -> IO ()
 updateObjects _boxes = do
+  traceIO "updateObjects"
   hidden <- readMVar visHidden
   (ops, bs', _ , size) <- xDotParse $ hidden
 
   modifyIORef state (\s -> s {operations = ops, boxes = bs', totalSize = size, hover = None})
+  traceIO "updateObjects End"

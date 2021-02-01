@@ -54,9 +54,11 @@ data State = State
 type RGB = (Double, Double, Double)
 
 state :: IORef State
+{-# NOINLINE state #-}
 state = unsafePerformIO $ newIORef $ State [] [] Nothing (0, 0, 1, 1)
 
 layout' :: IORef (Maybe PangoLayout)
+{-# NOINLINE layout' #-}
 layout' = unsafePerformIO $ newIORef Nothing
 
 fontName :: String
@@ -172,13 +174,13 @@ click = do
   s <- readIORef state
 
   hm <- inHistoryMode
-  when (not hm) $ case hover s of
-     Just t -> do
-       evaluate t
-       -- Without forkIO it would hang indefinitely if some action is currently
-       -- executed
-       void $ forkIO $ putMVar visSignal UpdateSignal
-     _ -> return ()
+  unless hm $ case hover s of
+    Just t -> do
+      evaluate t
+      -- Without forkIO it would hang indefinitely if some action is currently
+      -- executed
+      void $ forkIO $ putMVar visSignal UpdateSignal
+    _ -> return ()
 
 -- | Handle a mouse move. Causes an 'UpdateSignal' if the mouse is hovering a
 --   different object now, so the object gets highlighted and the screen
@@ -189,14 +191,13 @@ move canvas = do
   oldS <- readIORef state
   let oldHover = hover oldS
 
-  modifyIORef state $ \s' -> (
+  modifyIORef state $ \s' ->
     let (mx, my) = mousePos vS
         check (o, (x,y,w,h)) =
           if x <= mx && mx <= x + w &&
              y <= my && my <= y + h
           then Just o else Nothing
     in s' {hover = msum $ map check (bounds s')}
-    )
   s <- readIORef state
   unless (oldHover == hover s) $ widgetQueueDraw canvas
 

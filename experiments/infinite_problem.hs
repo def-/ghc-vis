@@ -25,7 +25,7 @@ walkHeap a = do
                    Just _  -> return l
                    Nothing -> do
                      c' <- getBoxedClosureData b
-                     l' <- foldM (\l x -> go x l) (Map.insert b (Nothing, c') l) (allPtrs c')
+                     l' <- foldM (\l x -> go x l) (Map.insert b (Nothing, c') l) (allClosures c')
                      return $ (Map.insert b (Nothing, c') l')
 
 walkHeapDepth a d = do
@@ -36,7 +36,7 @@ walkHeapDepth a d = do
                      Just _  -> return l
                      Nothing -> do
                        c' <- getBoxedClosureData b
-                       l' <- foldM (\l x -> go x (d - 1) l) (Map.insert b (Nothing, c') l) (allPtrs c')
+                       l' <- foldM (\l x -> go x (d - 1) l) (Map.insert b (Nothing, c') l) (allClosures c')
                        return $ (Map.insert b (Nothing, c') l')
 
 a x = 2 * x
