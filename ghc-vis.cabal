@@ -1,6 +1,6 @@
 cabal-version:      2.2
 name:               ghc-vis
-version:            0.9
+version:            0.9.2
 license:            BSD-3-Clause
 license-file:       LICENSE
 category:           GHC, Debug, Development
@@ -41,9 +41,10 @@ custom-setup
 
 Library
   Exposed-modules: GHC.Vis
+  Autogen-Modules: Paths_ghc_vis
   Other-modules: GHC.Vis.Internal GHC.Vis.Types GHC.Vis.View.List GHC.Vis.View.Common Paths_ghc_vis
   Default-Language: Haskell2010
-  Build-depends: base >= 4.5,
+  Build-depends: base >= 4.5 && < 5,
                  mtl >= 2.0,
                  fgl >= 5.4,
                  deepseq >= 1.3,
