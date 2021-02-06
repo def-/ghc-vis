@@ -309,7 +309,6 @@ setupGUI :: (WidgetClass w1, WidgetClass w2, WidgetClass w3) => w1 -> w2 -> w3 -
 setupGUI window canvas legendCanvas = do
   widgetAddEvents canvas [PointerMotionMask]
   on canvas motionNotifyEvent $ do
-    -- liftIO $ traceIO "on canvas motionNotifyEvent"
     (x,y) <- eventCoordinates
     lift $ do
       state <- readIORef visState
@@ -324,7 +323,6 @@ setupGUI window canvas legendCanvas = do
         widgetQueueDraw canvas
       else
         runCorrect move >>= \f -> f canvas
-      -- traceIO "on canvas motionNotifyEvent End"
       return True
 
   on canvas buttonPressEvent $ do
