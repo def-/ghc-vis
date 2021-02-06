@@ -4,7 +4,7 @@ version:            0.9
 license:            BSD-3-Clause
 license-file:       LICENSE
 category:           GHC, Debug, Development
--- build-type:         Custom
+build-type:         Custom
 author:             Dennis Felsing, Joachim Breitner, Contributors
 maintainer:         Dennis Felsing <dennis@felsin9.de>
 homepage:           http://felsin9.de/nnis/ghc-vis
@@ -35,6 +35,9 @@ flag full
 --flag sdl
 --  Default: False
 --  Description: "SDL window"
+
+custom-setup
+  setup-depends: base  >= 4, Cabal >= 1.24, filepath
 
 Library
   Exposed-modules: GHC.Vis
