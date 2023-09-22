@@ -4,7 +4,7 @@
    Module      : GHC.Vis.View.Graph.Parser
    Copyright   : (c) Dennis Felsing
    License     : 3-Clause BSD-style
-   Maintainer  : dennis@felsin9.de
+   Maintainer  : dennis@felsing.org
 
  -}
 module GHC.Vis.View.Graph.Parser (

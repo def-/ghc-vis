@@ -1,6 +1,6 @@
 Installing ghc-vis on Gentoo Linux
 ==================================
-Dennis Felsing <dennis@felsin9.de>
+Dennis Felsing <dennis@felsing.org>
 June 2013
 
 This document explains how to install ghc-vis on Gentoo Linux.

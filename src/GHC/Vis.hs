@@ -3,7 +3,7 @@
    Module      : GHC.Vis
    Copyright   : (c) Dennis Felsing
    License     : 3-Clause BSD-style
-   Maintainer  : dennis@felsin9.de
+   Maintainer  : dennis@felsing.org
 
 Although ghc-vis is meant to be used in GHCi it can also be used as a library
 in regular Haskell programs which are run or compiled by GHC. You can run those

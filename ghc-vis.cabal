@@ -6,8 +6,8 @@ license-file:       LICENSE
 category:           GHC, Debug, Development
 build-type:         Custom
 author:             Dennis Felsing, Joachim Breitner, Contributors
-maintainer:         Dennis Felsing <dennis@felsin9.de>
-homepage:           http://felsin9.de/nnis/ghc-vis
+maintainer:         Dennis Felsing <dennis@felsing.org>
+homepage:           https://dennis.felsing.org/ghc-vis
 copyright:          Dennis Felsing 2012-2018
 synopsis:           Live visualization of data structures in GHCi
 description:        Visualize live data structures in GHCi. Evaluation is not
@@ -15,10 +15,10 @@ description:        Visualize live data structures in GHCi. Evaluation is not
                     structures. This allows seeing Haskell's lazy evaluation
                     and sharing in action.
                     .
-                    See <http://felsin9.de/nnis/ghc-vis/#basic-usage> for the
+                    See <https://dennis.felsing.org/ghc-vis/#basic-usage> for the
                     basic usage of ghc-vis or watch a short video demonstrating
                     how it can be used with GHCi's debugger:
-                    <http://felsin9.de/nnis/ghc-vis/#combined-debugger>
+                    <https://dennis.felsing.org/ghc-vis/#combined-debugger>
 
 tested-with: GHC == 7.4.1, GHC == 7.4.2, GHC == 7.6.1, GHC == 7.6.2, GHC == 7.6.3, GHC == 7.8.3, GHC == 7.8.4, GHC == 7.10.1, GHC == 7.10.2, GHC == 7.10.3, GHC == 8.0.2
 data-files: ghci data/main.ui data/welcome.svg data/legend_graph.svg data/legend_list.svg data/icon_collapse.svg data/icon_evaluate.svg data/hover_collapse.svg data/hover_evaluate.svg

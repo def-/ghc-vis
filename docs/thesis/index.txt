@@ -1,6 +1,6 @@
 Visualization of Lazy Evaluation and Sharing
 ============================================
-Dennis Felsing <dennis@felsin9.de>
+Dennis Felsing <dennis@felsing.org>
 June 2013
 
 == Bachelor Thesis of Dennis Felsing
@@ -34,7 +34,7 @@ created in order to interactively view graphs created by Graphviz.
 - link:thesis.pdf[Thesis] (link:thesis.tar.bz2[source])
 - link:examples.tar.bz2[Examples used in the thesis]
 - link:beamer.pdf[Talk] (in German, link:beamer.tar.bz2[source])
-- link:http://felsin9.de/nnis/ghc-vis[ghc-vis] (link:http://hackage.haskell.org/package/ghc-vis[on Hackage])
+- link:https://dennis.felsing.org/ghc-vis[ghc-vis] (link:http://hackage.haskell.org/package/ghc-vis[on Hackage])
 - xdot (link:http://hackage.haskell.org/package/xdot[on Hackage])
 
 // vim: set syntax=asciidoc:

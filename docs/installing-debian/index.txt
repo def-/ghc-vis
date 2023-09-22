@@ -1,6 +1,6 @@
 Installing ghc-vis on Debian
 ============================
-Dennis Felsing <dennis@felsin9.de>
+Dennis Felsing <dennis@felsing.org>
 December 2013
 
 This document explains how to install ghc-vis on Debian.
