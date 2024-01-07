@@ -22,7 +22,7 @@ import GHC.Vis.Types
 import GHC.HeapView hiding (pkg, modl, fun, arrWords)
 
 import Control.Monad
-import Control.Monad.State.Strict hiding (State, fix)
+import Control.Monad.State.Strict (put, get, gets)
 
 import Data.Char
 import Data.List hiding (insert)
