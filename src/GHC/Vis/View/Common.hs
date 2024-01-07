@@ -28,8 +28,8 @@ import Prelude hiding (catch)
 import Control.Concurrent
 import Control.DeepSeq
 import Control.Exception hiding (evaluate)
-
-import Control.Monad.State.Strict hiding (State, fix)
+import Control.Monad
+import Control.Monad.State.Strict (evalState, runState)
 
 import qualified Data.IntMap as M
 

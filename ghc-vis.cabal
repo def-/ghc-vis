@@ -20,7 +20,7 @@ description:        Visualize live data structures in GHCi. Evaluation is not
                     how it can be used with GHCi's debugger:
                     <https://dennis.felsing.org/ghc-vis/#combined-debugger>
 
-tested-with: GHC == 7.4.1, GHC == 7.4.2, GHC == 7.6.1, GHC == 7.6.2, GHC == 7.6.3, GHC == 7.8.3, GHC == 7.8.4, GHC == 7.10.1, GHC == 7.10.2, GHC == 7.10.3, GHC == 8.0.2
+tested-with: GHC == 9.8.1, GHC == 9.6.3, GHC == 9.4.7, GHC == 8.8.4, GHC == 8.6.5
 data-files: ghci data/main.ui data/welcome.svg data/legend_graph.svg data/legend_list.svg data/icon_collapse.svg data/icon_evaluate.svg data/hover_collapse.svg data/hover_evaluate.svg
 Extra-source-files: nonghci-test.hs
 
@@ -54,7 +54,7 @@ Library
                  gtk3 >= 0.12,
                  svgcairo >= 0.12,
                  cairo >= 0.12,
-                 ghc-heap-view >= 0.5
+                 ghc-heap-view >= 0.6
   Hs-source-dirs: src/
   Ghc-options: -Wall -fno-warn-unused-do-bind
 

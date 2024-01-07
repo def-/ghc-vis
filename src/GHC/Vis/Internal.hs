@@ -22,7 +22,7 @@ import GHC.Vis.Types
 import GHC.HeapView hiding (pkg, modl, fun, arrWords)
 
 import Control.Monad
-import Control.Monad.State.Strict hiding (State, fix)
+import Control.Monad.State.Strict (put, get, gets)
 
 import Data.Char
 import Data.List hiding (insert)
@@ -142,7 +142,7 @@ parseInternal _ (FloatClosure _ val) = return [Unnamed $ printf "F# %0.5f" val]
 
 parseInternal _ (DoubleClosure _ val) = return [Unnamed $ printf "D# %0.5f" val]
 
-parseInternal _ (AddrClosure _ val) = return [Unnamed $ printf "Addr# %p" val]
+parseInternal _ (AddrClosure _ val) = return [Unnamed $ "Addr# " ++ show val]
 
 parseInternal _ (ConstrClosure (StgInfoTable _ 1 3 _ _ _) _ [_,0,0] _ "Data.ByteString.Internal" "PS")
   = return [Unnamed "ByteString 0 0"]
@@ -351,7 +351,7 @@ showClosureFields (FloatClosure _ val) = [printf "F# %0.5f" val]
 
 showClosureFields (DoubleClosure _ val) = [printf "D# %0.5f" val]
 
-showClosureFields (AddrClosure _ val) = [printf "Addr# %p" val]
+showClosureFields (AddrClosure _ val) = ["Addr# " ++ show val]
 
 showClosureFields (ConstrClosure (StgInfoTable _ 1 3 _ 0 _) _ [_,0,0] _ "Data.ByteString.Internal" "PS")
   = ["ByteString","0","0"]
