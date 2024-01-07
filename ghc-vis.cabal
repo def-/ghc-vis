@@ -54,7 +54,7 @@ Library
                  gtk3 >= 0.12,
                  svgcairo >= 0.12,
                  cairo >= 0.12,
-                 ghc-heap-view >= 0.5
+                 ghc-heap-view >= 0.6
   Hs-source-dirs: src/
   Ghc-options: -Wall -fno-warn-unused-do-bind
 
